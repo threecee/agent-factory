@@ -1,0 +1,32 @@
+# Gitleaks configuration (software-factory G3 SECURITY batch, ADR-0072).
+#
+# The HARD secret-scan gate (scripts/check_gitleaks.py) runs `gitleaks git .`, which
+# scans only COMMITTED content — so .gitignore is respected by construction: a
+# gitignored file (never committed) cannot appear in history. The repo-root `.env`
+# holds a LIVE key; it is gitignored and never committed, so it is out of scope for
+# the git-history scan. The allowlist below excludes `.env` / `.env.*` explicitly as
+# defense in depth (so a directory-mode scan can never surface it either), while a
+# secret-free `.env.example` template, if any, carries no real credential to leak.
+#
+# All existing findings are the `generic-api-key` entropy rule firing on test
+# fixtures (fake password hashes, signed tokens, hex digests) and doc hashes; they
+# are triaged in a redacted baseline (.gitleaks-baseline.json) — no allowlist
+# wildcard over tests/ (that is where real creds get pasted "temporarily").
+#
+# The gate has a SECOND leg (working tree) that runs `gitleaks dir` over just the
+# commit-eligible files with THIS SAME config, against its own redacted baseline
+# (.gitleaks-worktree-baseline.json) — so a lane catches a literal before it becomes
+# a commit. Both baseline artifacts are allowlisted below (same derived-copy reason).
+
+title = "kripos-chatanalyse gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Never surface the local secret files (defense in depth; already gitignored). Also skip the DERIVED scan-baseline artifacts: they embed code snippets from files gitleaks already scans at SOURCE, so excluding the copies masks nothing while avoiding self-referential findings (a bandit-baseline snippet re-flagged by the entropy rule). The gitleaks-worktree baseline is the working-tree leg's twin of the history baseline (dir-mode scan)."
+paths = [
+  '''^\.env$''',
+  '''^\.env\.[^/]+$''',
+  '''^\.(gitleaks|gitleaks-worktree|bandit|semgrep|ruff|sca)-baseline\.json$''',
+]

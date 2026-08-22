@@ -20,6 +20,8 @@ The orchestrator (lander) assembles and lands; lanes never push main.
 8. Re-confirm currency: fetch; if origin/main moved, READ what landed before
    rebasing — a non-ff rejection during an incident usually means a parallel
    session fixed the same thing (stand down if their fix is complete).
-9. Push HEAD:main → CI deploys. Confirm registered.
+9. Push HEAD:main GATED ON the verify verdict — mechanically
+   (`make verify && git push …`), never as two statements in one unconditional
+   block. (The smoke test shipped a red train exactly that way once.)
 10. Flip NUMBERS `claimed → landed`. Board sweep (Done + archive). Fast-forward
     the primary checkout. Reap lane worktrees and branches.

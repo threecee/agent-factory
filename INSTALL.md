@@ -31,7 +31,9 @@ that runs everything and stops at the first red gate).
    (`planning/CLAUDE.md.example`).
 
 ## Step 2 — Verification pillar
-1. Copy `verification/gates/*.py` → `scripts/`. Each script's docstring is its
+1. Copy `verification/gates/*.py` → `scripts/` (note the dependency clusters
+   in gates/README.md) and `gitleaks.toml.example` → repo root as
+   `.gitleaks.toml`. Each script's docstring is its
    contract. Most read repo-root/`docs/` paths and port as-is. Some carry
    localized (Norwegian) output strings from the source factory — translating
    those strings is part of your adaptation; never change a gate's LOGIC while
@@ -88,5 +90,9 @@ recommended user-level skills.
    the standing brief, run the choices audit on the handback, assemble a
    single-lane train, run full verify, land, sweep the board.
 2. Falsify at least one gate along the way (plant a violation, watch it go
-   red, remove it).
+   red, remove it). For the secret gate: random-shaped secrets on a throwaway
+   branch (see verification/gates/README.md — documentation keys are
+   allowlisted; the working-tree leg is advisory, history is HARD).
+3. Land with `make verify && git push` — never an unconditional push after a
+   verify you did not read.
 A factory whose smoke test has not run is not installed — it is copied.

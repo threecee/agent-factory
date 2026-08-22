@@ -24,6 +24,8 @@ a file or a git operation.
 - One lane, one writer. Helpers read and advise only. The wrapper commits
   (coding CLIs often cannot commit in linked worktrees).
 - Name every sentinel/log after this lane — the scratchpad is shared.
+- Environment symlinks (.venv/.env/node_modules) must be gitignored in the
+  target repo; the wrapper's `git add -A` must never commit them.
 - Tear down served instances by PORT, never by process-name grep.
 
 ## 3. Task
