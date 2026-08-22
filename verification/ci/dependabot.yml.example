@@ -1,0 +1,58 @@
+# Dependabot — grouped dependency updates (software-factory NOW phase, ADR-0071).
+#
+# Grouped updates batch minor/patch bumps into a few PRs instead of one-per-dep,
+# so the standing dependency-alert backlog is triaged in reviewable batches (each
+# still gated by `make verify` — egress lint, welfare suite, traceability). This is
+# the deterministic, portable half; the connected-tier dependabot-triage agent
+# (VEX authoring for not-exploitable alerts) is a later, advisory addition.
+version: 2
+updates:
+  # Python (pyproject.toml + uv.lock) — the runtime + dev/eval extras.
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      python-dependencies:
+        patterns: ["*"]
+
+  # Product frontend (pnpm).
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      frontend-dependencies:
+        patterns: ["*"]
+
+  # Dev-only demo-video pipeline (isolated Remotion project; never in the product bundle).
+  - package-ecosystem: "npm"
+    directory: "/demo/remotion"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      demo-remotion-dependencies:
+        patterns: ["*"]
+
+  # Container base image.
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    groups:
+      docker-dependencies:
+        patterns: ["*"]
+
+  # GitHub Actions (forward-looking: the connected pre-merge CI tier, design NEXT phase).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    groups:
+      actions-dependencies:
+        patterns: ["*"]

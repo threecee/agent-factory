@@ -1,0 +1,27 @@
+# <Project> — session anchor (short on purpose; the authorities are below)
+
+**Read before dispatching or landing anything:**
+
+| Authority | Governs |
+|---|---|
+| `docs/core-model.md` + factory docs | The whole factory map |
+| `docs/OPERATIONS.md` (yours, translated) | Operational law — procedure changes are reviewed diffs to this file |
+| `.claude/templates/lane-brief.md` | The standing lane brief — dispatch from THIS |
+| GitHub Project «<name>» (#N, `<PROJECT_ID>`) | Forward planning source of truth |
+
+Status field: `<STATUS_FIELD_ID>` · options: Planned=`<id>` In flight=`<id>`
+Deferred=`<id>` Done=`<id>` Decision needed=`<id>` Dropped=`<id>`
+
+## Board transaction points
+| Event | Action |
+|---|---|
+| Work dispatched | Real issue, Status → In flight |
+| Train lands | Boarded items → Done, then archive |
+| New deferred item | File with full body, → Deferred |
+| Needs owner ruling | → Decision needed |
+
+## Non-negotiables
+- <your domain's hard rules — data classification, secrets policy, etc.>
+- New test literals via `secrets.token_urlsafe`.
+- The choices audit is a transaction point: every lane handback → ledger
+  entry in `docs/choices/<train>.md`; unsound resolved before assembly.

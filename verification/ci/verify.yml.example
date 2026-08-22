@@ -1,0 +1,175 @@
+# Deterministic gate CI — the connected dev-tier leg of the software factory
+# (ADR-0074; design note docs/design-notes/2026-07-19_software-factory-cicd-agenter.md).
+#
+# Runs the SAME merge ritual as the local `make verify` (the Makefile is the
+# single source of the gate list — this workflow never re-enumerates gates), plus
+# the frontend test/typecheck leg. Zero secrets, zero LLMs: everything here is
+# deterministic and author-agnostic. This COMPLEMENTS the local ritual; the human
+# merge-gate stays between tiers, and nothing in this workflow auto-merges.
+#
+# Discipline (sota devsecops "gates that don't get bypassed"): no `continue-on-error`,
+# no soft-fail shell patterns, every third-party action pinned to a full commit SHA.
+# tests/test_ci_workflows.py machine-checks these properties.
+name: verify
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend_dependency_audit:
+    name: frontend dependency audit (connected, full lock graph)
+    permissions:
+      actions: read
+      contents: read
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@3adb4b14a2b0623876d18d863a498b785fb3752d # v2.3.8
+    with:
+      scan-args: |-
+        --lockfile=frontend/pnpm-lock.yaml
+      fail-on-vuln: true
+      upload-sarif: false
+
+  backend:
+    name: make verify (13 gates + welfare + non-slow suite)
+    runs-on: ubuntu-latest
+    # The non-slow suite alone is ~10 min on a fast dev machine but ~31 min on a
+    # hosted runner (measured, run 29770114080), and the gate chain (semgrep,
+    # verify-docs, ...) + verify-welfare ride on top. 60 gives honest headroom;
+    # trimming this back is a later optimization (xdist / job-split), not a gate.
+    timeout-minutes: 60
+    steps:
+      # Full history: check-gitleaks scans committed git history, and the
+      # trailer/consistency gates diff against origin/main.
+      - name: Check out (full history)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up uv 0.10.9 + Python 3.12
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.10.9"
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      # uv puts the venv at ./.venv, so the Makefile's relative
+      # `PY ?= .venv/bin/python` works unchanged — no PY override needed.
+      - name: Sync venv from committed uv.lock (dev + security + quality + types + docgen extras)
+        # docgen brings pillow — the describe_eval scenario tests import PIL and
+        # run in the non-slow suite, so the CI env must match the local ritual venv.
+        # types brings mypy (ADR-0085) for the check-mypy gate in `make verify`.
+        run: uv sync --frozen --extra dev --extra security --extra quality --extra types --extra docgen
+
+      # check-gitleaks is fail-closed (exit 2 when the binary is missing) — the
+      # binary MUST be installed, pinned and checksum-verified, never skipped.
+      - name: Install gitleaks 8.30.1 (pinned, sha256-verified)
+        env:
+          GITLEAKS_VERSION: "8.30.1"
+          GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+        run: |
+          curl -fsSL -o /tmp/gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tar.gz" | sha256sum --check --strict
+          mkdir -p "${HOME}/.local/bin"
+          tar -xzf /tmp/gitleaks.tar.gz -C "${HOME}/.local/bin" gitleaks
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+          "${HOME}/.local/bin/gitleaks" version
+
+      # Headroom for the tmpfs scratch tree the pytest leg below is pointed at.
+      # Printed rather than assumed: it is what makes that step's hypothesis
+      # falsifiable against a real number, and what makes a future ENOSPC one
+      # glance away instead of an archaeology exercise.
+      - name: Report /dev/shm headroom (pytest --basetemp target)
+        run: df -h /dev/shm
+
+      # The full gate chain by way of the Makefile (traceability, trailers,
+      # stories, migration-heads, egress, gitleaks, semgrep, ruff, mypy, bandit,
+      # consistency, dist-fresh, complexity, verify-docs), then the non-slow
+      # backend suite. Slow browser tests (chromium) stay in the LOCAL merge
+      # ritual; env-gated playwright/uxeval tests skip themselves here.
+      # jscpd (node) is absent on this runner: check-complexity loud-skips that
+      # one leg by design — never silently.
+      # `-n 4` (pytest-xdist): measured, the whole 17-gate chain is ~45s of a
+      # ~34min run — 95.6% of the time is THIS serial pytest leg. xdist changes
+      # only the SCHEDULING of tests, never their selection: the same gate
+      # prerequisites and the same full non-slow suite run here as before, so
+      # nothing about what "green" means changes. PYTEST_ARGS defaults to empty,
+      # so the LOCAL merge ritual stays serial and full (incl. slow browser tests).
+      #
+      # `--basetemp=/dev/shm/...` puts pytest's scratch tree on the runner's
+      # tmpfs. Stated as what it is: a HYPOTHESIS TEST, not a proven win. The
+      # evidence for it is that on the 56-minute run the CPU-bound gates were
+      # FASTER than a 30-minute run's while this I/O-heavy leg was 86% slower —
+      # so the differentiator was not CPU. If this shows no gain, the 29-to-92
+      # minute spread on constant work has another cause (most plausibly CPU
+      # steal on shared runners) and only a bigger or self-hosted runner fixes
+      # it. The measurement is above: `df` prints the headroom every run.
+      # Measured footprint of this suite's temp tree is ~0.9 GB against a tmpfs
+      # that defaults to half the runner's RAM, and the failure mode if that
+      # were ever wrong is a loud ENOSPC — never a silent skip. Verified that it
+      # composes with `-n 4`: xdist gives each worker its own basetemp/popen-gwN,
+      # so the rm_rf pytest does on an explicit --basetemp cannot cross workers.
+      - name: make verify (non-slow pytest leg)
+        run: make verify PYTEST_ARGS='-n 4 --basetemp=/dev/shm/kripos-pytest -m "not slow" --deselect tests/scenarios/docgen/test_live_visual_audit.py'
+
+      - name: make verify-welfare (named welfare-invariant suite)
+        run: make verify-welfare
+
+  frontend:
+    name: frontend (vitest + tsc)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Reads the pinned pnpm version from frontend/package.json "packageManager".
+      - name: Set up pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+        with:
+          package_json_file: frontend/package.json
+
+      - name: Set up Node 22
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      # Build the bundle BEFORE vitest so frontend/dist exists in CI. The airgap
+      # contract guard (src/styles/airgap.contract.test.ts) is `describe.skipIf`'d
+      # on a dist-absent tree (ADR-0099 untracked the committed dist), so without
+      # a build here its per-bundle "no external host" scans SKIP in CI and the
+      # welfare check never runs against the artifact that actually ships. Building
+      # here turns that coverage on: the guard scans the real emitted dist/assets/
+      # *.js. `pnpm run build` is `tsc -b && vite build`; the vite build runs once
+      # and the emitted tree is reused by vitest below. The `tsc --noEmit` leg
+      # stays as its own step (root tsconfig, machine-checked in
+      # tests/test_ci_workflows.py).
+      - name: Build (emit dist so the airgap guard runs, not skips)
+        run: pnpm run build
+
+      - name: vitest
+        run: npx vitest run
+
+      - name: tsc --noEmit
+        run: npx tsc --noEmit
