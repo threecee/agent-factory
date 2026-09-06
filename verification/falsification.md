@@ -20,6 +20,8 @@
    under the dev environment proves nothing about the documented production
    invocation (CMD paths, missing PYTHONPATH, files not COPY'd into the
    image). Test the invocation your Dockerfile/runbook actually documents.
+   An import test alone (`python -c "import gate"`) is not the invocation
+   (`evaluation-readiness.md` §6).
 7. **A root-cause report is falsified before the fix, or at the latest as
    the red acceptance criterion.** A read-only investigation
    (`../planning/investigation-brief-template.md`) returns a proposed causal
@@ -84,3 +86,20 @@
     stored receipt and never regresses. The falsification for (c) is the old
     `restart at 0` initialization: with it reverted in, the store's own
     regression guard must turn red. Example §3.
+13. **A skip is a verdict too — plant it.** An admission gate
+    (`evaluation-readiness.md`) is proven by three planted receipts, each of
+    which must REJECT with a message naming the cause: (a) a product AI role
+    configured real and observed dead while the judge is alive; (b) a
+    required data precondition unmet on the small bed; (c) a required check
+    marked `skip`. A wrapper that admits on "no check failed" passes (c) and
+    is vacuous. Then restore and prove the honest partial receipt (fake
+    roles, omitted actions with cause) is ADMITTED as a functional trial and
+    REJECTED as an AI evaluation — both directions, per evaluation-readiness
+    §2.2 rule 8. The worked receipts are evaluation-readiness §5.1–§5.4.
+14. **Fabricated probes falsify nothing.** A check tested only against inputs
+    the test invented (a selector list the test wrote, a log line the test
+    composed) has never met the real inventory it guards. Run the check once
+    against the actual served DOM, the actual log, the actual source
+    inventory before counting it as protection; the source factory's first
+    live smoke found a helper import that had never existed on main because
+    every unit test had supplied its own probes.
