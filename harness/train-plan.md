@@ -17,7 +17,7 @@ one train by hand from this plan before scripting it.
 | Primary checkout | `<abs path>` | The checkout whose shared environment lanes link to (worktree-ritual.md) |
 | Worktree root | `<abs path>` | Where train worktrees are created: `<root>/<train>` |
 | Train branch | `train/<name>` | One branch per train, from the current origin/main SHA |
-| Artifact directory | `<abs path>` | Receipts (§4) are written here; bank them if they must outlive the session (the harness's artifact-bank contract, when it lands) |
+| Artifact directory | `<abs path>` | Receipts (§4) are written here; bank them if they must outlive the session (`run-lifecycle.md` §9 says which receipts and when; `harness/artifact-bank.md`, introduced by PR5, owns the bank's lifecycle) |
 | Run id | `<train>-<attempt>` | Attempt counts from 1; a resumed run is the next attempt (lander-duties §3) |
 | Import root | `<how the package under test is resolved>` | e.g. `PYTHONPATH=<wt>/src`, `NODE_PATH`, a workspace `file:` link — the probe in §2 must be able to print the resolved path |
 
@@ -150,9 +150,10 @@ without it).
 Whatever launches the heavy step must (a) run the command in its own session
 so a harness or terminal exit does not take it down, (b) WAIT for it, (c)
 write the four lines to a temporary file and rename, (d) refuse an existing
-run id. The harness's run-lifecycle contract owns the general detached-launch
-pattern when it lands; until then this reference satisfies (a)–(d) on any
-platform with Python 3 and git. Save it as `<primary>/scripts/run_receipted.py`
+run id. `run-lifecycle.md` §4 owns the general detached-launch pattern for
+lane dispatch (session, writer lock, pin, stdin); the train's heavy step
+needs only (a)–(d), and this reference satisfies them on any platform with
+Python 3 and git. Save it as `<primary>/scripts/run_receipted.py`
 (or wherever the project keeps helpers) and cite it in §2 row 8b:
 
 ```python
