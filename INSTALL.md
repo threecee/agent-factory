@@ -22,7 +22,10 @@ that runs everything and stops at the first red gate).
    briefs cite them.
 2. `planning/core-model.md` + `planning/board-protocol.md` are law, not
    inspiration: the board is the planning source of truth; every dispatch and
-   landing has a board transaction (see the table in board-protocol).
+   landing has a board transaction (see the table in board-protocol). A
+   ruling the owner must give is filed as a decision brief
+   (`planning/decision-brief-template.md`, copied with the rest) — the owner
+   reads the brief, never the conversation.
 3. Copy `planning/lane-brief-template.md` → `.claude/templates/lane-brief.md`
    and parameterize: the gate block with the repo's pregate commands,
    `{{FIRST_CONTACT_STOPS}}` with the repo's guarded boundaries and number
@@ -190,7 +193,10 @@ register NO hook. Do not add a PreToolUse registration in this step.
 ## Step 6 — User level
 Follow `user-level/README.md`: add the global CLAUDE snippet to the user's
 `~/.claude/CLAUDE.md`, establish the memory conventions, install the
-recommended user-level skills.
+recommended user-level skills. Do NOT activate
+`user-level/landing-policy.example.md` — it ships INACTIVE and only the
+owner activates it, in person. Until then every finished train is held with
+a decision brief (`verification/lander-duties.md` §7).
 
 ## Step 7 — Smoke test
 1. Create one trivial board item, write a mini-spec, dispatch one lane from
@@ -223,7 +229,10 @@ recommended user-level skills.
    first evaluation artifact. Falsify the admission gate by planting the
    three rejections of `verification/falsification.md` rule 13.
 4. Land with `make verify && git push` — never an unconditional push after a
-   verify you did not read.
+   verify you did not read — and only on the owner's live ruling for the
+   smoke train (the owner is present for the smoke test; that ruling IS the
+   authority, recorded on the smoke item). Do not treat the smoke landing
+   as a grant of standing authority.
 5. Falsify the round counter: re-dispatch the same item under a new lane
    name and confirm the wrapper writes `round: 2`; attempt a third and
    confirm it is refused without a logged restart-from-document.
