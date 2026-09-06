@@ -37,8 +37,8 @@ baseline files, not by searching importers.
 
 ## 2. Lane `synth-move` — the handback
 
-The lane's result, terse shape (`harness/report-schema.md`, introduced by
-PR1):
+The lane's result, terse shape (`harness/report-schema.md`, rule 5, with the
+`id:` field of `../choices-ledger-README.md` §2 first in every entry):
 
 ```yaml
 choices:

@@ -81,8 +81,9 @@ The walked scenario is the storage format, not presentation polish
 ## 4. From handback to protocol
 1. The lane files `choices:` in its result (ID, headline, verdict,
    confidence, one-line gap) and writes the scenarios to its sidecar; the
-   terse shape is `harness/report-schema.md` (introduced by PR1). One field
-   name, `choices:`, in one language; no parallel field for the same thing.
+   terse shape is `harness/report-schema.md` (rule 5), with the `id:` field
+   of §2 first in every entry. One field name, `choices:`, in one language;
+   no parallel field for the same thing.
 2. The orchestrator runs `audit-choices` on the handback. Self-report and
    digest are inputs; the diff and the commits are walked regardless.
 3. Entries are appended to `docs/choices/<train>.md` under the lane's
