@@ -81,10 +81,13 @@ names its own ids and thresholds):
 9. Admission is bound to one run: the receipt carries the run id and the
    served process identity, and a wrapper refuses to start the expensive
    phase on a receipt from an earlier run or an earlier server process.
-   (Run identity is introduced by PR2 in `harness/run-lifecycle.md`.)
+   (`harness/run-lifecycle.md` §2 owns run identity and §5 binds a verdict
+   to it; the served process is identified as §6 identifies any process —
+   executable name plus exact argv token, never a log line.)
 10. The receipt is banked as it is produced, next to the evaluation's own
-    output (bank contract introduced by PR5 in `harness/artifact-bank.md`);
-    a smoke that lives only in a scratchpad cannot admit a later reader.
+    output (`harness/artifact-bank.md` §2; the run's own receipts go to the
+    bank per `harness/run-lifecycle.md` §9); a smoke that lives only in a
+    scratchpad cannot admit a later reader.
 
 ### 2.3 Coverage, not exit code
 The source factory's first live smoke ran "13 of 14 checks green" and the
@@ -94,14 +97,20 @@ inventory. Later, a pixel pass "14/14" was produced with several AI and
 load checks switched off against fake providers. Neither number is evidence
 of a full AI smoke. Read the check LIST of a receipt, not its total; a
 wrapper that admits on exit code alone is vacuous (falsify it per
-`falsification.md` rule 7).
+`falsification.md` rule 13).
 
 ## 3. The functional trial on a small bed
 
 11. Keep a small, complete, banked start state (a synthetic case that starts
     in seconds) for functional trials, and a separate large start state for
     scale and performance. The small bed is the default; the large bed is
-    reserved for what only scale can show.
+    reserved for what only scale can show. Each trial run STARTS its own
+    instance from a fresh copy of that state: an instance that was already
+    serving cannot show a startup-only fault (the closed-client class of
+    §2.1 lives in the startup path, as does a stale lease inherited from a
+    copy), so re-using a running instance for "one more trial" is not the
+    trial. The copy is isolated per `harness/artifact-bank.md` §3 before
+    the instance starts.
 12. **"Small" must still contain every situation the journey needs.** For
     each critical action of the scripted journey the project writes down its
     data preconditions (e.g. "the merge step needs at least two accounts with
@@ -135,8 +144,10 @@ wrapper that admits on exit code alone is vacuous (falsify it per
     digest, a manifest hash), never a file mtime: copying a bed reorders
     mtimes, and a gate that picks "the newest snapshot" then admits a stale
     index over the finished one. The gate and the reader must compute the
-    same identity. (A worked example of identity-vs-history is planned in
-    `verification/examples/identity-and-history.md`, introduced by PR10.)
+    same identity. The worked example — a decoy snapshot with a newer mtime
+    and the wrong key, which a mtime-picking gate selects and a key-resolving
+    gate rejects — is `verification/examples/identity-and-history.md` §2
+    (falsification rule 11).
 
 ## 4. The receipt
 
@@ -152,12 +163,12 @@ instance:
   start_state: small-synthetic-r12-pristine      # a banked, named start state
   start_state_identity: sha256:9b1d…                  # the reader's identity, not mtime
   served: http://127.0.0.1:<port>  pid=4711  started=2026-09-06T04:10:02Z
-roles:
-  driver:  { configured: scripted-recorder, observed: alive }
+roles:                                # per role: configured / observed / stand_in / identity (no key material)
+  driver:  { configured: scripted-recorder, observed: alive, identity: recorder@3f9c1e2 }
   judge:   { configured: none }
   product:
-    reasoning: { configured: fake, observed: fake, stand_in: deliberate }
-    embedding: { configured: fake, observed: fake, stand_in: deliberate }
+    reasoning: { configured: fake, observed: fake, stand_in: deliberate, identity: fake-v1 }
+    embedding: { configured: fake, observed: fake, stand_in: deliberate, identity: fake-v1 }
 background_work:
   required: all-terminal-and-notified
   observed: all-terminal-and-notified
@@ -190,6 +201,13 @@ Human form, same rows:
 The `proves:` line is mandatory and is the only sentence a downstream report
 may quote as the evaluation's claim.
 
+Every role row carries an `identity` — the provider/model pin or the pinned
+embedding identity the product's own configuration names, for a fake the
+fake's version — and never a key, token or endpoint secret. `build_sha`,
+`start_state_identity`, the role rows and `background_work` are the parity
+rows: two runs are comparable only when all of them agree
+(`interpretation/evaluation-practice.md`, "State parity and comparability").
+
 ## 5. Worked verdicts
 
 Each example is a diff against the §4 receipt. The reader should be able to
@@ -201,7 +219,7 @@ evaluation: ai-evaluation
 roles:
   judge:   { configured: model-judge, observed: alive }         # judge is fine
   product:
-    reasoning: { configured: real, observed: unavailable, stand_in: none }   # broken promise
+    reasoning: { configured: real, observed: unavailable, stand_in: none, identity: <provider/model> }   # broken promise
 checks:
   - { id: log-clean,      required: true, status: fail, evidence: "412 'client has been closed' lines since pid start" }
   - { id: reasoning-call, required: true, status: fail, evidence: "RuntimeError: cannot send a request, client has been closed" }
@@ -239,7 +257,7 @@ verdict: rejected
 proves: "nothing about AI readiness — two checks the AI evaluation depends on were not run. 12/14 ok is not admission."
 ```
 Rule 5 applies. A wrapper that reads "no failures ⇒ go" is the vacuity this
-rule exists for; the falsification in `falsification.md` rule 7 plants
+rule exists for; the falsification in `falsification.md` rule 13 plants
 exactly this receipt.
 
 ### 5.4 Offline fake prefix → admitted, as what it is
@@ -275,7 +293,9 @@ runbook, the CI job and the lander actually run.
 20. Which tree the invocation actually imported is a separate proof (a
     worktree can share an environment with the primary checkout and silently
     import the wrong revision); that provenance rule is owned by
-    `harness/worktree-ritual.md` and `verify-portfolio.md` (extended by PR2).
+    `harness/worktree-ritual.md` ("Prove which code the test imported",
+    with the per-stack probes) and `verify-portfolio.md` ("Prove the import
+    root before the expensive run").
 
 ## 7. Provenance and what is still provisional
 
@@ -288,13 +308,18 @@ had actually shown at the time of writing:
   of exactly the §4 shape (`beats_recorded`, `beats_skipped`,
   `beats_skipped_reason`). This is the anonymized §4/§5.4 example.
 - Its first live pre-flight smoke found a fabricated-probe gap (§2.3) and was
-  fixed; the smoke has since gated its AI-on evaluations.
+  fixed; the smoke has since gated its AI-on evaluations. The AI-on smoke
+  that established that gate was itself a PARTIAL run by §2.2 rule 6 — nine
+  of ten checks green, the embedding-identity check red as an apparatus
+  fault — so it is evidence that the gate runs, not a full AI-on admission.
 - **Still awaited:** the first sharp AI-on smoke plus full persona wave on a
   freshly built large start state under current code (the source factory's
   "T1"); its result was pending in a parallel run when this doctrine was
   written and is NOT claimed here. Likewise pending there: the replay matrix
   for warmer throughput (its #641), the precision fix for the pristine gate's
-  history-vs-live unavailable counting (its #669; covered by PR10), and the
-  post-fix convergence measurement of the large case (its #590/#670). None
-  of these is a proven result in this package; they are the reason §1 rule 2
-  and §2.2 rule 8 are phrased as they are.
+  history-vs-live unavailable counting (its #669 — the gate SHAPE is
+  `verification/examples/identity-and-history.md` §1; the source factory's
+  measurement with it is not in this package), and the post-fix convergence
+  measurement of the large case (its #590/#670). None of these is a proven
+  result in this package; they are the reason §1 rule 2 and §2.2 rule 8 are
+  phrased as they are.

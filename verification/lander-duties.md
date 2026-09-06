@@ -33,9 +33,12 @@ project's concrete commands and its resource contract live in
    package from the ASSEMBLED tree, not the primary checkout (train-plan §2,
    row "import root"). Refuse any path outside the tree.
 8. Resource check immediately before the heavy step (train-plan §3), then
-   FULL verify green on the assembled tree. If a mid-verify edit becomes
-   necessary, STOP the verify first; never mutate a tree under a running
-   verify (each such mutation costs a full re-run).
+   FULL verify green on the assembled tree. A verify leg that skipped for an
+   absent bed is not green on a train that touches its journey — read that
+   leg's own PASSED line (evaluation-readiness §3 rule 13 owns what a skip
+   may satisfy). If a mid-verify edit becomes necessary, STOP the verify
+   first; never mutate a tree under a running verify (each such mutation
+   costs a full re-run).
 9. Re-confirm currency: fetch; if origin/main moved, READ what landed before
    rebasing — a non-ff rejection during an incident usually means a parallel
    session fixed the same thing (stand down if their fix is complete).
