@@ -13,3 +13,12 @@ Two disciplines make the loop honest:
 2. **Process findings feed the factory itself.** Orchestrator mistakes the
    machinery catches (date errors, stale instructions, mid-verify mutations)
    get memories and, when procedural, reviewed diffs to the operations doc.
+
+A change to the factory's own machinery enters the same loop as a product
+change: a pilot with a measurement, a finding with the numbers, a board item
+for adoption. `harness/bulk-read-contract.md` is the worked case — routing
+large reads through a cheaper worker is adopted only after an off/on train
+pair records total cost (orchestrator and worker), latency and fact
+preservation (§7 there); until then it stays a voluntary tool. A machinery
+change that skips the measurement is a choice for the ledger, not a
+saving.

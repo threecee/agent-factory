@@ -13,6 +13,13 @@ factory-specific additions:
   skills, and more).
 - Factory additions (this repo's license): independent-lane-review and
   adaptations recorded in the lock file.
+- **threecee/varde** (same author; contributed under this repo's license) —
+  the bounded bulk-read pilot skills `bulk-reader`, `log-triage` and
+  `handback-digest`, adapted from that factory's `.claude/skills/` set. The
+  adaptation replaces every repository-specific command, path, threshold,
+  worker alias and model name with the parameters in
+  `../harness/bulk-read-contract.md` §4; the worker runtime and the
+  PreToolUse hooks were not copied — the contract describes them.
 
 Factory adaptations to upstream skill text (recorded here so a re-vendoring
 from upstream does not silently drop them):
