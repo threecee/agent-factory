@@ -20,3 +20,20 @@
    under the dev environment proves nothing about the documented production
    invocation (CMD paths, missing PYTHONPATH, files not COPY'd into the
    image). Test the invocation your Dockerfile/runbook actually documents.
+   An import test alone (`python -c "import gate"`) is not the invocation.
+7. **A skip is a verdict too — plant it.** An admission gate
+   (`evaluation-readiness.md`) is proven by three planted receipts, each of
+   which must REJECT with a message naming the cause: (a) a product AI role
+   configured real and observed dead while the judge is alive; (b) a
+   required data precondition unmet on the small bed; (c) a required check
+   marked `skip`. A wrapper that admits on "no check failed" passes (c) and
+   is vacuous. Then restore and prove the honest partial receipt (fake roles,
+   omitted actions with cause) is ADMITTED as a functional trial and
+   REJECTED as an AI evaluation — both directions, per evaluation-readiness §2.2 rule 8.
+8. **Fabricated probes falsify nothing.** A check tested only against inputs
+   the test invented (a selector list the test wrote, a log line the test
+   composed) has never met the real inventory it guards. Run the check once
+   against the actual served DOM, the actual log, the actual source
+   inventory before counting it as protection; the source factory's first
+   live smoke found a helper import that had never existed on main because
+   every unit test had supplied its own probes.
