@@ -20,14 +20,26 @@ module into the several owners it was hiding.
    oracle.
 2. Find every current owner and consumer. Treat wrappers, aliases, pass-local
    constants, copied structs, and "temporary" branches as sediment until proven
-   otherwise.
+   otherwise. Consumers are more than importers: a test in another language
+   that reads the file as text, a tool whose baseline is keyed by the file's
+   path, a test that patches a dotted name, a driver executed by a test from a
+   research directory. Before the first move, split, rename or delete, run the
+   consumer inventory in `interpretation/investigation-practice.md`
+   ("Consumer inventory") and decide live-versus-historical per file from
+   executing readers, not from the directory a file sits in.
 3. Promote the concept to its natural home. Pick the module that would own it from
    scratch, then make old call sites consume that owner directly.
 4. Delete or collapse the stale path in the same pass when feasible. If a bridge must
    remain, make it tiny, named as compatibility, and give it a removal condition.
 5. Verify behavior through consumers, not just the new module. A clean refactor is
    only proven when the surfaces that used to diverge now report or exercise the
-   same source of truth.
+   same source of truth — and when each consumer's own apparatus has run (the
+   frontend contract, the path-keyed SAST gate, the docgen run), not only the
+   module's suite. A moved line is a NEW finding to a path-keyed baseline: fix
+   the code, never relieve the baseline for the move. A guard that patches a
+   name and stays green proves the name existed, not that the path was taken;
+   pin it at the owner and show it red on a planted call before the refactor
+   leans on it.
 
 ## Rules
 
@@ -75,6 +87,11 @@ module into the several owners it was hiding.
   the commit; and a net count near zero can still hide real weight — a new
   cron, table column, index, endpoint, dependency, or config flag is a surface
   someone now owns and maintains, so name those separately from the count.
+  The inverse holds too: the count is a signal, the consumer surfaces are the
+  verdict. A change that fixes a dependency direction at net +1 production
+  line is still a simplification; a split that reads as −0 and scatters one
+  concept is not; and lines moved intact to a better owner are not deleted
+  maintenance — say "moved", not "removed".
 - **Do not over-weigh the sunk cost of the existing architecture.** "It already
   exists and works" is not an argument for keeping a shape — coding agents make
   large architecture switches cheap, so size a refactor by the quality of the end
