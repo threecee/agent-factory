@@ -58,3 +58,11 @@ So the factory works from ANY checkout on the machine:
    default by expiring (§6 there). Revisit the names on `review_by`; a
    policy past that date is stale, and the reading rules for a stale or
    inherited policy are §3 rule 3 and the worked example in §9.
+8. **Guard switches (optional):** `FACTORY_GUARD_DISABLED=1` only while the
+   guard apparatus itself is down; `FACTORY_GUARD_ALLOW=<id>` per rule,
+   preferably as a prefix on the command itself so it stands in the
+   transcript. Both are logged and ledgered as orchestrator entries, never
+   committed; record the reason and the date. The parameters a guard reads
+   (gate names, CLI name and token, port range, disk floor) are the repo's
+   operations-doc bindings of `../harness/guards.md` §8, not user-level
+   settings.
