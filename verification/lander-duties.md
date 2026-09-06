@@ -17,7 +17,8 @@ project's concrete commands and its resource contract live in
    (regenerated indexes from multiple lanes merge-conflict here — resolve by
    regenerating once on the assembled tree); counter-like edits from parallel
    lanes merged "clean" can still be wrong — set base+N at assembly. Never
-   predict a conflict; compute it (`git merge-tree --write-tree A B`).
+   predict a conflict; compute it (`git merge-tree --write-tree A B`,
+   git ≥ 2.38 — the one version requirement this file has).
 4. The choices ledger for the train is committed WITH the train.
 5. Build every product the gates or the suite READ, on the assembled tree,
    on every run — whether or not a file under that product's source changed
@@ -43,9 +44,9 @@ project's concrete commands and its resource contract live in
 10. Push HEAD:main GATED ON the verify verdict — mechanically
     (`make verify && git push …`), never as two statements in one
     unconditional block. (The smoke test shipped a red train exactly that way
-    once.) Where the project's owner has chosen a landing authorization
-    (user-level/landing-policy.example.md, introduced by PR11), it governs
-    WHETHER the lander may push unattended; it never changes this gate.
+    once.) Where the project's owner has chosen a landing authorization (a
+    user-level policy; the factory ships none active), it governs WHETHER
+    the lander may push unattended; it never changes this gate.
 11. Flip NUMBERS `claimed → landed`. Board sweep (§5). Fast-forward the
     primary checkout. Reap lane worktrees and branches only after each
     boarding SHA is confirmed an ancestor of main
@@ -59,8 +60,8 @@ project's concrete commands and its resource contract live in
    and never test the combination until the last one lands.
 2. Independent means: no lane depends on another's branch; no two lanes claim
    the same scarce number (migration, ADR); no two lanes edit the same
-   contract region — computed with `git merge-tree --write-tree`, not
-   predicted. A textual conflict is not a reason to split the train; it is
+   contract region — computed with `git merge-tree --write-tree` (§1 step
+   3), not predicted. A textual conflict is not a reason to split the train; it is
    resolved on the train (§3). Semantic incompatibility found by the suite
    is a reason to REVERT the offending merge commit and land the rest.
 3. Readiness alone is never a reason to give a non-blocking lane its own
@@ -114,13 +115,14 @@ it. The criteria:
 5. **A new run id, and the old receipt stays.** Every attempt is
    `<train>-<attempt>` and owns `<run-id>.log` and `<run-id>.exit`. Existing
    receipts are never overwritten; the failed attempt's log and exit file
-   survive the resumed attempt. Judge completion from the exit file's
-   `EXIT=<code>` line plus its `BASE=`/`HEAD=` lines — never from a pipe, a
-   wrapper's status, or a log tail. Bank receipts that must outlive the
-   session (harness/artifact-bank.md, introduced by PR5).
+   survive the resumed attempt. The verdict is read as train-plan §4.1 says
+   (that section owns the rule); bank receipts that must outlive the
+   session (the harness's artifact-bank contract, when it lands).
 6. **A red step after which the fix is committed on the train tree** resumes
-   the same way: commit, new run id, continue. Three rounds are normal for a
-   ten-lane train; count them in the protocol.
+   the same way: commit, new run id, continue. Expect several attempts on a
+   large train — the source factory's protocols record three verify rounds
+   on a fourteen-lane train and four attempts on a seven-boarder train —
+   and count them in the protocol.
 
 **Worked example.** Train `t-42`, run `t-42-1`: the third merge conflicts in
 one spec table (two lanes updated the same row). The lander resolves it by
@@ -137,11 +139,11 @@ test run compete for the same machine, and a verdict from a contended machine
 is adjudicated, not trusted (verify-portfolio.md). The lander therefore runs
 the project's resource contract (train-plan §3) at train creation AND
 immediately before full verify — a lane or standup that started during the
-build must not race the suite. The check is a snapshot, not a lock: it
-detects what is running at probe time and nothing that starts afterwards.
-The lander closes that window procedurally — no dispatch and no standup
-while a train is between its resource check and its verdict — and never
-claims race-free coordination it has not implemented and tested.
+build must not race the suite. The check is a snapshot, not a lock
+(train-plan §3.6 owns what it does and does not claim). The lander's rule,
+owned here: no dispatch and no standup while a train is between its
+resource check and its verdict, and no claim of race-free coordination the
+project has not implemented and tested.
 
 ## 5. Board sweep and the derived-view check
 
@@ -151,27 +153,24 @@ claims race-free coordination it has not implemented and tested.
 2. Deferred findings from the train (a reverted lane, a follow-up the suite
    exposed) are filed as board items in the same sweep, with the train's SHA
    in the body.
-3. **Derived-view check — only if the project has one.** If the project
-   keeps any progress page besides the board (a dashboard, a README status
-   table, a wiki page), compare, for every boarded issue: issue state on
-   GitHub, board status, and what the page shows (status and, if it shows
-   one, the landing SHA). Record every difference in the train protocol and
-   correct the PAGE. Never edit the board to match a page. If there is no
-   such page, the protocol says "derived view: none" and the step is done.
-   The source factory recorded this as a lander candidate duty after an
-   owner re-ordered already-landed work from a stale page; it was not an
-   automated routine there. Treat it as a recommended manual check.
+3. **Derived-view check — only if the project has one.** Run the check
+   that planning/board-protocol.md ("Authority, pagination and derived
+   views", item 3) owns, and record its differences in the train protocol.
+   If the project keeps no page besides the board, the protocol says
+   "derived view: none" and the step is done. It is a candidate duty
+   (medium confidence, see its home), not a proven routine.
 4. Fast-forward the primary checkout; reap worktrees only after the ancestor
    check in §1 step 11.
 
 ## 6. What this file does not claim
 
 - No assembler script ships with the factory. The order above was executed
-  by a repository-owned script in one source factory across roughly ten
-  trains; the transferable part is the order, the criteria and the receipts.
-  Script it in your project AFTER you have landed at least one train by
-  hand from train-plan.md, so the script encodes commands you have watched
-  succeed and fail.
+  by a repository-owned script in one source factory on a handful of
+  multi-lane trains after a first, partly manual fourteen-lane attempt
+  (train-plan §8 has the honest account); the transferable part is the
+  order, the criteria and the receipts. Script it in your project AFTER you
+  have landed at least one train by hand from train-plan.md, so the script
+  encodes commands you have watched succeed and fail.
 - Serialized verification (one full verify at a time) is a rule of THIS
-  file's owner, the lander; it is not enforced by any lock the factory
-  provides.
+  file's owner, the lander (§4); it is not enforced by any lock the factory
+  provides (train-plan §3.6).

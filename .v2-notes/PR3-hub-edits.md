@@ -47,7 +47,9 @@ breakers).
 Fill in `harness/train-plan.md` and commit it as `docs/train-plan.md`: the
 exact command per landing step (§2) and the resource contract (§3 — port
 range, agent-CLI binary and subcommand token, load threshold and wait
-window, hard stops). Run its §7 falsification list once on a throwaway
+window, hard stops). Save its §4.2 receipt launcher into the project's
+scripts directory — the full-verify verdict is read from that receipt and
+nothing else (§4.1). Run its §7 falsification list once on a throwaway
 train. No assembler script ships; land from the plan by hand first
 (`verification/lander-duties.md` §6).
 ```

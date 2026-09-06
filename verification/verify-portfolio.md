@@ -21,8 +21,11 @@ frontend must run it explicitly at assembly.
    against; "the build exists" is not "the build is current". A gate that
    checks the stamp belongs in the cheap gates.
 3. The check for "did a frontend file change?" is not a substitute: a
-   served-instance test reads the bundle regardless of what changed, and the
-   source factory learned this from a train whose only diff was docs.
+   served-instance test reads the bundle regardless of what changed. The
+   source factory's lander once skipped the build because no frontend file
+   had changed on a train that did change backend code; the train worktree
+   had no bundle, a login page answered 503 in a browser test, and the
+   first verify round was red for an apparatus reason, not a product one.
 4. The commands are the project's (harness/train-plan.md §2, step 5). The
    order — cross-checks, build, cheap gates, full verify — is the lander's
    (lander-duties.md §1).
@@ -31,8 +34,9 @@ frontend must run it explicitly at assembly.
 - **One verify at a time, on an idle machine.** Full verify never shares the
   machine with a build lane, a served instance or an evaluation wave; the
   resource contract in harness/train-plan.md §3 is the check, run
-  immediately before the suite, and it is a snapshot, not a lock. A red
-  suite from a contended machine is adjudicated (below), never trusted.
+  immediately before the suite (a snapshot, not a lock — train-plan §3.6).
+  A red suite from a contended machine is adjudicated (below), never
+  trusted.
 - **Local verify gates landing.** CI re-verifies and deploys; it is never the
   gate that lets code onto main. Lanes never run full verify (the lander does,
   on the ASSEMBLED train — verify the batch, not just its parts).
@@ -41,10 +45,11 @@ frontend must run it explicitly at assembly.
   semantic delta, and NEW findings of a secret-like nature are never
   baselined — rewrite the commit instead.
 - **Read the log, not the wrapper.** Background exit codes lie; the gate's own
-  log line is the verdict, and a train's verdict is its exit receipt's
-  `EXIT=` line under its own run id (lander-duties.md §3 — a resumed attempt
-  gets a new run id and never overwrites the failed attempt's receipt). A
-  red verify has three different causes that look
+  log line is the verdict, and a train's verdict is its run-bound exit
+  receipt (harness/train-plan.md §4.1 owns the rule and §4.2 the launcher;
+  lander-duties.md §3 — a resumed attempt gets a new run id and never
+  overwrites the failed attempt's receipt). A red verify has three
+  different causes that look
   alike (product bug, harness/starvation, stale state) — adjudicate before
   acting: rerun the failing file at idle; load-starved timing tests that go
   green at idle are a known class (then harden the test to assert contracts,

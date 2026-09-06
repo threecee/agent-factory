@@ -48,11 +48,14 @@ API-created items get no automatic status — set it explicitly.
    sweep, for every boarded issue compare three facts: the issue's state on
    GitHub, its Status on the Project, and what the view shows (status and,
    if the view carries one, the landing SHA). Every difference is recorded
-   in the train's choices protocol and fixed on the view. The failure this
-   prevents: an owner reading a stale "in progress" on a page and
-   re-ordering work that already landed. The source factory named this as a
-   lander duty after that happened; it was a manual check there, not an
-   automated one, and the factory does not ship a page adapter.
+   in the train's choices protocol and fixed on the view. The failure it
+   guards against — illustrative, not a recorded incident: an owner reads a
+   stale "in progress" on a page and re-orders work that already landed.
+   Provenance: the source factory's issue tracker named this as a CANDIDATE
+   lander duty; it was not found as an explicit duty in that factory's
+   operational law, it was never automated there, and the factory ships no
+   page adapter. Medium confidence — a recommended manual check, and the
+   lander's checkpoint (verification/lander-duties.md §5) points here.
 4. **A view must not become a second plan.** A view may show more (burn-
    down, grouping, links) but never carries a status the Project lacks; new
    intentions are filed on the Project first.
