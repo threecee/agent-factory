@@ -20,18 +20,22 @@ WHO granted WHAT, for HOW LONG, and what still stops.
 ## 1. Activation and the check the lander runs
 
 1. Active path: `~/.claude/landing-policy.md` (user level, outside every
-   checkout, so one policy governs every repo the operator lands from). A
-   repo may narrow it with its own `docs/landing-policy.md`; the narrower
-   rule wins. Neither file is created by the installer.
+   checkout, so one policy governs every repo the operator lands from).
+   There is exactly one active path and one file; a repo that needs a
+   stricter rule gets an extra `holds:` entry in that file (§2), never a
+   second policy file. The installer creates nothing at the path.
 2. A policy is active only when ALL hold: the file exists at the active
    path and the path does not contain `example`; it has a line
    `status: ACTIVE` and no line `status: INACTIVE`; `valid_until` is a real
    `YYYY-MM-DD` date and today is not later than it (the policy is valid
    through that day, expired from the next); `granted_by` and `signed` are
-   filled with something other than the `<placeholder>` of §2. Anything
-   else — file missing, `INACTIVE`, expired, a placeholder date, unsigned,
-   an `example` in the path — means **no authority**. This paragraph and
-   the check below are the same list; if one changes, both change.
+   filled — the first non-blank character after the colon exists and is
+   neither `<` (the `<placeholder>` of §2) nor `#` (the placeholder deleted
+   and the template's trailing comment kept). Anything else — file missing,
+   `INACTIVE`, expired, a placeholder date, unsigned, a bare or
+   comment-only field, an `example` in the path — means **no authority**.
+   This paragraph and the check below are the same list; if one changes,
+   both change.
 3. The check, run by the lander before any push (adapt the path):
 
    ```sh
@@ -42,8 +46,8 @@ WHO granted WHAT, for HOW LONG, and what still stops.
       && case "$p" in *example*) false;; *) true;; esac \
       && grep -Eq '^status: *ACTIVE([[:space:]]|$)' "$p" \
       && ! grep -Eq '^status: *INACTIVE' "$p" \
-      && grep -Eq '^granted_by: *[^<[:space:]]' "$p" \
-      && grep -Eq '^signed: *[^<[:space:]]' "$p" \
+      && grep -Eq '^granted_by: *[^<#[:space:]]' "$p" \
+      && grep -Eq '^signed: *[^<#[:space:]]' "$p" \
       && test -n "$until" && test "$until" -ge "$today"
    then echo AUTHORITY
    else echo "NO AUTHORITY -> hold + decision brief"
@@ -54,10 +58,13 @@ WHO granted WHAT, for HOW LONG, and what still stops.
    and compared as an integer (`YYYYMMDD`), never as a string — string
    comparison of `<YYYY-MM-DD>` against a date is collation-dependent and
    fails OPEN under `LC_ALL=C`. A trailing comment on the `valid_until`
-   line (the §2 template keeps one) is ignored by the match. A field
-   whose first character is `<` is a placeholder and fails. Against this
-   example file the check prints `NO AUTHORITY` (the status line says
-   `INACTIVE`). That is the correct result for a fresh install.
+   line (the §2 template keeps one) is ignored by the match. A
+   `granted_by`/`signed` field whose first non-blank character is `<` (the
+   placeholder) or `#` (the placeholder deleted, the template's comment
+   kept) or that has no value at all fails — the value must come first on
+   the line, the comment after it. Against this example file the check
+   prints `NO AUTHORITY` (the status line says `INACTIVE`). That is the
+   correct result for a fresh install.
 
    Falsify it once on the machine, on scratch copies of this file with
    the path adapted, under `LC_ALL=C` as well as the login locale; the
@@ -72,11 +79,17 @@ WHO granted WHAT, for HOW LONG, and what still stops.
    | same, `valid_until` = yesterday | `NO AUTHORITY` |
    | ONLY the two `status:` lines flipped to ACTIVE, every `<placeholder>` left | `NO AUTHORITY` |
    | all filled and ACTIVE, but `signed: <owner initials + date>` left | `NO AUTHORITY` |
-   | all filled and ACTIVE, `granted_by:` empty | `NO AUTHORITY` |
+   | all filled and ACTIVE, `granted_by:` placeholder deleted, the template's `# the person …` comment kept | `NO AUTHORITY` |
+   | all filled and ACTIVE, `signed:` placeholder deleted, its `# a policy nobody signed …` comment kept | `NO AUTHORITY` |
+   | all filled and ACTIVE, `granted_by:` bare (comment stripped too) | `NO AUTHORITY` |
+   | all filled and ACTIVE, `granted_by: Jane Doe   # the person …` (value first, comment after) | `AUTHORITY` |
    | all filled and ACTIVE, copy saved under a path containing `example` | `NO AUTHORITY` |
 
-   A check that prints `AUTHORITY` for any row but the second and fourth
-   is a bug in the check, and no train lands on it until it is fixed.
+   A check that prints `AUTHORITY` for any row but the second, fourth and
+   the value-first row is a bug in the check, and no train lands on it
+   until it is fixed. The rows with a deleted placeholder and a kept
+   comment are the shape an editor produces most often; a check that only
+   fails a bare field has not been falsified.
 4. No authority is not an error. It routes the finished train to the hold
    path in `../verification/lander-duties.md` §7: train kept
    intact, decision brief filed, one notification, wait.
@@ -123,8 +136,8 @@ holds:
 
 # Where the ONE notification per transition goes, and how it is keyed.
 notify:
-  channel: <issue comment | push notification | chat DM | mail>
-  key: "<item id> <train HEAD sha> <transition>"   # never re-sent for the same key
+  channel: <issue comment | push notification | chat DM | mail>   # with no active policy, the comment on the item IS the notification
+  key: "<item id> <train HEAD sha | none> <transition>"   # board-protocol § Notifications owns the rule; never re-sent for the same key
   transitions: [held, decided, landed, reverted]
 
 revocation: <how the owner revokes — delete the file, or set INACTIVE>

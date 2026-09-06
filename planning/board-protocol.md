@@ -116,8 +116,12 @@ session resume.
 2. Before sending, read the item: if the key is already there, do not send.
    A watcher that wakes twice, a wrapper that retries, a session resumed
    from a transcript — all of them find the key and stay silent.
-3. The channel is chosen locally in the landing policy (`notify.channel`),
-   not here; the key is portable across channels.
+3. The channel is local, not fixed here. With an ACTIVE landing policy it
+   is `notify.channel` there. Without one — the default path, where no
+   policy file exists — the channel is the item itself: the comment that
+   carries the key (the brief, the ruling, the landing comment) IS the
+   notification, and the owner's subscription to the board or issue
+   delivers it. The key is portable across channels.
 4. A notification is a pointer to the item, not a summary of it: item id,
    transition, train SHA, one line. The reader opens the brief.
 5. A train re-assembled with a different HEAD is a new key; its `held`
