@@ -11,8 +11,8 @@ what makes a report trustworthy lives in `../verification/falsification.md`
 (§7–§9); the evidence-package convention lives in `../harness/artifact-bank.md`
 (introduced by PR5); the run identity, the stdout-extraction rule and the
 report path live in `../harness/run-lifecycle.md` (introduced by PR2). Round
-counting and the measurement contract follow `execution-contract.md`
-(introduced by PR1). Nothing here needs tool support: the brief is a
+counting (§3) and the measurement contract (§2) follow
+`execution-contract.md`. Nothing here needs tool support: the brief is a
 markdown file, the evidence is a directory, the report is a markdown file,
 and every check in §10 is a read or a shell one-liner.
 
@@ -170,7 +170,7 @@ The orchestrator, not the investigator, turns the report into a fix brief:
    - what remains **unknown**, carried as an observability criterion (persist
      the cause class), never rewritten into a proven cause;
    - the measurement that the later run must produce, and who runs it
-     (`execution-contract.md`).
+     (`execution-contract.md` §2).
 4. **State the proof limits.** One investigation that changed the mandate
    shows the pattern works; it does not prove a general time saving. A fix
    train green in one pass is one instance. Say which measurements are still

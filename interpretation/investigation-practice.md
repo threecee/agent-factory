@@ -72,7 +72,7 @@ the trust rules are `../verification/falsification.md` §7–§9.
 - **One success is not a time saving.** The worked example changed the
   mandate and its train verified green in one pass; that shows the pattern
   can work. Claims about rounds saved need the round counts from
-  `../planning/execution-contract.md` (introduced by PR1) across several
+  `../planning/execution-contract.md` §3 across several
   investigations, and the measurement the fix promised (here: plan attempts
   on the full case after the fix) is owed by a later run, not by the report.
 - **Probes carry the caller's arguments** — copy the call site verbatim.
