@@ -41,6 +41,10 @@ a file or a git operation. The rules below have exactly one home each
   target repo; the wrapper's `git add -A` must never commit them.
 - Tear down served instances by PORT and by path, never by process-name grep
   (../harness/artifact-bank.md §8).
+- Guards may refuse a hard form (a verdict through a pipe, `--no-verify`,
+  text-match process selection, a raw lane dispatch): the refusal names the
+  exact alternative and a switch; using a switch is logged and goes into the
+  train ledger with a reason, never silently (../harness/guards.md §4–§5).
 - First-contact STOPs for this repo (execution-contract.md §5):
   {{FIRST_CONTACT_STOPS}}
 

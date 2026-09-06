@@ -103,3 +103,12 @@
     inventory before counting it as protection; the source factory's first
     live smoke found a helper import that had never existed on main because
     every unit test had supplied its own probes.
+15. **A guard is mounted only after its planted violation went red and its
+    green form stayed silent.** Every rule ships a falsification list
+    (planted violations with the needle the refusal must contain; green
+    forms expected silent), replayed through the REAL hook entry, and the
+    receipt log is banked before the hook is registered; the first live
+    train runs with the hook on and records every refusal and switch in the
+    ledger. Rule 2 applies: the message is checked, not the exit code. A
+    rule that produces one false positive without a named alternative drops
+    to WARN until fixed (`../harness/guards.md` §11).

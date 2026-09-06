@@ -1,0 +1,508 @@
+# Harness guards — one dispatcher, switches that leave a trace, rules that fail open, adapters as short mappings
+
+**Status: pilot, measurement-gated. Nothing here activates by itself.** This
+file is the one home of every rule about guards; `harness/guards/` is the
+mechanism and `harness/tests/test_guards.sh` the proof that it does what this
+file says. Installing the package registers no hook; §9 says what registration
+is and §11 what must exist before it happens.
+
+Depends on `run-lifecycle.md` §6 (process identity: executable name plus an
+exact argv token), `train-plan.md` §3 and §4 (the resource contract and the
+receipt a verdict is read from), `../interpretation/choices-ledger-README.md`
+§2 (the `O-<n>` entry a switch use becomes) and `bulk-read-contract.md` §3
+rule 5 and §8 (the switch precedent: a hook whose block message does not name
+its escape hatches is not compliant, and an adapter is a harness option, never
+a default).
+
+## 1. What a guard is and is not
+
+A guard is a hook-mounted check that reads **one** signal available without
+network at a harness event (pre-tool, post-tool, stop, session start) or a git
+hook, and answers `allow`, `deny` or `context`. Four properties, none optional:
+
+1. **One signal, no network.** The command text, a file in the tree, the
+   process table, a receipt. A guard that needs the network (a board lookup)
+   runs after the tool, advisory, never before it (§6, M-9).
+2. **A denial names the exact alternative.** A guard never refuses what it
+   cannot rewrite into the command the operator should have typed (§5).
+3. **The switch exists before the guard is mounted** (§4). A rule with no
+   switch is one of the few un-overridable conditions listed there, and says
+   so in its message.
+4. **A guard fails OPEN on its own crash**, with a loud context note (§3).
+   Three neighbours that look alike and are not: a **gate** runs inside
+   verify and fails CLOSED — a crashing gate is red; the **board
+   verification** (M-9) is fail-open even on a logic error, because the board
+   is not an air-gap-critical invariant; a **dispatch quota canary**
+   (`run-lifecycle.md` §11 rule 1) is deliberately NOT fail-open, because a
+   dispatch without quota is the failure it exists to prevent. Each of those
+   is stated once, in its own home.
+
+**No guard does any of this:** push, commit, reap a worktree, flip a registry
+row, create a symlink, weaken a gate or a threshold, rewrite a baseline or a
+receipt, bypass a hold, read production data, measure load, kill a process,
+or call the network in a pre-tool event. A guard can refuse and name the
+alternative; it never performs it.
+
+## 2. Hook channel facts
+
+What a hook can do depends on the event, and getting this wrong produces
+reminders nobody receives (§10). The table is the reference behaviour of the
+Claude Code hook model as read at analysis time (§14); other harnesses map
+onto it or are post-hoc (§9).
+
+| Event | Exit 2 blocks? | Context channel at exit 0 | Plain stdout reaches the model? |
+|---|---|---|---|
+| `PreToolUse` | yes — or JSON `permissionDecision: deny` with a reason | `hookSpecificOutput.additionalContext` | no |
+| `PostToolUse`, `PostToolUseFailure`, `PostToolBatch` | exit 2 shows stderr to the model **after** the tool ran; nothing is undone | `additionalContext` | no |
+| `Stop`, `SubagentStop` | yes — prevents the stop, the turn continues | `additionalContext` | no |
+| `PreCompact` | yes — blocks the compaction | **none**: the event discards `systemMessage` and `continue` | no |
+| `SessionStart` (sources `startup`, `resume`, `compact`), `SubagentStart` | no | `additionalContext` | **yes** (`SessionStart` only) |
+| `UserPromptSubmit`, `UserPromptExpansion` | exit 2 blocks the prompt | `additionalContext` | **yes** |
+| `PostModelSwitch` | no | `additionalContext` | **yes** |
+
+Consequences the package builds on:
+
+- Anything that must **survive a compaction** goes to a `SessionStart` hook
+  with matcher `compact` (plain stdout reaches the model there), or to the
+  next `UserPromptSubmit`. Nothing a `PreCompact` hook writes is preserved;
+  `PreCompact` is a block, never a context channel.
+- Timeouts: 600 s per command hook by default, **30 s** on the prompt and
+  model-switch events — a `UserPromptSubmit` leg must finish well inside that.
+- The hook process **inherits the environment of the session start**. A
+  variable exported mid-session does not reach a hook; hence the command
+  prefix and the state-file switch forms (§4). The harness env file
+  (`CLAUDE_ENV_FILE`, written by a `SessionStart` hook) is documented for the
+  shell tool's environment, and the dispatcher reads its `export` lines as a
+  courtesy, not as the primary switch.
+- **Coding-CLI hooks are post-hoc and unverified.** Never claim a blocking
+  hook for a coding CLI; what such a lane can be forced to is what the
+  wrapper checks at handback and what the git hooks refuse (§9,
+  `run-lifecycle.md` §11 rule 3).
+
+## 3. Dispatcher and rule contract
+
+One dispatcher (`guards/guard_dispatch.py`) serves every event; adapters feed
+it (§9). Per invocation:
+
+- **Input.** The hook payload as JSON on stdin; the event from `argv[1]`
+  (falling back to the payload's `hook_event_name`). An empty or garbage
+  payload is an allow with no output.
+- **Rules.** One module per mechanism under `guards/rules/`, loaded sorted by
+  file name, exposing `ID` (the switch name), `EVENTS` (a set of event names),
+  `MATCHER` (a tool name, a set of tool names, or `None` for tool-less
+  events), optional `HONORS_ALLOW = True` (the rule reads its own switch, for
+  un-overridable conditions), `check(payload, context) -> Verdict` and
+  `falsification_cases(workdir)`. A module that fails to import or lacks
+  `ID`/`EVENTS`/`check` is skipped and reported as a context note under
+  `loader` — never a crash, never a denial.
+- **Verdict.** `allow`, `deny` or `context` with a message. Any `deny` →
+  the refusal on stderr, exit 2. Otherwise the `context` notes go out on the
+  event's channel: `hookSpecificOutput.additionalContext` JSON on stdout for
+  the harness events of §2; plain text on stderr, exit 0, for the git
+  pseudo-events `GitPreCommit`, `GitCommitMsg`, `GitPrePush` (git has no JSON
+  channel; the driver that feeds them is the git-hook adapter,
+  `../verification/protections.md`, introduced by PR13). An event outside
+  both sets has no context channel and the notes stay in the log.
+- **Crash.** A rule that raises is reported as a context note under its own
+  id: `GUARD <id> failed and let the call through (<error>). Fix it before it
+  counts as standard.` The other rules still run and still refuse.
+- **Log.** One JSON line per invocation to `FACTORY_GUARD_LOG` (default
+  `.factory-guard.log` in the repository root, gitignored): timestamp,
+  session, event, tool, cwd, the first 200 characters of the command, the
+  switch sources, one verdict per rule (`allow`/`deny`/`context`/`switched`,
+  or `{"*": "disabled"}`), and the messages.
+- **Events log.** `<state-dir>/factory-events.log`, one tab-separated line
+  per **denial** and per **switch use** (timestamp, session, event, kind
+  `deny`|`allow-switch`, rule id, message or the switch sources). The memory
+  nudge reads it; the ledger cites it (§4).
+- **State directory.** `FACTORY_GUARD_STATE_DIR`, else `.factory-guard/` in
+  the **primary** checkout — the parent of `git rev-parse --git-common-dir` —
+  so every linked worktree, a session started in a worktree and the git hooks
+  share one allow file, one events log and one landing state. **Tests MUST
+  set the override**; a direct call without it writes into the primary's
+  events log (the wave-2 assembly finding behind this rule).
+
+## 4. Switches
+
+Two switches, four sources, every use logged.
+
+| Switch | Effect |
+|---|---|
+| `FACTORY_GUARD_DISABLED=1` | every rule off for the session; the log records `{"*": "disabled"}` |
+| `FACTORY_GUARD_ALLOW=<id>[,<id>]` | the named rules off; a rule with `HONORS_ALLOW` still runs and decides itself |
+
+Sources, read in this order — **first wins** for a value, all of them named in
+the log record's `switches` field:
+
+1. the hook process environment (set before the session started);
+2. `export` lines in the harness env file named by `CLAUDE_ENV_FILE`;
+3. a `FACTORY_GUARD_ALLOW=<id>` **prefix on the command text itself**, so the
+   switch stands in the transcript exactly where it was used — the form to
+   prefer;
+4. for events with no command (`Stop`, `SessionStart`, the git hooks), the
+   state directory's allow file `factory-guard-allow`, one id per line.
+
+Every switch use writes one `allow-switch` line to the events log **and** one
+orchestrator entry `O-<n>` in the train's choices ledger with the rule id and
+the reason (`../interpretation/choices-ledger-README.md` §1); a switch without
+a ledger entry is a finding at landing. The clause is the bulk-read
+contract's: a switch is for when the apparatus is down or the guard is wrong,
+never a permanently disabled gate.
+
+**Conditions with no switch.** A few refusals name a fact no switch can
+change and are refused with the switch set, saying so: a server listening in
+the project's port range, a test runner descending from a live lane
+(`train-plan.md` §3.1 hard stops, M-5), and the gate legs of §6 that are not
+hooks at all (M-7, M-8, M-17 — the fix *is* the correction).
+
+## 5. Hard and soft forms
+
+A **hard form** is refused (exit 2) because an exact, always-available
+alternative exists: a verdict through a pipe, `--no-verify`, text-match
+process selection, a raw lane dispatch, a push without a receipt. A **soft
+form** is a context note or a `WARN` at exit 0: a reminder, a lint on its
+first train, a check whose apparatus is offline.
+
+The refusal shape, every hard form, no exceptions:
+
+```
+<GUARD>: <cause>. <evidence>. Fix: <exact command>. Switch: <id> (logged).
+```
+
+Rules of form:
+
+- A soft form becomes hard only by a **reviewed diff** to the operations doc
+  after one train with the hook on, never by default.
+- A rule that produces one false positive without a named alternative drops
+  to `WARN` until fixed (§11).
+- A `Stop`-style rule that refuses because of its own bug would hold the
+  session in a loop. Such a rule **counts its refusals** in its state file
+  and gives up loudly after three; the duties stay listed.
+
+## 6. Mechanism table
+
+Every mechanism of the reference analysis, with its trigger, the one signal it
+reads, its form, and its home. `shipped` rows are code in this package;
+`documented` rows are one sentence in their existing home plus this row;
+`PR13` rows are forward references resolved by `../verification/protections.md`
+(introduced by PR13). No row restates its home.
+
+| Mechanism | Trigger | Signal read | Form | Home | Status |
+|---|---|---|---|---|---|
+| M-1 landing | `git push` to the default branch (pre-tool, and the git pre-push hook) | the verify receipt for exactly this HEAD (`EXIT=`, `HEAD=`, `BASE=`), boarder heads on origin, the choices ledger, a `landing-in-progress.json` written after a registered push | hard | `../verification/protections.md` + the landing rule | PR13 |
+| M-2 verdict | pre-tool shell | a gate invocation followed by a hiding pipe stage or a push in the same call | hard | §7 | shipped |
+| M-3 identity | pre-tool shell; lint leg over the tree | `pgrep -f`-style text-match selection; the grep form outside lines marked `forbidden form` | hard; lint red | §7 | shipped |
+| M-4 ritual | post-tool after `git worktree add`; pre-tool before a dispatch into the tree | symlinks, lockfile equality, `info/exclude`, HEAD vs the remote default branch | hard (dispatch), context (post-tool) | `worktree-ritual.md` | documented |
+| M-5 idle | pre-tool before verify, assembly, an evaluation driver | the process table and listeners by identity; never load | hard conditions have no switch; soft conditions yield to `idle` | `train-plan.md` §3 | documented |
+| M-6 built-bundle | pre-tool before a serve/standup | the built bundle's entry set and stamp against the tree it will serve | hard | this row — only with a bundle to serve | documented |
+| M-7 ledger lint | landing (M-1) and a cheap gate on a train branch | the choices ledger's form: one section per boarder, verdict + confidence per entry, no `unsound` without a fix note, no hedge | hard on the second train, `WARN` on the first | PR13 gate | PR13 |
+| M-8 drift leg | a gate leg | a `claimed` registry row whose file is already on the remote default branch | gate, no switch | PR13 gate | PR13 |
+| M-9 board | post-tool after a dispatch and after a registered push | the board item's status via the board CLI (network — hence post-tool, never in verify) | context; **fail-open by design** | `../planning/board-protocol.md` | PR13 |
+| M-10 git hooks | `pre-commit`, `commit-msg`, `pre-push` | the identity git will write, the staged blobs, the trailer, the landing check on a push to the default branch | hard; git's `--no-verify` cannot be removed on the git side | PR13 | PR13 |
+| M-11 ruleset / status | a push to the default branch on the hosting side | a required commit status `local-verify` on exactly this SHA, posted from the receipt | hosting refuses | PR13 | PR13 |
+| M-12 CI signal | `SessionStart` | the last CI conclusion for the default branch, when the CLI is authenticated; offline silent | context | PR13 | PR13 |
+| M-13 close-out | `Stop` while `landing-in-progress.json` exists; `SessionStart` `compact`/`resume` as context | the open lander duties (ff, registry flip, reap, listeners, disk) | hard on `Stop` with the three-refusal rule; context after compaction | PR13 | PR13 |
+| M-14 memory nudge | `Stop` and `SessionStart` `compact` | the events log (≥ 1 refusal or ≥ 2 red assembly rounds on one train → a question, never a block); the operations doc changed in the working tree → re-test its portability claim | soft | `../interpretation/memory-conventions.md` | documented |
+| M-15 dispatch preconditions, result lint, rows `rawcodex`, `justification`, `subagent-result` | the wrapper before launch; the wrapper at handback; pre-tool on a raw lane-shaped CLI call; pre-tool on a harness-subagent dispatch; `SubagentStop` | the brief's pinned SHA vs the worktree HEAD, the model policy, the quota-canary receipt, the round file, the dispatch gap; the report's form; a lane-shaped invocation outside the wrapper; a `justification:` line (logged, not judged); a result file passing the machine check | hard (wrapper refusal, `rawcodex`, `justification`); `subagent-result` hard with the three-refusal rule | `run-lifecycle.md` §11 + `report-schema.md` "Machine check at handback" | documented |
+| M-16 destructive and forbidden forms | pre-tool shell / edit | see the rows below | hard, one switch per row | §7 (`no-verify`); the others documented | `no-verify` shipped |
+| M-17 gate legs | cheap gates and lane pregate | duplicate registry ids, registry pin tests, diff-triggered tests, "never weaken" (a baseline that rises without an `--update` commit, a gate changed without a test change, net assertion loss), brief↔operations consistency, skills lock, env scrub, seed-in-migration | gates, no switch; the "never weaken" leg `WARN` on its first train | `../verification/verify-portfolio.md` | PR13 |
+| M-18 watchdog | a recurring task, not a hook | every `<lane>.sentinel.json` at `--max-age-min`, the exit sentinel, log and result mtimes, the branch head on origin; one line only on change | context; nudges, never kills | `run-lifecycle.md` §11 rule 6 (consumer of `../verification/gates/lane_sentinel.py`) | documented |
+| M-19 hygiene | none — a rule about the hook table itself | every registered entry exists and its channel reaches the model | — | §10 | shipped as §10 + the settings example |
+| M-20 disk floor | pre-tool before a big spender (dispatch, assembly, serve) | `df -k <volume>` against the floor, `du -sk <tmp>` under a time budget | hard; a `du` that does not finish is a note | `train-plan.md` §3.1 row + the reminders' session-start line | documented |
+
+**M-16 rows.** Each row has one switch (`FACTORY_GUARD_ALLOW=<row>`) so a false
+positive never turns off the whole table.
+
+| Row | Refuses | Alternative named |
+|---|---|---|
+| `no-verify` | `git commit\|push\|merge\|rebase\|am --no-verify`, `git commit -n` — always | the same command without the flag (§7, shipped) |
+| `baseline` | a ratchet `--update` unless the cwd is the primary, the tree is clean and the row's own switch is set (`HONORS_ALLOW`) | fix the findings, or rebaseline deliberately in the primary on a clean HEAD with the switch as a prefix |
+| `stash-live` | `git stash\|checkout\|restore\|reset\|clean` while a writer whose directory flag resolves to this tree is alive (by identity) | wait for the sentinel to say done/parked, or tear the lane down first |
+| `restore-dirty` | `git restore <path>` / `git checkout -- <path>` over uncommitted changes | commit first, or `git stash push -m <lane> -- <path>` |
+| `worktree-remove` | `git worktree remove` / `git branch -D` while the branch holds unpushed commits, a dirty tree, ritual symlinks, large ignored files or a parked result — a branch merged into the remote default branch passes first | push, bank, unlink; then remove |
+| `signal-probe` | `kill -USR1` / `-30` at a live process | the artefact's mtime and a stack dump tool |
+| `shared-sentinel` | a redirect or `tee` to a shared default log/exit name without a lane prefix | `<lane>-<name>` |
+| `second-writer` | a second writing lane CLI in a tree that already has one | wait, or run the second read-only |
+| `edit-scope` | an edit to a script a running process holds open; an edit to historical documents from a subagent session | write the finding in the result file; only the orchestrator touches history |
+| `commit-identity` | `git commit` in a tree whose `user.email` is not the factory identity | `git -C <tree> config user.email <identity>` |
+
+A repository may list known no-op build forms as further rows (a type-check
+flag that neither checks nor emits; the reference factory had one) with the
+honest form as the alternative.
+
+## 7. Shipped rules
+
+Three rules ship as code, each with its falsification table (§11). Every gate
+name, CLI name and token in their messages is a parameter (§8).
+
+### `verdict` (M-2)
+
+- **Signal.** A gate invocation — `make <target>` matching a make pattern, a
+  runner name, or `python -m scripts.<module>` / `python scripts/<module>.py`
+  matching a module pattern of `FACTORY_GUARD_GATES` — followed in the same
+  command by `| tail` or `| head` (always), by any other pipe stage without
+  `set -o pipefail`, or by a `git push` statement; and `cat <x>.exit`
+  followed by `git push` (verdict and push in one call). Only invocations are
+  gated, never mentions: `grep` on a log, `ls | tail`, `git log | head` pass.
+- **Parameter.** `FACTORY_GUARD_GATES` (§8).
+- **Refusal.** `VERDICT GUARD: a verdict cannot be read through «| tail».
+  Run the gate with a redirect to <lane>-<gate>.log and read $? in ONE call;
+  push in the NEXT (harness/train-plan.md §4.1). Fix, exactly: <rewritten
+  command>. Switch: FACTORY_GUARD_ALLOW=verdict (logged).` The push form
+  adds `— then, in the NEXT call when EXIT=0: <push>`. The command is never
+  rewritten silently; the exact form stands in the message so the operator
+  learns it.
+- **Falsification** (10 denied, 10 allowed):
+
+| Denied (red) | Allowed (green) |
+|---|---|
+| `make check-backlog 2>&1 \| tail -6; echo EXIT=$?` | `grep -n FAILED verify-t-42.log \| tail -5` |
+| `pytest tests/test_backlog.py -q \| tail -1` | `ls -t artifacts \| tail -3` |
+| `python3 -m scripts.check_backlog \| head -20` | `set -o pipefail; make check-backlog 2>&1 \| tee t-42-backlog.log; echo EXIT=${PIPESTATUS[0]}` |
+| `make verify 2>&1 \| grep -E 'passed\|failed'` (no pipefail) | `make check-backlog > lane-backlog.log 2>&1; echo EXIT=$?` |
+| `python3 -m scripts.assemble_train t-42 --run-id t-42-1 \| tail` | `cat t-42-1.exit` |
+| `make check-backlog; git push origin HEAD:main` | `git push origin lane/x` |
+| `cat t-42-1.exit; git push origin HEAD:main` | `pytest tests/test_backlog.py -q -p no:cacheprovider` |
+| `pytest tests -q 2>&1 \| tee lane-full.log` (no pipefail) | `python3 -m scripts.check_backlog` |
+| `make verify-fast \| tail -2` | `make check-backlog && make check-numbers` |
+| `make check-backlog && make check-numbers && git push origin HEAD:main` | `git log --oneline \| head -3` |
+
+### `identity` (M-3b, plus the lint leg M-3a)
+
+- **Signal.** The forbidden forms `pgrep -f`/`--full`, `pkill -f`, and `ps
+  aux|-ef|ax|-ax … | grep|egrep|rg`, at statement level, `cd` prefixes
+  honoured. Never kills.
+- **Parameters.** `FACTORY_GUARD_CLI`, `FACTORY_GUARD_CLI_TOKEN` fill the
+  identity form in the message (placeholders `<cli>`/`<token>` when unset).
+- **Refusal** (it quotes the forbidden form). `IDENTITY GUARD: «pgrep -f»
+  matches the inspecting shell
+  (harness/run-lifecycle.md §6). Fix: ps -axo pid=,comm=,args= | awk
+  '$2=="<cli>" && /<token>/'. Switch: FACTORY_GUARD_ALLOW=identity (logged).`
+  The `pkill` form says `kills by text match and hits other lanes' processes`
+  and adds `tear down by port: lsof -ti :<port>` before the identity form.
+- **Lint leg.** `lint_findings(root, roots=('harness',), marker='forbidden
+  form')` returns `path:line: text` for the same three patterns outside lines
+  that carry the marker (on the line, or on the previous non-blank line). The
+  installer's own lint test and the shell test use it; the package's `harness/`
+  tree is clean under it, so every quoted forbidden form here carries the
+  marker.
+- **Falsification** (5 forbidden forms denied, 5 allowed): `pkill -f serve.py` ·
+  `pgrep -fl "<cli> <token>"` · `pgrep --full '<cli> <token>' | wc -l` (forbidden forms) ·
+  `ps aux | grep '[s]erve.py'` · `cd /tmp && pgrep -af serve` (forbidden forms, all red)
+  versus the identity form itself · `lsof -ti :<port>` · `pgrep -x <cli>` ·
+  `grep -rn pgrep docs` · `kill 4711` (green).
+
+### `no-verify` (M-16 row)
+
+- **Signal.** `git commit|push|merge|rebase|am --no-verify` and `git commit
+  -n`, `git -C <dir>` honoured — always, no precondition. Git's own
+  `--no-verify` cannot be removed on the git side, so this harness-side row
+  is what gives the PR13 git hooks their meaning inside a hooked session.
+- **Refusal.** `GUARD no-verify: «git <sub> --no-verify» skips the git hooks
+  (planning/lane-brief-template.md §2; verification/protections.md). Fix: run
+  «git <sub>» without the flag — a red hook is fixed, never bypassed. Switch:
+  FACTORY_GUARD_ALLOW=no-verify (logged).`
+- **Falsification** (3 denied, 2 allowed): `git commit --no-verify -m 'x'` ·
+  `git -C /tmp/wt commit -n -m 'x'` · `git push --no-verify origin lane/x`
+  (red) versus `git commit -m 'x'` · `grep -rn -- --no-verify docs` (green).
+
+## 8. Parameters
+
+The package names roles; the operator binds each to a value in the
+repository's operations doc. Nothing here is a universal constant.
+
+| Role | Placeholder | Suggested default | Owner |
+|---|---|---|---|
+| Package location | `FACTORY_GUARD_DIR` | beside the entry script (`<adapters>/../guards`) | the entry script; set only when the two directories are not copied together |
+| State directory | `FACTORY_GUARD_STATE_DIR` | `.factory-guard/` in the primary checkout (§3) | tests set it always; operators only when the primary is not writable |
+| Verdict log | `FACTORY_GUARD_LOG` | `.factory-guard.log` in the repository root, gitignored; named per train during the pilot | operator; banked as produced during the pilot |
+| Global switch | `FACTORY_GUARD_DISABLED` | unset; `1` only while the apparatus is down | operator (`../user-level/README.md`) |
+| Per-rule switch | `FACTORY_GUARD_ALLOW` | unset; `<id>[,<id>]`, preferably as a command prefix | operator; every use ledgered |
+| Offline mode | `FACTORY_GUARD_OFFLINE` | unset; `1` makes every network-reading rule (M-9) answer with context instead of calling out — the falsification runner and the tests set it | operator; the apparatus always |
+| Gate names for `verdict` | `FACTORY_GUARD_GATES` | `verify,verify-*,check-*,pytest,scripts.check_*,scripts.assemble_*` — make target patterns and runner names (no dot), module patterns (with a dot) | repo operations doc |
+| Lane CLI identity | `FACTORY_GUARD_CLI` / `FACTORY_GUARD_CLI_TOKEN` / `FACTORY_GUARD_CLI_DIR_FLAG` | unset — the identity refusal prints placeholders and the live-lane legs list nothing; e.g. `codex` / `exec` / `--cd` | repo operations doc (`train-plan.md` §3.3 names the same two values) |
+| Port range | `FACTORY_GUARD_PORT_RANGE` | unset; e.g. `4300-4399` (`train-plan.md` §3.1) | repo operations doc |
+| Data volume | `FACTORY_GUARD_DATA_VOLUME` | unset; the volume the repo lives on | repo operations doc |
+| Disk floor | `FACTORY_GUARD_DISK_FLOOR_GB` | unset; e.g. `20` | repo operations doc |
+| Entry script for `falsify` | `FACTORY_GUARD_ENTRY` | `<package>/../adapters/factory_guard.py` | the falsification runner |
+
+## 9. Adapters
+
+An adapter is the short, harness-specific mapping that feeds events to the
+one dispatcher. Registration of an adapter is a separate, deliberate operator
+step (§11); the package registers nothing.
+
+| Harness | Adapter | What it is |
+|---|---|---|
+| Claude Code | `adapters/claude-code-settings.json.example` + `adapters/factory_guard.py` + `adapters/factory_reminders.sh` | the hooks block: `PreToolUse` matchers `Bash`, `Agent\|Task`, `Edit\|Write\|MultiEdit\|NotebookEdit`; `PostToolUse` `Bash`; `Stop`; `SubagentStop`; `SessionStart` matcher `compact\|resume` — all to the entry script with the event as `argv[1]`; the two text legs (`SessionStart` incl. `compact`, `UserPromptSubmit`) to the reminders script (§10). `$CLAUDE_PROJECT_DIR/<path>` is the only thing to edit |
+| Coding CLI with post-hoc hooks | `adapters/AGENTS.md.example` | one paragraph: the session is not hooked; the git hooks, the wrapper's result lint at handback (`report-schema.md` "Machine check at handback") and the standing brief's hard rules bind the lane; write the report to `$LANE_RESULT_PATH` |
+| git | the tracked hook shims + driver | `pre-commit`, `commit-msg`, `pre-push` → the pseudo-events of §3 (`../verification/protections.md`, introduced by PR13) |
+| CI | a workflow | the pull-request advisory lanes and the CI signal (`../verification/protections.md`, introduced by PR13) |
+
+The entry script is nineteen lines: it locates the package
+(`FACTORY_GUARD_DIR`, else beside itself), puts the package's parent on
+`sys.path`, and calls `main(argv)`. It works wherever the two directories are
+copied together.
+
+## 10. Hook hygiene (M-19)
+
+Two facts per registered entry, checked when the table changes and once per
+install: **the script exists**, and **its channel reaches the model** (§2).
+An entry that fails either is a reminder nobody receives, and worse than no
+entry: it looks like coverage.
+
+| Was | Reroute to |
+|---|---|
+| a `PostToolUse` hook printing plain stdout | the dispatcher, as `additionalContext` |
+| a `PreCompact` hook printing "keep this after compaction" | `SessionStart` with matcher `compact` (plain stdout reaches the model there) |
+| a hook entry pointing at a script that does not exist | delete the entry, or write the script |
+
+One owner per reminder: the post-dispatch checklist is a `PostToolUse` note
+from the dispatcher; the lander list comes from the landing guard (M-1); the
+worktree ritual from the ritual guard (M-4); the reminders script owns only
+the two plain-stdout legs and says so in its header. A reminder with two
+owners is stated twice and maintained by neither.
+
+## 11. Falsification and mounting
+
+Every rule ships its falsification list: planted violations with the needle
+the refusal must contain (expected `RED`), and green forms expected silent
+(`GREEN`). The runner replays them through the **real** entry script as a
+subprocess with the case's environment merged over a scrubbed one
+(`FACTORY_GUARD_ALLOW`, `FACTORY_GUARD_DISABLED`, `CLAUDE_ENV_FILE` removed;
+`FACTORY_GUARD_OFFLINE=1`; a per-run state directory and log under `--out`),
+judges the exit code **and** the needle in the **right** stream
+(`../verification/falsification.md` rule 2: the message, not the exit code),
+and writes the receipt:
+
+```sh
+python3 harness/guards/guard_dispatch.py falsify --lane <lane> --out <dir>
+#   → <dir>/<lane>-guard-falsification.log, one line per case:
+#     RED|GREEN ok|FAIL <rule>/<case>: <detail>
+#   exit 0 when every case is ok, 1 on any FAIL
+```
+
+Mounting is then a trial, not a switch flip:
+
+1. The receipt log is **banked** before the adapter is registered
+   (`artifact-bank.md` §2).
+2. The first live train runs with the hooks on from assembly start, and the
+   ledger's `O-` section records every refusal and every switch use.
+3. Measured on that train: refusals, true and false; assembly runs per train
+   before and after; switch use. A false positive without a named alternative
+   sends the rule to `WARN` until fixed (§5).
+4. Adoption enters the loop of `../interpretation/continuous-improvement.md`:
+   a machinery change with a measurement, a finding with the numbers, a board
+   item for making the rule standard. No rule counts as standard before it
+   has run one train with (a) the receipt for red on a planted violation, (b)
+   silence on a green train, (c) zero switch uses without a reason in the
+   ledger.
+
+## 12. What stays human
+
+Binding. The signal a hook can read is the **existence or form** of text,
+never its truth. A hook that checks that `root_cause:` exists does not check
+that the hypothesis is true; one that counts assertions does not tell a
+rewrite from a deletion; a lint that finds "should work now" does not find the
+same hedge in another sentence or another language. Therefore:
+
+- **Review content** — whether a red→green proof is real, whether an
+  invariant is right, whether a reviewer was independent, whether the
+  close-out order was followed. A form lint (M-7, M-15) is useful because it
+  forces text a reader can reject; it is not the proof.
+- **Role and policy choices** — who is the lander, which effort level, which
+  model, how CI is read. A hook may require that the choice is **logged**
+  (the `justification:` line of M-15); it never judges whether it is right.
+- **Events that need reading** — a purge in progress, whether three
+  hypotheses were distinct, whether a failure was a quota wall, the right
+  moment to bank, a parallel fixer. The signal is often printed (M-14); the
+  decision is a reading.
+- **Rules the operations doc exempts by design** — a session trailer's form
+  ("do not invent a check"), a disable variable that is only for a dead
+  worker chain, the absence of compliance ceremony on interior surfaces. A
+  guard there would contradict the manual it serves.
+
+Three patterns of false security, each seen in the reference factory:
+
+1. **The guard measures itself.** A text-match idle check that matched the
+   inspecting shell; a load check that measured its own pregate burst; a
+   freshness stamp computed from the wrong entry set. A guard that was never
+   falsified with a planted violation is a claim, and an operator who stops
+   believing it starts forcing past it.
+2. **The guard can be bypassed silently.** `--no-verify` without a git hook,
+   `--update` without a dirty-tree refusal, `--force` as a habit. A switch
+   must leave a trace and be per rule, not global.
+3. **The guard locks the operator out.** A hook mounted before its switch
+   existed or before the alternative it named could work. The switch exists
+   first; the refusal always names the exact alternative.
+
+And the `Stop`-hook warning: a `Stop` hook that holds a session in its turn
+because of its own bug is worse than no hook. It counts and gives up after
+three (§5).
+
+## 13. What the test proves — and what it does not
+
+`bash harness/tests/test_guards.sh` (or `zsh …`) runs in about ten seconds
+on a throwaway copy of `guards/` and `adapters/` under a path with a space,
+through the real entry script, every case with its own state directory and
+log (§3):
+
+| Case | Proves | Section |
+|---|---|---|
+| 1 | an empty payload, a garbage payload and an unknown event are exit 0 with no output | §3 |
+| 2 | the `verdict` table: denied forms name the pipe stage, the rewritten form and the switch; the push form names the next call; green forms are silent; `FACTORY_GUARD_GATES` binds the gate names both ways | §7, §8 |
+| 3 | the `identity` table: the three forbidden forms are refused naming the identity form and, for `pkill`, the port form; the identity form is filled from the CLI variables; the green forms pass | §7, §8 |
+| 4 | the `no-verify` table, `-C` honoured, `merge --no-verify` included | §7 |
+| 5 | all four switch sources are honoured and each is named in the log (`env:`, `prefix:`, `file:`, `env-file:`); `DISABLED=1` logs `{"*": "disabled"}`; another rule's switch does not silence this one; the events log holds one line per denial and per switch use, naming the source | §4, §3 |
+| 6 | a rule that raises fails OPEN: exit 0 and the loud note in `additionalContext`; a module without `ID`/`EVENTS`/`check` yields a loader note, never a crash; the other rules still refuse beside a crashing one | §3 |
+| 7 | channels: a `PostToolUse` note is stdout JSON only; a `PreToolUse` denial is stderr only with exit 2; a `GitPrePush` pseudo-event's note is stderr text with exit 0 | §3, §2 |
+| 8 | from a linked worktree the state directory resolves to the primary (its allow file is read, nothing is written under the worktree); `FACTORY_GUARD_STATE_DIR` overrides it | §3 |
+| 9 | `falsify` writes the receipt with exactly the shipped number of `ok` lines in the documented shape and exits 0; a planted wrong needle in the copy gives exactly one `FAIL` line naming the case and exit 1 | §11 |
+| 10 | the lint helper reports a planted forbidden form as `path:line: text`, is silent on a marked line, and finds nothing in the package's own `harness/` tree | §7 |
+| 11 | the reminders script prints the guards line, the `DISABLED` warning and the open-landing line; `compact` prints the keep-list; `prompt` names a live lane by identity (a symlink named `fakecli`, the exact token, the directory flag) and never a shell whose text mentions the same words; a different bound CLI name lists nothing | §9, §10 |
+| 12 | the settings example parses, names only adapter scripts that exist, carries the required matchers, has no `PreCompact` leg and no bulk-read entry | §9, §10 |
+
+Self-falsification of the test (authoring run, on scratch copies of the
+package through `TEST_GUARDS_ROOT`): dropping the events-log write turned
+exactly 5g and 5h red; removing the rule try/except turned 6a–6c red (the
+crash takes the whole hook down, so the loader note and the neighbouring
+denial vanish with it); emptying `CONTEXT_EVENTS` turned 7a red and, because
+the crash and loader notes travel on the same channel, 6a and 6b with it.
+Nothing else moved.
+
+What the test does **not** prove:
+
+- **A real CLI's hook behaviour.** The payloads are the documented shapes,
+  fed by the test. Whether a given harness version sends them, honours exit
+  2 on every event of §2, or surfaces `additionalContext` on `PostToolUse` is
+  checked once per harness, by hand, against a live session.
+- **The `compact` matcher firing.** That a `SessionStart` hook with source
+  `compact` runs right after a compaction and that its plain stdout reaches
+  the model was read from the reference, not tried.
+- **Process identity for a directory operand containing a space.** `ps`
+  joins argv with spaces; the reminders script and `live_agents` read such an
+  operand up to its first space. Lane directories without spaces are the
+  contract; the test's fake lane is space-free for this reason.
+- **The documented-not-shipped rows of §6.** They are contract rows with a
+  home each; their falsification lists are written when their code is.
+
+## 14. Provenance and what is still provisional
+
+This chapter was distilled from a reference factory's 2026 analysis of what
+could be made deterministic and its two implementation waves; the dispatcher,
+the shared primitives and the three rules keep that implementation's
+semantics (fail-open on a crashing rule, four logged switch sources, denial
+reserved for hard forms) with every gate name, CLI name, port, path and
+identity replaced by the parameters of §8 (`../skills/ATTRIBUTION.md`).
+
+Provisional:
+
+- The false-positive rate of `verdict` and `identity` is unknown until one
+  train has run with the hooks on (§11). The reference expected the first
+  mounting to send at least one row to `WARN`.
+- The git hooks and the hosting-side ruleset were untried in the reference at
+  analysis time; PR13 carries them with their own falsification.
+- The channel table of §2 is the reference harness's documented behaviour at
+  analysis time; the one empirical confirmation there was that `PostToolUse`
+  plain stdout never reached the model. Re-read the table against the
+  harness version you run.

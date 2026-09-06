@@ -24,6 +24,15 @@ factory-specific additions:
   worker alias and model name with the parameters in
   `../harness/bulk-read-contract.md` §4; the worker runtime and the
   PreToolUse hooks were not copied — the contract describes them.
+  - The guard dispatcher, its shared primitives and the three example
+    rules under `harness/guards/` are adapted from that factory's guard
+    dispatcher and rule set (wave 1 and 2, 2026-09); the adaptation makes
+    imports package-relative, replaces every gate name, CLI name, port
+    range, path, identity and Norwegian string with the parameters in
+    `../harness/guards.md` §8, drops the fixture library and pytest suite
+    in favour of `guard_dispatch.py falsify` and the shell test, and keeps
+    the semantics verbatim: fail-open on a crashing rule, four logged
+    switch sources, denial reserved for hard forms.
 
 Factory adaptations to upstream skill text (recorded here so a re-vendoring
 from upstream does not silently drop them):

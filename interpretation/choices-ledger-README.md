@@ -38,6 +38,10 @@ duplicates the rules below.
   commit, so the next lane of that shape inherits the lesson as a given.
 - A mechanical lane (a version bump, one documentation row) with no choices
   of its own gets one line in the protocol, not an empty ritual.
+- A guard denial the orchestrator overrode, and every switch use, is an
+  orchestrator entry (`O-<n>`) with the rule id, the reason and the
+  events-log line it corresponds to; a switch without a ledger entry is a
+  finding at landing (../harness/guards.md §4).
 
 ## 2. One ID per choice, everywhere it is mentioned
 - A choice gets a stable ID when it is first written down and keeps it:
