@@ -348,9 +348,9 @@ mechanism rows; this section owns the rules).
    file that passes the machine check, refused at most three times before
    the guard gives up loudly (`guards.md` §5).
 5. **A raw lane-shaped CLI invocation outside the wrapper is a hard form**
-   (row `rawcodex` in `guards.md` §6): the wrapper is what makes a dispatch
-   checkable. A read-only investigation (a read-only sandbox, no auto-approve
-   flag) is not a lane and passes.
+   (row `raw-dispatch` in `guards.md` §6): the wrapper is what makes a
+   dispatch checkable. A read-only investigation (a read-only sandbox, no
+   auto-approve flag) is not a lane and passes.
 6. **The sentinel watchdog is a recurring task, not a hook.** It reads every
    `<lane>.sentinel.json` in `LANE_SENTINEL_DIR`, judges freshness with
    `../verification/gates/lane_sentinel.py` at `--max-age-min`, compares with
@@ -360,7 +360,7 @@ mechanism rows; this section owns the rules).
    exits 1 when it printed, 0 otherwise, so a loop shows text only on change.
    It nudges by text; it never kills, re-dispatches or edits a sentinel.
 
-| Parameter | Meaning | Reference-factory value (a local choice, not a default) |
+| Parameter | Meaning | Source-factory value (a local choice, not a default) |
 |---|---|---|
 | N | maximum age of the quota-canary receipt, minutes | 30 |
 | G | minimum gap between two dispatches, seconds | 20 |

@@ -11,8 +11,8 @@
 # FACTORY_GUARD_DIR / CLAUDE_PROJECT_DIR (the entry runs under `env -i`), sets
 # FACTORY_GUARD_OFFLINE=1, feeds a JSON payload to the REAL entry
 # `python3 <copy>/adapters/factory_guard.py <event>` and asserts the exit code AND a
-# message needle AND which stream carried it. Direct main() calls are never used: the
-# wave-2 assembly finding was that they polluted the primary checkout's events log.
+# message needle AND which stream carried it. Direct main() calls are never used: a
+# direct call without the state-dir override writes into the primary checkout's events log.
 #
 # TEST_GUARDS_ROOT=<dir containing harness/> selects the tree under test (default: this
 # package) — how the self-falsification in guards.md §13 ran the mutated scratch copies.
@@ -20,28 +20,35 @@
 # Cases (harness/guards.md §13 lists what each proves):
 #   1  empty / garbage payload and an unknown event → exit 0, no output
 #   2  verdict table: denied forms name the pipe stage, the rewritten form and the switch;
-#      allowed forms are silent
-#   3  identity table: text-match process selection denied naming the identity form;
-#      the identity form, lsof by port, pgrep -x, grep for the word, kill <pid> allowed
-#   4  no-verify table
+#      a subshell, a brace group and a bash -c string are seen through; `git commit -m push`
+#      is not a push; allowed forms are silent; GATES bind from env and from the env file
+#   3  identity table: text-match process selection denied naming the launcher's identity
+#      form; a sh -c string seen through; the launcher form, the ps|awk mention, lsof by
+#      port, pgrep -x, grep for the word, kill <pid> allowed
+#   4  no-verify table, incl. the `-c core.hooksPath=` override and a bash -c string
 #   5  switches: env, command prefix (`prefix:` in the log), state-dir allow file, env-file
 #      export, DISABLED=1 (log verdicts {"*":"disabled"}); one events-log line per denial
-#      and per switch use; another rule's switch does not silence this one
+#      and per switch use; another rule's switch does not silence this one; env + env-file
+#      allow sets are unioned and both named
 #   6  a crashing rule fails OPEN with a loud note; a module without ID/EVENTS/check is
 #      skipped with a loader note, never a crash
 #   7  channels: PostToolUse note → stdout JSON only; PreToolUse deny → stderr only, exit 2;
 #      GitPrePush pseudo-event with a planted context rule → stderr text, exit 0
 #   8  state dir resolves to the PRIMARY from a linked worktree (its allow file is read);
-#      the override is honoured (the primary's allow file is not read)
-#   9  `falsify` writes the receipt with N ok lines (N = the shipped cases) and exits 0;
-#      a planted wrong needle in the copy → exactly one FAIL line, exit 1
+#      the override is honoured (the primary's allow file is not read); a package kept
+#      outside the repo (FACTORY_GUARD_DIR) still logs into the primary's state dir, and
+#      the reminders script names the same dir
+#   9  `falsify` writes the receipt with N ok lines (N = the shipped cases) and exits 0,
+#      also under a FACTORY_GUARD_GATES binding; a planted wrong needle in the copy →
+#      exactly one FAIL line, exit 1
 #  10  lint helper: a planted forbidden form (pgrep -f) → path:line; marked line → silent; the package's own
 #      harness/ tree is lint-clean under the default roots
-#  11  reminders: session-start prints the guards line, the DISABLED warning, the landing
-#      line; compact prints the keep-list; prompt prints LIVE LANES only while a fakecli
-#      runs with the token and dir flag — never for a shell whose text mentions them
-#  12  the settings example parses; every command path it names exists in adapters/; no
-#      PreCompact leg, no bulk-read shunt entry
+#  11  reminders: session-start prints the guards line, the GUARD BINDINGS line (unbound or
+#      the values), the DISABLED warning, the landing line; compact prints the keep-list;
+#      prompt prints LIVE LANES only while a fakecli runs with the token and dir flag —
+#      never for a shell whose text mentions them
+#  12  the settings example parses; every command path it names exists in adapters/; it
+#      carries an env block; no PreCompact leg, no bulk-read shunt entry
 set -u
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -125,7 +132,7 @@ check "1c unknown event with a planted violation → exit 0, no output" "$( [ "$
 
 # ---------------------------------------------------------------- case 2
 STATE="$T/state two"; LOG="$T/logs/2.jsonl"
-deny_case "2a gate | tail is refused naming the stage" "$PLANTED" 'VERDICT GUARD: a verdict cannot be read through «| tail»'
+deny_case "2a gate | tail is refused naming the stage" "$PLANTED" 'GUARD verdict: a verdict cannot be read through «| tail»'
 check "2b the refusal carries the rewritten form and the switch" "$( has "$(cat "$ERR")" 'make check-backlog > <lane>-check-backlog.log 2>&1; echo EXIT=$?' && has "$(cat "$ERR")" 'Switch: FACTORY_GUARD_ALLOW=verdict (logged)'; echo $? )" "$(cat "$ERR")"
 deny_case "2c pytest | head" 'pytest tests -q | head -3' '«| head»'
 deny_case "2d make verify | grep without pipefail" "make verify 2>&1 | grep -E 'passed|failed'" '«| grep without set -o pipefail»'
@@ -146,26 +153,37 @@ run_hook PreToolUse "$(payload PreToolUse 'npm run verify 2>&1 | tail -3')" FACT
 check "2o FACTORY_GUARD_GATES binds the gate names (npm runner refused)" "$( [ "$RC" -eq 2 ] && has "$(cat "$ERR")" '«| tail»'; echo $? )" "rc=$RC err=$(cat "$ERR")"
 run_hook PreToolUse "$(payload PreToolUse 'make check-backlog | tail -1')" FACTORY_GUARD_GATES='npm'
 check "2p a gate outside FACTORY_GUARD_GATES is not gated" "$( [ "$RC" -eq 0 ] && [ ! -s "$ERR" ]; echo $? )" "rc=$RC err=$(cat "$ERR")"
+deny_case "2q a gate inside a bash -c string is seen through" 'bash -c "make check-backlog | tail -3"' '«| tail»'
+deny_case "2r a gate inside a subshell piped to tail" '(make check-backlog 2>&1) | tail -5' '«| tail»'
+deny_case "2s a gate inside a brace group piped to tail" '{ make check-backlog; } | tail -3' '«| tail»'
+check "2s2 the subshell refusal rewrites the bare gate, not the wrapper" "$( has "$(cat "$ERR")" 'Fix, exactly: make check-backlog > <lane>-check-backlog.log 2>&1; echo EXIT=$?'; echo $? )" "$(cat "$ERR")"
+allow_case "2t git commit -m push after a gate is a commit, not a push" 'make check-backlog; git commit -m push'
+printf "export FACTORY_GUARD_GATES='verify,npm'\n" > "$T/bind env"
+run_hook PreToolUse "$(payload PreToolUse 'npm run verify 2>&1 | tail -3')" CLAUDE_ENV_FILE="$T/bind env"
+check "2u a FACTORY_GUARD_GATES export in the env file binds the gate names too" "$( [ "$RC" -eq 2 ] && has "$(cat "$ERR")" '«| tail»'; echo $? )" "rc=$RC err=$(cat "$ERR")"
 
 # ---------------------------------------------------------------- case 3
 STATE="$T/state three"; LOG="$T/logs/3.jsonl"
 # forbidden form — planted violations for the identity table
-deny_case "3a pkill -f is refused naming the port form" 'pkill -f serve.py' 'IDENTITY GUARD: «pkill -f»'
-check "3b the pkill refusal names lsof by port and the identity form with placeholders" "$( has "$(cat "$ERR")" 'lsof -ti :<port>' && has "$(cat "$ERR")" "ps -axo pid=,comm=,args= | awk '\$2==\"<cli>\" && /<token>/'"; echo $? )" "$(cat "$ERR")"
+deny_case "3a pkill -f is refused naming the port form" 'pkill -f serve.py' 'GUARD identity: «pkill -f»'
+check "3b the pkill refusal names lsof by port and the launcher's identity form with placeholders" "$( has "$(cat "$ERR")" 'lsof -ti :<port>' && has "$(cat "$ERR")" 'harness/launch_lane.sh running <cli> <token>'; echo $? )" "$(cat "$ERR")"
 # forbidden form — planted violation
-deny_case "3c pgrep -fl" 'pgrep -fl "<cli> <token>"' 'IDENTITY GUARD: «pgrep -f» matches the inspecting shell'
+deny_case "3c pgrep -fl" 'pgrep -fl "<cli> <token>"' 'GUARD identity: «pgrep -f» matches the inspecting shell'
 # forbidden form — planted violation
 deny_case "3d pgrep --full | wc -l" "pgrep --full 'x y' | wc -l" '«pgrep -f»'
 # forbidden form — planted violation
-deny_case "3e ps aux | grep" "ps aux | grep '[s]erve.py'" 'IDENTITY GUARD: «ps aux | grep»'
+deny_case "3e ps aux | grep" "ps aux | grep '[s]erve.py'" 'GUARD identity: «ps aux | grep»'
 # forbidden form — planted violation
 deny_case "3f cd then pgrep -af" 'cd /tmp && pgrep -af serve' '«pgrep -f»'
 # forbidden form — planted violation
-run_hook PreToolUse "$(payload PreToolUse 'pgrep -fl "codex exec"')" FACTORY_GUARD_CLI=codex FACTORY_GUARD_CLI_TOKEN=exec
-check "3g the identity form is filled from FACTORY_GUARD_CLI / _CLI_TOKEN" "$( [ "$RC" -eq 2 ] && has "$(cat "$ERR")" "awk '\$2==\"codex\" && /exec/'"; echo $? )" "$(cat "$ERR")"
-allow_case "3h the identity form itself" "ps -axo pid=,comm=,args= | awk '\$2==\"codex\" && /exec/'"
-allow_case "3i lsof by port; pgrep -x; kill <pid>" 'lsof -ti :4310; pgrep -x codex; kill 4711'
+run_hook PreToolUse "$(payload PreToolUse 'pgrep -fl "lanecli exec"')" FACTORY_GUARD_CLI=lanecli FACTORY_GUARD_CLI_TOKEN=exec
+check "3g the identity form is filled from FACTORY_GUARD_CLI / _CLI_TOKEN" "$( [ "$RC" -eq 2 ] && has "$(cat "$ERR")" 'Fix: harness/launch_lane.sh running lanecli exec.'; echo $? )" "$(cat "$ERR")"
+allow_case "3h the launcher's identity form itself" 'harness/launch_lane.sh running lanecli exec'
+allow_case "3h2 the ps | awk mention is green (not a text match), though not the recommended form" "ps -axo pid=,comm=,args= | awk '\$2==\"lanecli\" && /exec/'"
+allow_case "3i lsof by port; pgrep -x; kill <pid>" 'lsof -ti :4310; pgrep -x lanecli; kill 4711'
 allow_case "3j grep for the word" 'grep -rn pgrep docs'
+# forbidden form — planted violation inside a shell -c string
+deny_case "3k pgrep -f inside sh -c is seen through" "sh -c 'pgrep -f serve'" 'GUARD identity: «pgrep -f»'
 
 # ---------------------------------------------------------------- case 4
 STATE="$T/state four"; LOG="$T/logs/4.jsonl"
@@ -176,6 +194,10 @@ deny_case "4d git push --no-verify" 'git push --no-verify origin lane/x' '«git 
 deny_case "4e git merge --no-verify" 'git merge --no-verify lane/x' '«git merge --no-verify»'
 allow_case "4f plain commit" "git commit -m 'x'"
 allow_case "4g grep for the flag" 'grep -rn -- --no-verify docs'
+deny_case "4h git -c core.hooksPath=… commit is refused as the override" "git -c core.hooksPath=/dev/null commit -m 'x'" 'GUARD no-verify: «git -c core.hooksPath=/dev/null commit» skips the git hooks'
+check "4h2 the override refusal names the fix without the override" "$( has "$(cat "$ERR")" 'Fix: run «git commit» without the override'; echo $? )" "$(cat "$ERR")"
+deny_case "4i --no-verify inside a bash -c string is seen through" 'bash -c "git commit --no-verify -m x"' '«git commit --no-verify»'
+allow_case "4j another -c config on a commit passes" "git -c user.email=lane@example.invalid commit -m 'x'"
 
 # ---------------------------------------------------------------- case 5
 STATE="$T/state five"; LOG="$T/logs/5.jsonl"
@@ -202,6 +224,10 @@ check "5f another rule's switch does not silence this one" "$( [ "$RC" -eq 2 ]; 
 kinds="$(cut -f4 "$STATE/factory-events.log" 2>/dev/null | sort | uniq -c | tr -s ' ' | tr '\n' ';')"
 check "5g events log: one deny line and four allow-switch lines, all for this session" "$( has "$kinds" '4 allow-switch' && has "$kinds" '1 deny' && [ "$(cut -f2 "$STATE/factory-events.log" | sort -u)" = "$SESSION" ]; echo $? )" "kinds=$kinds"
 check "5h the allow-switch line names the source" "$( grep 'allow-switch' "$STATE/factory-events.log" | grep -q 'prefix:FACTORY_GUARD_ALLOW=verdict'; echo $? )"
+printf "export FACTORY_GUARD_ALLOW='identity'\n" > "$T/claude env two"
+run_hook PreToolUse "$(payload PreToolUse "$PLANTED")" FACTORY_GUARD_ALLOW=verdict CLAUDE_ENV_FILE="$T/claude env two"
+rec="$(last_record)"
+check "5i env ALLOW=verdict + env-file ALLOW=identity: the sets are unioned and both sources named" "$( [ "$RC" -eq 0 ] && has "$rec" '"identity": "switched"' && has "$rec" '"verdict": "switched"' && has "$rec" 'env:FACTORY_GUARD_ALLOW=verdict' && has "$rec" 'env-file:FACTORY_GUARD_ALLOW=identity'; echo $? )" "rc=$RC rec=$rec"
 
 # ---------------------------------------------------------------- case 6
 COPY6="$T/copy six"; fresh_copy "$COPY6"
@@ -218,10 +244,10 @@ printf 'x = 1\n' > "$COPY6/guards/rules/zz_noid.py"
 STATE="$T/state six"; LOG="$T/logs/6.jsonl"
 ENTRY="$COPY6/adapters/factory_guard.py"
 run_hook PreToolUse "$(payload PreToolUse 'ls')"
-check "6a a crashing rule fails OPEN: exit 0 + additionalContext with the loud note" "$( [ "$RC" -eq 0 ] && has "$(cat "$OUT")" 'GUARD zz-crash failed and let the call through' && has "$(cat "$OUT")" 'planted crash' && [ ! -s "$ERR" ]; echo $? )" "rc=$RC out=$(cat "$OUT") err=$(cat "$ERR")"
+check "6a a crashing rule fails OPEN: exit 0 + additionalContext with the loud note" "$( [ "$RC" -eq 0 ] && has "$(cat "$OUT")" 'GUARD zz-crash: rule crashed and let the call through' && has "$(cat "$OUT")" 'planted crash' && [ ! -s "$ERR" ]; echo $? )" "rc=$RC out=$(cat "$OUT") err=$(cat "$ERR")"
 check "6b a module without ID/EVENTS/check is skipped with a loader note, never a crash" "$( has "$(cat "$OUT")" 'rule module zz_noid.py lacks ID, EVENTS, check and was skipped'; echo $? )" "$(cat "$OUT")"
 run_hook PreToolUse "$(payload PreToolUse "$PLANTED")"
-check "6c the other rules still refuse beside a crashing one (exit 2)" "$( [ "$RC" -eq 2 ] && has "$(cat "$ERR")" 'VERDICT GUARD'; echo $? )" "rc=$RC err=$(cat "$ERR")"
+check "6c the other rules still refuse beside a crashing one (exit 2)" "$( [ "$RC" -eq 2 ] && has "$(cat "$ERR")" 'GUARD verdict:'; echo $? )" "rc=$RC err=$(cat "$ERR")"
 ENTRY="$COPY/adapters/factory_guard.py"
 
 # ---------------------------------------------------------------- case 7
@@ -241,7 +267,7 @@ ENTRY="$COPY7/adapters/factory_guard.py"
 run_hook PostToolUse "$(payload PostToolUse 'ls')"
 check "7a PostToolUse note → stdout additionalContext JSON only, exit 0" "$( [ "$RC" -eq 0 ] && [ ! -s "$ERR" ] && python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); h=d["hookSpecificOutput"]; sys.exit(0 if h["hookEventName"]=="PostToolUse" and "planted note" in h["additionalContext"] else 1)' "$OUT"; echo $? )" "rc=$RC out=$(cat "$OUT") err=$(cat "$ERR")"
 run_hook PreToolUse "$(payload PreToolUse "$PLANTED")"
-check "7b PreToolUse deny → stderr only, exit 2" "$( [ "$RC" -eq 2 ] && [ ! -s "$OUT" ] && has "$(cat "$ERR")" 'VERDICT GUARD'; echo $? )" "rc=$RC out=$(cat "$OUT")"
+check "7b PreToolUse deny → stderr only, exit 2" "$( [ "$RC" -eq 2 ] && [ ! -s "$OUT" ] && has "$(cat "$ERR")" 'GUARD verdict:'; echo $? )" "rc=$RC out=$(cat "$OUT")"
 git_payload="$(python3 -c 'import json,sys; print(json.dumps({"hook_event_name": "GitPrePush", "git": {"hook": "pre-push", "refs": []}, "cwd": sys.argv[1], "session_id": sys.argv[2]}))' "$T" "$SESSION")"
 run_hook GitPrePush "$git_payload"
 check "7c GitPrePush pseudo-event: note → stderr text, stdout empty, exit 0" "$( [ "$RC" -eq 0 ] && [ ! -s "$OUT" ] && has "$(cat "$ERR")" 'planted note for the channel test'; echo $? )" "rc=$RC out=$(cat "$OUT") err=$(cat "$ERR")"
@@ -263,15 +289,32 @@ else
   run_raw PreToolUse "$(payload PreToolUse "$PLANTED")" CLAUDE_PROJECT_DIR="$W" FACTORY_GUARD_LOG="$LOG" FACTORY_GUARD_STATE_DIR="$T/state eight"
   rec="$(last_record)"
   check "8b FACTORY_GUARD_STATE_DIR overrides: the primary's allow file is not read (exit 2, no file: source)" "$( [ "$RC" -eq 2 ] && ! has "$rec" 'file:factory-guard-allow'; echo $? )" "rc=$RC rec=$rec"
+  # the package kept OUTSIDE the repository: FACTORY_GUARD_DIR locates it and nothing else
+  rm -rf "$P/.factory-guard"
+  ELSEWHERE="$T/else where"; fresh_copy "$ELSEWHERE"
+  printf '%s' "$(payload PreToolUse "git commit --no-verify -m 'x'")" | env -i PATH="$PATH" HOME="$HOME" FACTORY_GUARD_OFFLINE=1 \
+    FACTORY_GUARD_DIR="$ELSEWHERE/guards" CLAUDE_PROJECT_DIR="$W" python3 "$ELSEWHERE/adapters/factory_guard.py" PreToolUse > "$OUT" 2> "$ERR"; RC=$?
+  # observed through the verdict log (like 8a through the allow file), never the events log,
+  # so the "drop the events-log write" mutation of guards.md §13 keeps mapping to case 5 alone
+  check "8c with FACTORY_GUARD_DIR outside the repo, the verdict log lands in the PRIMARY's state dir, nothing beside the package or the worktree" \
+    "$( [ "$RC" -eq 2 ] && grep -q '"no-verify": "deny"' "$P/.factory-guard/factory-guard.log" && [ ! -e "$ELSEWHERE/.factory-guard" ] && [ ! -e "$T/.factory-guard" ] && [ ! -e "$W/.factory-guard" ] && [ ! -e "$T/.factory-guard.log" ] && [ ! -e "$W/.factory-guard.log" ]; echo $? )" \
+    "rc=$RC $(find "$T" -name '.factory-guard*' -maxdepth 3 2>/dev/null | tr '\n' ' ')"
+  printf '{"train": "t-8"}\n' > "$P/.factory-guard/landing-in-progress.json"
+  out="$(printf '{}' | env -i PATH="$PATH" HOME="$HOME" FACTORY_GUARD_DIR="$ELSEWHERE/guards" CLAUDE_PROJECT_DIR="$W" /bin/sh "$ELSEWHERE/adapters/factory_reminders.sh" session-start 2>/dev/null)"
+  check "8d the reminders script resolves the same state dir as the dispatcher (names the primary's landing file)" "$( has "$out" "Delete $P/.factory-guard/landing-in-progress.json"; echo $? )" "$out"
+  rm -rf "$P/.factory-guard"
 fi
 
 # ---------------------------------------------------------------- case 9
-expected="$(python3 -c 'import sys, pathlib; sys.path.insert(0, sys.argv[1]); from guards import load_report; mods, problems = load_report(); print(sum(len(m.falsification_cases(pathlib.Path(sys.argv[2]))) for m in mods) if not problems else -1)' "$COPY" "$T/w9")"
+expected="$(PYTHONDONTWRITEBYTECODE=1 python3 -c 'import sys, pathlib; sys.path.insert(0, sys.argv[1]); from guards import load_report; mods, problems = load_report(); print(sum(len(m.falsification_cases(pathlib.Path(sys.argv[2]))) for m in mods) if not problems else -1)' "$COPY" "$T/w9")"
 env -i PATH="$PATH" HOME="$HOME" python3 "$COPY/guards/guard_dispatch.py" falsify --lane t-1 --out "$T/falsify out" > "$OUT" 2> "$ERR"; rc=$?
 receipt="$T/falsify out/t-1-guard-falsification.log"
 check "9a falsify on the copy: exit 0, receipt written, summary printed" "$( [ "$rc" -eq 0 ] && [ -f "$receipt" ] && has "$(cat "$OUT")" "t-1: $expected cases, $expected ok, 0 FAIL"; echo $? )" "rc=$rc out=$(cat "$OUT") err=$(cat "$ERR")"
 check "9b the receipt has exactly N ok lines (N = $expected shipped cases) and no FAIL" "$( [ "$(grep -c ' ok   ' "$receipt")" -eq "$expected" ] && ! grep -q 'FAIL' "$receipt"; echo $? )" "$(grep -c ' ok   ' "$receipt") ok lines"
 check "9c every line has the shape RED|GREEN ok <rule>/<case>: <detail>" "$( ! grep -vE '^(RED|GREEN) +ok +[a-z-]+/[a-z0-9-]+: ' "$receipt" >/dev/null; echo $? )" "$(grep -vE '^(RED|GREEN) +ok +[a-z-]+/[a-z0-9-]+: ' "$receipt" | head -2)"
+env -i PATH="$PATH" HOME="$HOME" FACTORY_GUARD_GATES=npm FACTORY_GUARD_CLI=othercli python3 "$COPY/guards/guard_dispatch.py" falsify --lane t-3 --out "$T/falsify out" > "$OUT" 2> "$ERR"; rc=$?
+check "9c2 falsify under a FACTORY_GUARD_GATES / _CLI binding still exits 0 (the receipt proves the shipped tables)" "$( [ "$rc" -eq 0 ] && has "$(cat "$OUT")" "t-3: $expected cases, $expected ok, 0 FAIL"; echo $? )" "rc=$rc out=$(cat "$OUT") $(grep FAIL "$T/falsify out/t-3-guard-falsification.log" | head -3)"
+check "9c3 falsify leaves no __pycache__ beside the package" "$( [ -z "$(find "$COPY" -name __pycache__ -type d)" ]; echo $? )" "$(find "$COPY" -name __pycache__ -type d)"
 COPY9="$T/copy nine"; fresh_copy "$COPY9"
 python3 -c 'import sys, pathlib; p = pathlib.Path(sys.argv[1]); t = p.read_text(encoding="utf-8"); old = "\"GUARD no-verify: «git push --no-verify»\""; assert t.count(old) == 1, t.count(old); p.write_text(t.replace(old, "\"GUARD nope: «git push --no-verify»\""), encoding="utf-8")' "$COPY9/guards/rules/no_verify.py"
 env -i PATH="$PATH" HOME="$HOME" python3 "$COPY9/guards/guard_dispatch.py" falsify --lane t-2 --out "$T/falsify out" > "$OUT" 2> "$ERR"; rc=$?
@@ -284,7 +327,7 @@ LR="$T/lint root"; mkdir -p "$LR/harness"
 printf 'pgrep -f serve\n' > "$LR/harness/x.sh"
 printf '# the next line is a forbidden form, quoted\npgrep -f serve\n' > "$LR/harness/y.sh"
 printf 'ps aux | grep serve  # forbidden form\n' > "$LR/harness/z.md"
-lint() { python3 -c 'import sys, pathlib; sys.path.insert(0, sys.argv[1]); from guards.rules.identity import lint_findings; print("\n".join(lint_findings(pathlib.Path(sys.argv[2]))))' "$COPY" "$1"; }
+lint() { PYTHONDONTWRITEBYTECODE=1 python3 -c 'import sys, pathlib; sys.path.insert(0, sys.argv[1]); from guards.rules.identity import lint_findings; print("\n".join(lint_findings(pathlib.Path(sys.argv[2]))))' "$COPY" "$1"; }
 found="$(lint "$LR")"
 # forbidden form — the expected finding text below quotes it
 check "10a a planted pgrep -f is reported as path:line: text" "$( [ "$found" = 'harness/x.sh:1: pgrep -f serve' ]; echo $? )" "found=$found"
@@ -301,6 +344,9 @@ rem() { # leg [VAR=value ...]
 }
 out="$(rem session-start)"
 check "11a session-start names the mounted rules and the switch forms, no warning" "$( has "$out" 'FACTORY GUARDS' && has "$out" 'identity' && has "$out" 'no-verify' && has "$out" 'verdict' && has "$out" 'FACTORY_GUARD_ALLOW=<id>' && ! has "$out" 'WARNING'; echo $? )" "$out"
+check "11a2 session-start prints the bindings line with 'unbound' while nothing is bound" "$( has "$out" 'GUARD BINDINGS: cli=unbound token=unbound dir-flag=unbound gates=unbound'; echo $? )" "$out"
+out="$(rem session-start FACTORY_GUARD_CLI=fakecli FACTORY_GUARD_CLI_TOKEN=exec FACTORY_GUARD_GATES=npm)"
+check "11a3 session-start prints the bound values" "$( has "$out" 'GUARD BINDINGS: cli=fakecli token=exec dir-flag=unbound gates=npm'; echo $? )" "$out"
 out="$(rem session-start FACTORY_GUARD_DISABLED=1)"
 check "11b session-start warns when FACTORY_GUARD_DISABLED=1" "$( has "$out" 'WARNING: FACTORY_GUARD_DISABLED=1'; echo $? )" "$out"
 printf '{"train": "t-9"}\n' > "$STATE/landing-in-progress.json"
@@ -329,12 +375,13 @@ check "11i compact lists the live lane" "$( has "$out" 'live lanes: lane-a'; ech
 kill "$lane_pid" "$text_pid" 2>/dev/null; wait "$lane_pid" "$text_pid" 2>/dev/null
 
 # ---------------------------------------------------------------- case 12
-check "12 the settings example parses, names only adapter scripts that exist, no PreCompact, no shunt" \
+check "12 the settings example parses, names only adapter scripts that exist, carries an env block, no PreCompact, no shunt" \
   "$( python3 - "$COPY" <<'EOF'
 import json, pathlib, sys
 copy = pathlib.Path(sys.argv[1])
 data = json.loads((copy / "adapters" / "claude-code-settings.json.example").read_text(encoding="utf-8"))
 hooks = data["hooks"]
+assert isinstance(data.get("env"), dict) and "FACTORY_GUARD_GATES" in data["env"], "no env block binding the parameters"
 assert "PreCompact" not in hooks, "PreCompact leg present"
 commands = [h["command"] for rows in hooks.values() for row in rows for h in row["hooks"]]
 assert commands, "no commands"

@@ -9,7 +9,10 @@ Process identity (``process_table``, ``live_agents``, ``agents_writing_in``) is 
 by ``FACTORY_GUARD_CLI`` (the lane CLI's executable basename), ``FACTORY_GUARD_CLI_TOKEN``
 (its exact headless verb as one argv token) and ``FACTORY_GUARD_CLI_DIR_FLAG`` (the flag whose
 operand is the lane directory). Unbound, every process query answers "no lanes" — never a
-text match over the command line (harness/run-lifecycle.md §6).
+text match over the command line (harness/run-lifecycle.md §6). The readers here, the
+reminders adapter and the launcher's ``running`` subcommand — the form the identity refusal
+names — use one method: a cheap prefilter on the exact token, then the untruncated ``comm``
+of one pid at a time (a multi-column ``comm`` is truncated on macOS).
 """
 
 from __future__ import annotations
@@ -96,26 +99,43 @@ class FalsificationCase:
 
 _REDIRECTION_RE = re.compile(r"\d*>>?&\d+|&>>?|\d*<&\d+")
 REDIRECTION = "__REDIR__"
+_OPENERS = frozenset({"(", "{", "$("})
+_CLOSERS = frozenset({")", "}"})
+_SHELLS = frozenset({"bash", "sh", "zsh", "dash", "ksh"})
+_MAX_INLINE_DEPTH = 3
 
 
-def parse_statements(command: str) -> list[Statement]:
+def parse_statements(command: str, *, _depth: int = 0) -> list[Statement]:
     """Split a shell command into statements and pipelines, honouring quotes.
 
     Redirection operators that contain ``&`` (``2>&1``, ``&>``) are replaced by the word
-    ``__REDIR__`` first, so the ``&`` never reads as a statement separator.
+    ``__REDIR__`` first, so the ``&`` never reads as a statement separator. Grouping is
+    flattened — ``(make x) | tail``, ``{ make x; } | tail`` and ``$(make x | tail)`` read as
+    ``make x | tail`` — and the operand of a ``bash|sh|zsh -c '<string>'`` head is parsed
+    and appended after the wrapper statement, the wrapper's trailing pipe stages attached
+    to the operand's last statement. So a hard form inside a subshell, a brace group or a
+    shell ``-c`` string is still seen (up to three levels); ``eval``, a string built at run
+    time and a script file are not (harness/guards.md §13).
     """
     normalized = _REDIRECTION_RE.sub(f" {REDIRECTION} ", command)
     try:
         lexer = shlex.shlex(normalized, posix=True, punctuation_chars=";&|\n")
         lexer.whitespace = " \t\r"
         lexer.whitespace_split = True
-        tokens = list(lexer)
+        tokens = [ungrouped for token in lexer if (ungrouped := _ungroup(token))]
     except ValueError:
         return []
     statements: list[Statement] = []
     pipeline: list[tuple[str, ...]] = []
     segment: list[str] = []
     for token in [*tokens, ";"]:
+        if token in _CLOSERS:
+            if segment:
+                pipeline.append(tuple(segment))
+            segment = []
+            if not pipeline and statements:  # ``; }`` — the group's pipe applies to that statement
+                pipeline = list(statements.pop().pipeline)
+            continue
         if not (token and set(token) <= _SEPARATORS):
             segment.append(token)
             continue
@@ -127,7 +147,59 @@ def parse_statements(command: str) -> list[Statement]:
         if pipeline:
             statements.append(Statement(tuple(pipeline), token))
         pipeline = []
+    if _depth < _MAX_INLINE_DEPTH:
+        statements = _inline_shell_strings(statements, _depth + 1)
     return statements
+
+
+def _ungroup(token: str) -> str:
+    """Drop bare opening tokens, keep bare closers for the assembly loop, and strip grouping
+    characters off a word's ends."""
+    if token in _OPENERS:
+        return ""
+    if token in _CLOSERS or token == REDIRECTION or set(token) <= _SEPARATORS:
+        return token
+    while token.startswith(("$(", "(", "{")):
+        token = token[2:] if token.startswith("$(") else token[1:]
+    while token.endswith((")", "}")):
+        token = token[:-1]
+    return token
+
+
+def shell_string_operand(tokens: Sequence[str]) -> str | None:
+    """The command string a ``bash|sh|zsh … -c <string>`` statement runs, else ``None``."""
+    stripped = strip_prefixes(tokens)
+    if not stripped or basename(stripped[0]) not in _SHELLS:
+        return None
+    rest = list(stripped[1:])
+    wants_string = False
+    while rest:
+        token = rest.pop(0)
+        if token == "--":
+            break
+        if token.startswith("--"):
+            continue
+        if token.startswith("-") and len(token) > 1:
+            wants_string = wants_string or "c" in token[1:]
+            if token.endswith("o") and rest:  # ``-o <option-name>``
+                rest.pop(0)
+            continue
+        return token if wants_string else None
+    return rest[0] if wants_string and rest else None
+
+
+def _inline_shell_strings(statements: list[Statement], depth: int) -> list[Statement]:
+    result: list[Statement] = []
+    for statement in statements:
+        result.append(statement)  # the wrapper stays: its leading assignments are a switch source
+        operand = shell_string_operand(statement.first)
+        inner = parse_statements(operand, _depth=depth) if operand else []
+        if not inner:
+            continue
+        last = inner[-1]
+        inner[-1] = Statement(last.pipeline + statement.pipeline[1:], statement.terminator)
+        result.extend(inner)
+    return result
 
 
 def _is_pipe(separator: str) -> bool:
@@ -360,10 +432,14 @@ def read_events(state_dir: pathlib.Path, session: str | None = None) -> list[tup
 
 
 _GIT_OPTIONS_WITH_OPERAND = frozenset({"-c", "--git-dir", "--work-tree"})
+_HOOKS_PATH_KEY = "core.hookspath"
 
 
-def _git_global_options(rest: list[str]) -> pathlib.Path | None:
-    """Consume git's global options from ``rest`` in place; the ``-C`` directory if any."""
+def _git_global_options(
+    rest: list[str], configs: list[str] | None = None
+) -> pathlib.Path | None:
+    """Consume git's global options from ``rest`` in place; the ``-C`` directory if any.
+    ``-c key=value`` overrides are collected into ``configs`` when a list is given."""
     directory: pathlib.Path | None = None
     while rest and rest[0].startswith("-"):
         option = rest.pop(0)
@@ -371,6 +447,13 @@ def _git_global_options(rest: list[str]) -> pathlib.Path | None:
             directory = pathlib.Path(rest.pop(0))
         elif option.startswith("-C") and len(option) > 2:
             directory = pathlib.Path(option[2:])
+        elif option == "-c" and rest:
+            value = rest.pop(0)
+            if configs is not None:
+                configs.append(value)
+        elif option.startswith("-c") and len(option) > 2 and "=" in option:
+            if configs is not None:
+                configs.append(option[2:])
         elif option in _GIT_OPTIONS_WITH_OPERAND and rest:
             rest.pop(0)
     return directory
@@ -386,6 +469,22 @@ def git_statement(tokens: list[str]) -> tuple[pathlib.Path | None, str | None, l
     if not rest:
         return directory, None, []
     return directory, rest[0], rest[1:]
+
+
+def git_hooks_path_override(tokens: list[str]) -> str | None:
+    """The ``core.hooksPath=<x>`` a ``git`` statement carries among its global ``-c``
+    options (the key is case-insensitive), else ``None`` — the second way to skip the git
+    hooks after ``--no-verify``."""
+    stripped = strip_prefixes(tokens)
+    if not stripped or basename(stripped[0]) != "git":
+        return None
+    configs: list[str] = []
+    _git_global_options(stripped[1:], configs)
+    for config in configs:
+        key, _, _ = config.partition("=")
+        if key.strip().lower() == _HOOKS_PATH_KEY:
+            return config
+    return None
 
 
 def git_tree(directory: pathlib.Path | None, cwd: pathlib.Path) -> pathlib.Path:

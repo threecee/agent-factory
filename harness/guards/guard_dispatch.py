@@ -20,14 +20,23 @@ directory (§3), and answers the harness:
 * any ``deny`` → the refusal on stderr, exit 2 (the harness blocks the tool call);
 * otherwise every ``context`` note → ``hookSpecificOutput.additionalContext`` JSON on
   stdout for harness events, plain text on stderr for the git pseudo-events (git has no
-  JSON channel; the driver is verification/protections.md, introduced by PR13), exit 0;
+  JSON channel; the driver is the git-hook adapter of verification/protections.md), exit 0;
 * a rule that raises never locks the session out: it is logged and reported as context
-  (``<id> failed and let the call through (<error>)``), never as a denial.
+  (``GUARD <id>: rule crashed and let the call through (<error>)``), never as a denial.
 
-The state directory is ``FACTORY_GUARD_STATE_DIR``, else ``.factory-guard/`` in the
-*primary* checkout (the parent of ``git rev-parse --git-common-dir``) so every linked
-worktree, a session started in a worktree and the git hooks share one allow file and one
-events log. Tests MUST set the override or they write into the primary's log.
+One state location. The repository root is ``CLAUDE_PROJECT_DIR``, else the checkout the
+current directory is in, else the tree this package lives in — ``FACTORY_GUARD_DIR`` only
+locates the package and never moves the state. The state directory is
+``FACTORY_GUARD_STATE_DIR``, else ``.factory-guard/`` in the *primary* checkout of that root
+(the parent of ``git rev-parse --git-common-dir``), so every linked worktree, a session
+started in a worktree and the git hooks share one allow file, one events log, one landing
+state and — by default — one verdict log (``<state-dir>/factory-guard.log``;
+``FACTORY_GUARD_LOG`` overrides). Tests MUST set the override or they write into the
+primary's log.
+
+Parameters (guards.md §8) are read from the hook process environment, overlaid with the
+``FACTORY_GUARD_*`` exports of the harness env file (``CLAUDE_ENV_FILE``) so a binding
+written mid-session reaches the rules too.
 """
 
 from __future__ import annotations
@@ -44,6 +53,7 @@ from types import ModuleType
 from typing import IO
 
 if __package__ in (None, ""):  # run as a script: make ``guards`` importable
+    sys.dont_write_bytecode = True  # a hook never leaves __pycache__ in the tree it guards
     sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 from guards import load_report, rules_directory  # noqa: E402
@@ -76,12 +86,26 @@ CONTEXT_EVENTS = frozenset(
         "PostModelSwitch",
     }
 )
-# Git-hook pseudo-events fed by the git-hook driver (PR13). Git has no JSON channel: a context
-# note is plain text on stderr (exit 0), a refusal stderr + exit 2 as everywhere else.
+# Git-hook pseudo-events fed by the git-hook adapter (verification/protections.md). Git has no
+# JSON channel: a context note is plain text on stderr (exit 0), a refusal stderr + exit 2 as
+# everywhere else.
 GIT_EVENTS = frozenset({"GitPreCommit", "GitCommitMsg", "GitPrePush"})
 _EXPORT_RE = re.compile(r"^\s*(?:export\s+)?(FACTORY_GUARD_[A-Z_]+)=['\"]?([^'\"\n]*)['\"]?\s*$")
 PACKAGE_DIR = pathlib.Path(__file__).resolve().parent
 SWITCHED_OFF = "switched off"
+SWITCH_VARS = ("FACTORY_GUARD_ALLOW", "FACTORY_GUARD_DISABLED")
+# The §8 parameters the falsification runner scrubs so the receipt proves the SHIPPED tables
+# (guards.md §11); the operator's binding is proved by the first live train, not the receipt.
+PARAMETER_VARS = (
+    "FACTORY_GUARD_GATES",
+    "FACTORY_GUARD_CLI",
+    "FACTORY_GUARD_CLI_TOKEN",
+    "FACTORY_GUARD_CLI_DIR_FLAG",
+    "FACTORY_GUARD_PORT_RANGE",
+    "FACTORY_GUARD_DATA_VOLUME",
+    "FACTORY_GUARD_DISK_FLOOR_GB",
+)
+VERDICT_LOG = "factory-guard.log"
 
 
 def _git_toplevel(cwd: pathlib.Path) -> pathlib.Path | None:
@@ -100,12 +124,11 @@ def _git_toplevel(cwd: pathlib.Path) -> pathlib.Path | None:
 
 
 def repo_root_from(environ: Mapping[str, str]) -> pathlib.Path:
-    """``FACTORY_GUARD_DIR``'s parent-of-parent (``<repo>/harness/guards`` or
-    ``<repo>/scripts/guards``), else ``CLAUDE_PROJECT_DIR``, else the checkout the current
-    directory is in, else the tree this file lives in."""
-    guards_dir = environ.get("FACTORY_GUARD_DIR")
-    if guards_dir:
-        return pathlib.Path(guards_dir).expanduser().resolve().parents[1]
+    """``CLAUDE_PROJECT_DIR``, else the checkout the current directory is in, else the tree
+    this package lives in. Never ``FACTORY_GUARD_DIR``: that variable locates the package
+    (the entry script's job) and a package kept outside the repository must not drag the
+    state directory and the log out with it — the reminders adapter resolves the same root
+    from ``CLAUDE_PROJECT_DIR`` and both must name one state directory."""
     configured = environ.get("CLAUDE_PROJECT_DIR")
     if configured:
         return pathlib.Path(configured).expanduser().resolve()
@@ -145,9 +168,11 @@ def state_dir_from(environ: Mapping[str, str], repo_root: pathlib.Path) -> pathl
     return (primary_root(repo_root) or repo_root) / ".factory-guard"
 
 
-def log_path_from(environ: Mapping[str, str], repo_root: pathlib.Path) -> pathlib.Path:
+def log_path_from(environ: Mapping[str, str], state_dir: pathlib.Path) -> pathlib.Path:
+    """``FACTORY_GUARD_LOG``, else ``factory-guard.log`` inside the state directory — the one
+    primary-resolved location, never a file in whichever checkout the session started in."""
     configured = environ.get("FACTORY_GUARD_LOG")
-    return pathlib.Path(configured).expanduser() if configured else repo_root / ".factory-guard.log"
+    return pathlib.Path(configured).expanduser() if configured else state_dir / VERDICT_LOG
 
 
 def env_file_switches(environ: Mapping[str, str]) -> dict[str, str]:
@@ -172,20 +197,35 @@ def _split_ids(value: str | None) -> set[str]:
     return {part.strip() for part in (value or "").split(",") if part.strip()}
 
 
+def bound_environ(environ: Mapping[str, str]) -> dict[str, str]:
+    """The environment the rules read: the hook process environment overlaid with the §8
+    parameter exports of the harness env file (a binding written mid-session is the later
+    value). Switches are not bindings: ``FACTORY_GUARD_ALLOW``/``_DISABLED`` from the env
+    file go through :func:`resolve_switches`, where they are logged as a source."""
+    bindings = {
+        key: value for key, value in env_file_switches(environ).items() if key not in SWITCH_VARS
+    }
+    return {**environ, **bindings}
+
+
 def resolve_switches(
     payload: Mapping[str, object], environ: Mapping[str, str], state_dir: pathlib.Path
 ) -> tuple[bool, frozenset[str], list[str]]:
     """``(disabled, allowed rule ids, where each switch came from)`` — the four sources of
-    guards.md §4, every one of them named in the log record."""
-    merged = {**environ, **env_file_switches(environ)}
+    guards.md §4. Sources ADD: the allow sets of the environment, the env file, the command
+    prefix and the allow file are unioned, ``DISABLED=1`` in either the environment or the
+    env file disables, and every source that contributed is named in the log record."""
     sources: list[str] = []
-    disabled = merged.get("FACTORY_GUARD_DISABLED") == "1"
-    if disabled:
-        sources.append("FACTORY_GUARD_DISABLED=1")
-    allowed = _split_ids(merged.get("FACTORY_GUARD_ALLOW"))
-    if allowed:
-        origin = "env-file" if "FACTORY_GUARD_ALLOW" in env_file_switches(environ) else "env"
-        sources.append(f"{origin}:FACTORY_GUARD_ALLOW=" + ",".join(sorted(allowed)))
+    disabled = False
+    allowed: set[str] = set()
+    for origin, values in (("env", environ), ("env-file", env_file_switches(environ))):
+        if values.get("FACTORY_GUARD_DISABLED") == "1":
+            disabled = True
+            sources.append(f"{origin}:FACTORY_GUARD_DISABLED=1")
+        ids = _split_ids(values.get("FACTORY_GUARD_ALLOW"))
+        if ids:
+            sources.append(f"{origin}:FACTORY_GUARD_ALLOW=" + ",".join(sorted(ids)))
+            allowed |= ids
     prefixed = _split_ids(leading_assignments(command_of(payload)).get("FACTORY_GUARD_ALLOW"))
     if prefixed:
         sources.append("prefix:FACTORY_GUARD_ALLOW=" + ",".join(sorted(prefixed)))
@@ -227,7 +267,7 @@ def _run_rule(rule: ModuleType, payload: Mapping[str, object], context: GuardCon
         return Verdict(
             "context",
             rule_id,
-            f"GUARD {rule_id} failed and let the call through ({detail}). "
+            f"GUARD {rule_id}: rule crashed and let the call through ({detail}). "
             "Fix it before it counts as standard (harness/guards.md §3).",
         )
 
@@ -325,7 +365,7 @@ def dispatch(
     state_dir = state_dir_from(environ, repo_root)
     disabled, allowed, sources = resolve_switches(payload, environ, state_dir)
     record = _record(event, payload, sources)
-    log_path = log_path_from(environ, repo_root)
+    log_path = log_path_from(environ, state_dir)
     if disabled:
         record["verdicts"] = {"*": "disabled"}
         _log(log_path, record)
@@ -334,7 +374,11 @@ def dispatch(
     if rules is None:
         rules, problems = load_report()
     context = GuardContext(
-        event=event, repo_root=repo_root, state_dir=state_dir, environ=environ, allowed=allowed
+        event=event,
+        repo_root=repo_root,
+        state_dir=state_dir,
+        environ=bound_environ(environ),
+        allowed=allowed,
     )
     verdicts = [Verdict("context", "loader", f"GUARD loader: {p} (harness/guards.md §3).") for p in problems]
     verdicts += _run_rules(rules, event, payload, context)
@@ -363,8 +407,11 @@ def entry_script(environ: Mapping[str, str], package_dir: pathlib.Path) -> pathl
 def _case_env(
     environ: Mapping[str, str], package_dir: pathlib.Path, out: pathlib.Path, lane: str
 ) -> dict[str, str]:
+    """A scrubbed environment: no switch, no env file, no §8 parameter binding (the receipt
+    proves the shipped tables — guards.md §11), a per-run state directory and log, offline,
+    and no bytecode written beside the package."""
     env = dict(environ)
-    for key in ("FACTORY_GUARD_ALLOW", "FACTORY_GUARD_DISABLED", "CLAUDE_ENV_FILE"):
+    for key in (*SWITCH_VARS, "CLAUDE_ENV_FILE", *PARAMETER_VARS):
         env.pop(key, None)
     env.update(
         {
@@ -372,13 +419,17 @@ def _case_env(
             "FACTORY_GUARD_STATE_DIR": str(out / f"{lane}-guard-state"),
             "FACTORY_GUARD_LOG": str(out / f"{lane}-guard-falsify.jsonl"),
             "FACTORY_GUARD_OFFLINE": "1",
+            "PYTHONDONTWRITEBYTECODE": "1",
         }
     )
     return env
 
 
 def judge(case: FalsificationCase, result: subprocess.CompletedProcess[str]) -> tuple[bool, str]:
-    """Exit code AND the needle in the RIGHT stream (falsification.md rule 2: the message)."""
+    """Exit code AND the needle in the RIGHT stream (falsification.md rule 2: the message).
+    A green form is silent when nothing reached a channel: no ``additionalContext`` on
+    stdout and no ``GUARD`` text on stderr — an interpreter warning on stderr is not a
+    refusal and does not turn the receipt red."""
     if case.expect == "deny":
         ok = result.returncode == 2 and case.needle in result.stderr
         return ok, f"exit {result.returncode}; stderr: {result.stderr.strip()[:160]!r}"
@@ -386,7 +437,11 @@ def judge(case: FalsificationCase, result: subprocess.CompletedProcess[str]) -> 
         stream = result.stdout if case.event in CONTEXT_EVENTS else result.stderr
         ok = result.returncode == 0 and case.needle in stream
         return ok, f"exit {result.returncode}; output: {stream.strip()[:160]!r}"
-    ok = result.returncode == 0 and "additionalContext" not in result.stdout and not result.stderr
+    ok = (
+        result.returncode == 0
+        and "additionalContext" not in result.stdout
+        and "GUARD" not in result.stderr
+    )
     return ok, f"exit {result.returncode}; silent={not (result.stdout.strip() or result.stderr.strip())}"
 
 

@@ -265,11 +265,19 @@ register NO hook. Do not add a PreToolUse registration in this step.
    worker-down trial (§5) and the off/on pilot (§7) before registering the
    adapter (§8). Installing the contract activates nothing.
 8. Optional, measurement-gated: `harness/guards.md`. Run
-   `bash harness/tests/test_guards.sh`, copy `harness/guards/` and
-   `harness/adapters/` beside your scripts (imports are package-relative),
-   bind the §8 parameters in the operations doc, run
-   `python3 harness/guards/guard_dispatch.py falsify --lane install --out <dir>`
-   and bank the log, then register the adapter block from
+   `bash harness/tests/test_guards.sh`. Keep `harness/guards/` and
+   `harness/adapters/` where they are (the settings example already points
+   there) or move BOTH together — imports are package-relative and the
+   package directory must keep the name `guards`. Add `.factory-guard/` and
+   `__pycache__/` to the target repo's `.gitignore` before the first hooked
+   lane (the wrapper's `git add -A` must never commit them — the same rule
+   as the env symlinks in item 1). Bind the §8 parameters in the operations
+   doc and put the same values where the hook process reads them (§8 names
+   the path per harness; the session-start reminder prints what is bound).
+   Run `python3 harness/guards/guard_dispatch.py falsify --lane install
+   --out <dir>` and bank the log — the receipt proves the shipped tables
+   under a scrubbed environment, your binding is proved on the first hooked
+   train (§11). Then register the adapter block from
    `harness/adapters/claude-code-settings.json.example` as a deliberate
    step — the package registers nothing. Coding CLIs get the
    `AGENTS.md.example` paragraph. Every rule that applies is written into

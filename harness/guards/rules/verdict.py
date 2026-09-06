@@ -26,6 +26,7 @@ from guards._common import (
     basename,
     command_of,
     deny,
+    git_statement,
     is_python,
     parse_statements,
     strip_prefixes,
@@ -97,7 +98,10 @@ def _python_gate(tokens: list[str], plain: list[str], modules: list[str]) -> str
 
 
 def _is_git_push(tokens: list[str]) -> bool:
-    return bool(tokens) and basename(tokens[0]) == "git" and "push" in tokens[1:]
+    """A ``git push`` statement — the subcommand, never the word ``push`` elsewhere in the
+    argv (``git commit -m push`` is a commit)."""
+    _, sub, _ = git_statement(tokens)
+    return sub == "push"
 
 
 def _reads_receipt(tokens: list[str]) -> bool:
@@ -128,7 +132,7 @@ def _rewrite(statement: Statement, gate: str) -> str:
 def _refusal(through: str, exact: str) -> Verdict:
     return deny(
         ID,
-        f"VERDICT GUARD: a verdict cannot be read through «{through}». Run the gate with a "
+        f"GUARD verdict: a verdict cannot be read through «{through}». Run the gate with a "
         "redirect to <lane>-<gate>.log and read $? in ONE call; push in the NEXT "
         f"(harness/train-plan.md §4.1). Fix, exactly: {exact}",
     )
@@ -206,9 +210,12 @@ _DENIED_FORMS = (
         "make check-backlog && make check-numbers && git push origin HEAD:main",
         "; git push",
     ),
+    ("bash-c-wrapped", 'bash -c "make check-backlog | tail -3"', "| tail"),
+    ("subshell-then-tail", "(make check-backlog 2>&1) | tail -5", "| tail"),
 )
 _ALLOWED_FORMS = (
     ("grep-on-log", "grep -n FAILED verify-t-42.log | tail -5"),
+    ("commit-message-push", "make check-backlog; git commit -m push"),
     ("tail-after-ls", "ls -t artifacts | tail -3"),
     (
         "tee-with-pipefail",
@@ -239,7 +246,7 @@ def falsification_cases(workdir: pathlib.Path) -> list[FalsificationCase]:
             "PreToolUse",
             payload(command),
             "deny",
-            f"VERDICT GUARD: a verdict cannot be read through «{needle}",
+            f"GUARD verdict: a verdict cannot be read through «{needle}",
         )
         for name, command, needle in _DENIED_FORMS
     ]

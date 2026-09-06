@@ -47,12 +47,18 @@ _FORBIDDEN_TEXT = (
 _PS_WIDE_FLAGS = frozenset({"aux", "-ef", "ax", "-ax", "-aux", "-e"})
 
 
+LAUNCHER = "harness/launch_lane.sh"
+
+
 def identity_form(environ: Mapping[str, str]) -> str:
-    """The exact alternative the refusal names, with the CLI and token filled in from
-    ``FACTORY_GUARD_CLI``/``FACTORY_GUARD_CLI_TOKEN`` (placeholders when unset)."""
+    """The exact alternative the refusal names: the launcher's ``running`` subcommand, which
+    implements harness/run-lifecycle.md §6 (the untruncated ``comm`` of ONE pid at a time plus
+    the exact argv token — never a multi-column ``comm``, never a substring match), with the
+    CLI and token filled in from ``FACTORY_GUARD_CLI``/``FACTORY_GUARD_CLI_TOKEN``
+    (placeholders when unset)."""
     cli = environ.get(CLI_VAR) or "<cli>"
     token = environ.get(CLI_TOKEN_VAR) or "<token>"
-    return f"ps -axo pid=,comm=,args= | awk '$2==\"{cli}\" && /{token}/'"
+    return f"{LAUNCHER} running {cli} {token}"
 
 
 def _has_full_flag(tokens: list[str]) -> bool:
@@ -93,14 +99,14 @@ def verdict_for_command(command: str, environ: Mapping[str, str]) -> Verdict:
             # forbidden form quoted in the refusal below
             return deny(
                 ID,
-                f"IDENTITY GUARD: «{form}» kills by text match and hits other lanes' processes "
+                f"GUARD identity: «{form}» kills by text match and hits other lanes' processes "
                 "(harness/run-lifecycle.md §6). Fix: tear down by port: lsof -ti :<port>, or "
                 f"select by identity: {form_of_identity}",
             )
         # forbidden form quoted in the refusal below
         return deny(
             ID,
-            f"IDENTITY GUARD: «{form}» matches the inspecting shell "
+            f"GUARD identity: «{form}» matches the inspecting shell "
             f"(harness/run-lifecycle.md §6). Fix: {form_of_identity}",
         )
     return ALLOW
@@ -159,18 +165,24 @@ def lint_findings(
 
 _DENIED_FORMS = (
     # forbidden form — planted violation in the falsification table
-    ("pkill-f-server", "pkill -f serve.py", "IDENTITY GUARD: «pkill -f»"),
+    ("pkill-f-server", "pkill -f serve.py", "GUARD identity: «pkill -f»"),
     # forbidden form — planted violation in the falsification table
-    ("pgrep-fl-cli", 'pgrep -fl "<cli> <token>"', "IDENTITY GUARD: «pgrep -f»"),
+    ("pgrep-fl-cli", 'pgrep -fl "<cli> <token>"', "GUARD identity: «pgrep -f»"),
     # forbidden form — planted violation in the falsification table
-    ("pgrep-full", "pgrep --full '<cli> <token>' | wc -l", "IDENTITY GUARD: «pgrep -f»"),
+    ("pgrep-full", "pgrep --full '<cli> <token>' | wc -l", "GUARD identity: «pgrep -f»"),
     # forbidden form — planted violation in the falsification table
-    ("ps-aux-grep", "ps aux | grep '[s]erve.py'", "IDENTITY GUARD: «ps aux | grep»"),
+    ("ps-aux-grep", "ps aux | grep '[s]erve.py'", "GUARD identity: «ps aux | grep»"),
     # forbidden form — planted violation in the falsification table
-    ("cd-then-pgrep", "cd /tmp && pgrep -af serve", "IDENTITY GUARD: «pgrep -f»"),
+    ("cd-then-pgrep", "cd /tmp && pgrep -af serve", "GUARD identity: «pgrep -f»"),
+    # forbidden form — planted violation inside a shell -c string (one level of wrapping)
+    ("sh-c-wrapped", "sh -c 'pgrep -f serve'", "GUARD identity: «pgrep -f»"),
 )
 _ALLOWED_FORMS = (
-    ("ps-comm-awk", identity_form({})),
+    ("launcher-running", identity_form({})),
+    # a multi-column comm read plus an awk: green (no text match over the command line), but
+    # not the recommended form — multi-column comm is truncated on macOS and /<token>/ is a
+    # substring match (harness/run-lifecycle.md §6, train-plan.md §3.3)
+    ("ps-comm-awk", "ps -axo pid=,comm=,args= | awk '$2==\"<cli>\" && /<token>/'"),
     ("lsof-port", "lsof -ti :<port>"),
     ("pgrep-exact", "pgrep -x <cli>"),
     ("grep-for-the-word", "grep -rn pgrep docs"),

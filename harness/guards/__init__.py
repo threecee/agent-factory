@@ -5,8 +5,9 @@ The rule-module contract, in five lines:
   ID                   the switch name (``FACTORY_GUARD_ALLOW=<ID>``) and the log key
   EVENTS               the harness events the rule answers (a set of event names)
   MATCHER              a tool name, a set of tool names, or ``None`` for tool-less events
-  HONORS_ALLOW         optional, ``True`` when the rule reads its own switch (un-overridable
-                       conditions); the dispatcher then calls it even when it is switched off
+  HONORS_ALLOW         optional, ``True`` when the rule reads its own switch and decides —
+                       a switch that is a precondition, or none at all; the dispatcher then
+                       calls it even when it is switched off
   check(payload, context) -> Verdict     and     falsification_cases(workdir) -> list
 
 Package-relative imports only (``from guards._common import …``), so the directory can be

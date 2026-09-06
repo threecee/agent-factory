@@ -83,13 +83,18 @@ disk_line() {
 case "${1:-}" in
   session-start)
     printf 'FACTORY GUARDS (harness/guards.md): rules %smounted through harness/adapters/factory_guard.py. Switch per rule: prefix the command with FACTORY_GUARD_ALLOW=<id> (logged; ledgered as an O-entry); FACTORY_GUARD_DISABLED=1 only while the apparatus is down.\n' "$(mounted_rules)"
+    # The §8 bindings as the hook process sees them — an unbound parameter is visible here,
+    # never silent (guards.md §8 names how a binding reaches the hook process).
+    printf 'GUARD BINDINGS: cli=%s token=%s dir-flag=%s gates=%s port-range=%s (unbound = the identity refusal prints placeholders, the live-lane legs list nothing, verdict gates only its default table)\n' \
+      "${FACTORY_GUARD_CLI:-unbound}" "${FACTORY_GUARD_CLI_TOKEN:-unbound}" "${FACTORY_GUARD_CLI_DIR_FLAG:-unbound}" "${FACTORY_GUARD_GATES:-unbound}" "${FACTORY_GUARD_PORT_RANGE:-unbound}"
     [ "${FACTORY_GUARD_DISABLED:-0}" = "1" ] && printf '%s\n' "WARNING: FACTORY_GUARD_DISABLED=1 — every factory guard is off in this session."
     if [ -f "$STATE_DIR/landing-in-progress.json" ]; then
       TRAIN=$(sed -nE 's/.*"train": *"([^"]+)".*/\1/p' "$STATE_DIR/landing-in-progress.json" | head -1)
-      printf 'LANDING IN PROGRESS: train %s is pushed — lander duties are open (verification/lander-duties.md §1 step 11). Delete %s when they are closed.\n' "${TRAIN:-?}" "$STATE_DIR/landing-in-progress.json"
+      printf 'LANDING IN PROGRESS: train %s is registered on the default branch — lander duties are open (verification/lander-duties.md §1 step 11). Delete %s when they are closed.\n' "${TRAIN:-?}" "$STATE_DIR/landing-in-progress.json"
     fi
     disk_line
-    # CI signal (verification/protections.md, introduced by PR13): absent = silent.
+    # CI signal (guards.md §9, CI row): the protections chapter ships
+    # verification/protections/ci_signal.sh; this script calls it when executable, absent = silent.
     PROTECTIONS="${FACTORY_PROTECTIONS_DIR:-$HERE/../../verification/protections}"
     [ -x "$PROTECTIONS/ci_signal.sh" ] && "$PROTECTIONS/ci_signal.sh"
     ;;
@@ -98,7 +103,7 @@ case "${1:-}" in
     # SessionStart with matcher `compact`: what must survive a compaction.
     LANES=$(live_lanes)
     printf '%s\n' \
-      "AFTER COMPACTION, KEEP: (1) the board transaction points (planning/board-protocol.md); (2) the open lander duties (verification/lander-duties.md §1); (3) briefs are dispatched from the standing template, never re-authored by hand; (4) live lanes: ${LANES:-none}; (5) every guard denial and every switch use in this session goes into the train ledger (O-entries)."
+      "AFTER COMPACTION, KEEP: (1) the board transaction points (planning/board-protocol.md); (2) the open lander duties (verification/lander-duties.md §1); (3) briefs are dispatched from the standing template, never re-authored by hand; (4) live lanes: ${LANES:-none}; (5) every guard denial and every switch use in this session goes into the train's choices ledger (O-entries)."
     ;;
 
   prompt)

@@ -7,9 +7,11 @@
 This repository runs factory guards (`harness/guards.md`). Your session is not hooked:
 nothing here can refuse a command before you run it. Three things bind you anyway:
 
-1. **The git hooks** — identity and trailer checks on commit, the landing check on a push
-   to the default branch (`verification/protections.md`, introduced by PR13). A red hook is
-   fixed, never bypassed: `--no-verify` is a hard form in this repository.
+1. **The git hooks** — identity and trailer checks on commit, and the landing check when
+   the override landing mode pushes the default branch directly (landing is a PR merge
+   with required checks by default; `verification/protections.md`). A red hook is fixed,
+   never bypassed: `--no-verify` and `-c core.hooksPath=…` are hard forms in this
+   repository.
 2. **The wrapper's result lint at handback** (`harness/report-schema.md`, "Machine check at
    handback"): a report that fails the form check is not accepted, and the wrapper commits
    nothing for a lane without one.

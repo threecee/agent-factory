@@ -27,14 +27,9 @@ ln -sfn <primary>/.venv <wt>/.venv         # and .env; node_modules for frontend
   import-root invocation form (the probe table below). The check never
   creates a link (`--fix` is explicit); installing dependencies inside a
   linked worktree is refused.
-- **Destructive forms guarded by identity** (`guards.md` §6, M-16 rows
-  `stash-live`, `restore-dirty`, `worktree-remove`, `second-writer`):
-  stash/checkout/restore/reset/clean while a writer whose directory flag
-  resolves to this tree is alive; restore over uncommitted changes;
-  `worktree remove` / `branch -D` while the branch holds unpushed commits, a
-  dirty tree, ritual symlinks, large ignored files or a parked result — a
-  branch already merged into the remote default branch passes first, so
-  close-out is never blocked.
+- The destructive git forms are refused by process identity — `guards.md`
+  §6 rows `stash-live`, `restore-dirty`, `worktree-remove`, `second-writer`
+  own the conditions and the alternatives.
 
 ## The worktree is a launcher parameter
 
