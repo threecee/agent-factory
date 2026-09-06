@@ -2,74 +2,363 @@
 
 An agent-driven software factory covering the full SDLC — from idea to
 production and continuous improvement. Distilled from a production factory
-that ran multi-lane parallel builds, landing trains, and PO-governed decision
-loops for months; everything repo-specific has been removed, everything
-deterministic (gates, skills, CI, harness scripts) is included verbatim.
+that ran multi-lane parallel builds, landing trains and owner-governed
+decision loops for months; everything repo-specific has been removed,
+everything deterministic (gates, skills, CI, harness scripts) is included
+verbatim.
 
-**Installation is agent-driven:** point an LLM agent (Claude Code, codex or
-similar) at `INSTALL.md` inside your target repo. The agent parameterizes the
-deterministic pieces against your language, build chain and domain.
+**Installation is agent-driven:** point an LLM agent (Claude Code, a coding
+CLI or similar) at `INSTALL.md` inside your target repo. The agent
+parameterizes the deterministic pieces against your language, build chain
+and domain.
 
-## The three pillars
+**How to read this file.** §3 is the whole loop with a pointer at every hop;
+§10 is the index from a question to its home. Everything else is a hub: a
+pointer plus a one-sentence gloss, never a second statement of a rule — each
+rule has one home, cited as `pillar/file.md §N`, and
+`verification/tests/test_hub_pointers.sh` checks that every pointer here and
+in `INSTALL.md` resolves. No mechanism is named without its form tag — gate,
+guard, hook, ruleset or text (§5.2). Counts are pointers, or covered by that
+test.
+
+Three non-negotiables inherited from the source factory:
+1. **Falsify the apparatus before the product** — a gate or test that has
+   never been seen red proves nothing (`verification/falsification.md`).
+2. **Never weaken a criterion to pass** — ratchets move one way; baselines
+   change only through each gate's own `--update`, and a gate leg catches
+   the rest (`verification/protections.md §7`).
+3. **Honesty on every surface** — unavailable is never rendered as empty;
+   advisory output is labeled advisory; a result claims no more than its
+   receipt's `proves:` line (`verification/evaluation-readiness.md §1`).
+
+## 1. Who does what
+
+| Role | Does | Never does | Home |
+|---|---|---|---|
+| Owner / operator | approves specs; rules on Decision-needed items; signs the two user-level policy files (model, landing) | grants authority by chat; edits code mid-lane | `planning/core-model.md`; `user-level/README.md` |
+| Orchestrator | files board items, allocates numbers, writes briefs from the standing template, declares the change kind, audits choices, presents the ledger | authors in a lane's tree; guesses to keep moving | `planning/execution-contract.md §1`; `planning/adr-and-numbers.md` |
+| Wrapper | cuts the worktree, launches the lane, commits under the writer lock, falsifies red→green, runs the result lint, pushes the lane branch | pushes main; reads a verdict from a pipe | `planning/execution-contract.md §6`; `harness/run-lifecycle.md §11` |
+| Lane | authors in its own worktree under one brief; runs the pregate block and the matching diff-triggered legs; files its report however it exits | pushes; opens a pull request; runs full verify; allocates a number | `planning/lane-brief-template.md §2` |
+| Proof owner | reruns the apparatus the lane cannot run, over the whole observed run | passes a partial rerun off as the whole | `planning/execution-contract.md §2` |
+| Lander | assembles the train, runs one full verify, reads the receipt, re-derives the kind, lands under authority, closes out | lands on a pipe status; lands without authority | `verification/lander-duties.md §1`, `§7`, `§8` |
+| CI | re-verifies the landed commit and deploys; advisory lanes comment | gates a landing (until promoted by a reviewed diff) | `verification/landing-modes.md §4.3`; `verification/ci/README.md §2` |
+
+Vocabulary: a **task** is a board item ID and the round counter follows it; a
+**round** is one authoring pass plus its proof attempt; the **apparatus** is
+whatever decides that a delivery works; a **train** is one worktree where
+independent ready lanes are merged and verified together; a **receipt** is a
+run-bound file a verdict is read from (`EXIT=`, `HEAD=`, `BASE=`); the
+**ledger** is the train's choices protocol (`planning/execution-contract.md
+§1`; `harness/train-plan.md §4`; `interpretation/choices-ledger-README.md §1`).
+
+## 2. The three pillars
 
 | Pillar | Question it answers | Contents |
 |---|---|---|
-| **`planning/`** | *Define why, what, how* | Board protocol (GitHub Projects as planning truth; decision briefs, one notification per transition, derived views), spec discipline, ADR + number registry, backlog discipline with closing evidence, the standing lane brief, the read-only investigation brief that precedes a fix brief when the cause is uncertain, and the execution contract (measurement baseline handed over before dispatch, a named proof owner, two complete rounds per task then park-and-split) |
-| **`verification/`** | *Prove that it works* | 27 deterministic gate scripts (one-way ratchets, secret scanning with a working-tree leg, traceability, planning-doc teeth — classified by what ports to a non-Python repo, with a JavaScript ratchet and boundary test as the worked substitution), the verify portfolio, falsification norms (with a runnable identity-and-history example: gates follow the consumer's identity, falsified in both directions), evaluation readiness (pre-flight smoke, offline functional trial and AI evaluation kept apart, one receipt schema), CI in the pinned/secret-gated regime, lander duties for landing trains (push gated on verify AND on landing authority — held with a decision brief by default), landing modes (a branch policy that admits a PR merge or a direct push against one receipt-bound status; PR-mode advisory review and security lanes; git hooks that carry the landing check into any harness — `verification/landing-modes.md`, `verification/protections.md`) |
-| **`interpretation/`** | *Understand how it really works* | The choices ledger (every decision an agent made on your behalf, audited per handback, one stable ID per choice, scenarios stored with the train), memory conventions that outlive sessions, evaluation practice (what each evaluation type proves, intended product mode, state parity, honest metrics), investigation practice (instrument-first; investigate before the fix mandate; consumer inventory before any move, split or delete), a worked simplification-review example, the continuous-improvement loop |
+| **`planning/`** | *Define why, what, how* | The board as planning truth, the ladder from idea to approved spec, the standing lane brief and the read-only investigation brief, the decision brief, the execution contract (measurement baseline, two rounds, first-contact STOPs, change kind), ADRs and the number registry, backlog teeth. Start at: `planning/core-model.md`. |
+| **`verification/`** | *Prove that it works* | The verify portfolio and its cheap legs, the deterministic gate scripts (which port: `verification/gates/README.md`), falsification norms with a runnable identity-and-history example, evaluation readiness, the CI regime, lander duties, landing modes, and the protections — git hooks, ruleset, status, ledger lint, close-out, never-weaken. Start at: `verification/verify-portfolio.md`. |
+| **`interpretation/`** | *Understand how it really works* | The choices ledger, memory conventions, investigation practice (instrument first, consumer inventory, identity and history), evaluation practice (what each result may claim), a worked simplification review, the improvement loop. Start at: `interpretation/choices-ledger-README.md`. |
 
-Shared infrastructure: **`skills/`** (38 vendored agent skills under a
-content lock — `skills-lock.json`, verified by `verify_skills_lock.py`,
-falsified by its test — and the routing table by factory step,
-`ROUTING.md`), **`harness/`** (parameterized lane launcher with run-bound
-receipts and its test, the run lifecycle, worktree ritual, board bootstrap,
-report schema with a choices sidecar, the train plan with its resource
-contract, the artifact-bank contract — pristine acceptance, isolated copies,
-receipts that tell a deliberate fake from a promised-but-failed role — the
-measurement-gated bounded bulk-read contract, the harness guards (one
-dispatcher, rules that fail open, switches that leave a trace, adapters as
-short mappings — `harness/guards.md`), and the model policy: roles
-and parameters are the factory's, model names are the operator's, dated,
-probed and revisited — `harness/model-policy.md`),
-**`user-level/`** (what goes into `~/.claude` so the factory works
-from any checkout: the global snippet, the local bank root, the operator's
-model-policy file from its example, plus the INACTIVE landing-policy
-example — the only place push authority can be granted, and only by the
-owner).
+## 3. Life of a change
 
-Tried against a foreign repo: `INSTALL.md` was run end to end on a Node
-hello-world with no Python project on 2026-09-06
-(`verification/examples/install-trial-node.md`). Ten of the 27 gate
-scripts port as-is (with `python3` + PyYAML; the three protections gates
-were added after the trial and need only stdlib + git); the rest are
-stack-specific or the source factory's domain choices, and the gates README
-says which.
+Each step: artifact → owner → next reader, then its home. Tags: (gate)
+(guard) (hook) (ruleset) (text) — §5.2.
 
-## The core loop (one screen)
+1. A board item whose body says why → Planned with a full spec → the owner's
+   approval recorded on the item; orchestrator → brief writer
+   (`planning/board-protocol.md` "Statuses"; `planning/core-model.md`).
+2. Uncertain cause: a read-only investigation brief on frozen evidence at a
+   pinned SHA → a falsified causal model → a fix brief or a Decision-needed
+   item, never code (`planning/investigation-brief-template.md §0`, `§8`).
+3. Every ADR or migration number claimed as a `claimed` row in NUMBERS on
+   main before the lane starts; the drift leg (gate) reads it at assembly
+   (`planning/adr-and-numbers.md`).
+4. The lane brief from the standing template — task ID, round, pin,
+   numbers, measurement baseline and proof owner, model/effort line, kind
+   line, legs table — orchestrator → wrapper; item → In flight
+   (`planning/lane-brief-template.md §1`, `§4`;
+   `planning/execution-contract.md §2`, `§9`; `harness/model-policy.md §4`).
+5. The wrapper: worktree at the pin, ritual, writer lock, launcher with
+   run-bound receipts → three questions: started, alive, deliverable
+   (`harness/worktree-ritual.md`; `harness/run-lifecycle.md §1`, `§4`, `§5`).
+6. The lane: authors; pregate block plus matching legs (gate) with the
+   import root pinned; sentinel; `<lane>-result.md` with `choices:` however
+   it exits; STOP on first contact, PARK at the ceiling or after round two
+   (`harness/report-schema.md`; `planning/execution-contract.md §3`–`§6`).
+7. The wrapper: result lint, red→green falsified after committing, identity
+   and trailer (hook), lane branch pushed — built or parked
+   (`harness/report-schema.md` "Machine check at handback";
+   `verification/falsification.md` rule 1; `verification/protections.md §1`).
+8. The orchestrator: `audit-choices` on the handback → one entry per
+   invented decision with a stable ID in `docs/choices/<train>.md`; unsound
+   resolved before assembly (`interpretation/choices-ledger-README.md §1`–`§4`).
+9. The lander: train worktree at origin/main, resource contract, `--no-ff`
+   merges of pinned SHAs, the kind re-derived from the real diff (text,
+   documented row), cross-checks, ledger committed with the train
+   (`verification/lander-duties.md §1`, `§2`; `harness/train-plan.md §2`).
+10. The lander: build and stamp; cheap gates by exit code (gate);
+    import-root probe; resource check; ONE full verify read only from
+    `EXIT= HEAD= BASE=` — the `verdict` rule (guard) refuses a pipe
+    (`harness/train-plan.md §4.1`; `harness/guards.md §7`).
+11. Authority: a live ruling on the item, or an active signed policy with no
+    `holds:` firing (text); neither → HOLD as an open pull request with a
+    decision brief (`verification/lander-duties.md §7`;
+    `user-level/landing-policy.example.md §1`, `§2`).
+12. Land: train branch pushed, `local-verify` posted, the pull request
+    merged `--merge --match-head-commit <HEAD=>` — or the documented direct
+    push; the ruleset (ruleset), the `landing` rule (guard) and the pre-push
+    hook (hook) run the same check (`verification/landing-modes.md §1`–`§5`;
+    `verification/protections.md §1.1`, `§2`, `§3`).
+13. Registration: origin/main CONTAINS `HEAD=`, never equals;
+    `landing-in-progress.json` written (`verification/landing-modes.md §4.6`;
+    `verification/protections.md §6`).
+14. Close-out, both modes: NUMBERS flipped, board sweep, one `landed`
+    notification per item, primary fast-forwarded, worktrees reaped after
+    the ancestor check; the close-out check (gate) and the Stop rule (guard)
+    hold the session until done (`verification/lander-duties.md §8`;
+    `planning/board-protocol.md` "Notifications").
+15. CI re-verifies and deploys; read at the next session start as a signal
+    (text), never the gate (`verification/landing-modes.md §4.3`;
+    `verification/protections.md §4`).
+16. Evaluation on an isolated bank copy under an admission receipt whose
+    `proves:` line is the whole claim; findings → board items
+    (`verification/evaluation-readiness.md §1`–`§4`; `harness/artifact-bank.md
+    §3`, `§6`).
+17. Lessons → memory, one fact per file, pointing at bank names; a rule
+    change → a reviewed diff to the operations doc; a machinery change → a
+    pilot with a measurement (`interpretation/memory-conventions.md`;
+    `interpretation/continuous-improvement.md`).
 
-```
-idea → board item (Planned, with a full spec) → PO approval
-  → (uncertain cause) read-only investigation on frozen evidence → falsified causal model
-  → lane brief from the standing template → parallel lane in its own worktree
-    (evidence attached first; agent authors; the wrapper commits and pushes
-     the branch; the named proof owner reruns the apparatus; two rounds max)
-  → handback → CHOICES AUDIT (ledger entry per invented decision)
-  → landing train (independent ready lanes share one): --no-ff pinned SHAs
-    → cross-checks → build → cheap gates → resource check
-    → FULL local verify green → landing authority? (ruling or active
-      policy; else HOLD with a decision brief)
-    → land: train branch pushed, local-verify status on the verified SHA,
-      pull request with the choices ledger as body, merge (default) — or
-      the documented direct-push override → CI re-verifies and deploys
-  → board sweep (Done + archive) → evaluation on an isolated bank copy
-    → findings → new board items
-  → memory: lessons that survive the session
-```
+## 4. Planning end to end
 
-Three non-negotiables inherited from the source factory:
-1. **Falsify the apparatus before the product** — a gate or test that has never
-   been seen red proves nothing.
-2. **Never weaken a criterion to pass** — ratchets move one way; baselines are
-   updated only through each gate's own `--update` mechanism.
-3. **Honesty on every surface** — unavailable is never rendered as empty;
-   advisory output is labeled advisory.
+- **4.1 The board is planning truth** — statuses, the transaction table,
+  Decision needed as a state with a document, one notification per
+  transition, full-board enumeration, derived views never a second plan
+  (`planning/board-protocol.md`).
+- **4.2 The ladder** — why → what (a full spec; the write-spec ceremony
+  for risky work) → owner approval → how (the standing brief) → proof; the
+  ceremony scales by slicing risk, not by a tier flag; dates are real; a
+  model change is an owner decision (`planning/core-model.md`).
+- **4.3 Briefs** — the lane brief parameterizes and never restates; the
+  investigation brief precedes a fix brief when the cause is uncertain; the
+  decision brief is what the owner reads instead of the conversation
+  (`planning/lane-brief-template.md`;
+  `planning/investigation-brief-template.md §0`, `§8`;
+  `planning/decision-brief-template.md`).
+- **4.4 The execution contract** — measurement baseline, two rounds per
+  task ID, decision versus repetition, first-contact STOPs, PARK versus
+  STOP and who pushes, the change kind
+  (`planning/execution-contract.md §2`–`§6`, `§9`).
+- **4.5 ADRs and numbers** — claim first, orchestrator-only, flip at
+  landing; the drift leg (gate) finds a `claimed` row already on main
+  (`planning/adr-and-numbers.md`; `planning/NUMBERS-template.md`;
+  `verification/protections.md §7`).
+- **4.6 Backlog teeth** — cited-or-stamped specs and closing evidence are a
+  gate, not a heuristic (`planning/backlog-discipline.md`;
+  `verification/gates/check_backlog.py`).
+
+## 5. Verification end to end
+
+- **5.1 Four layers** — lane pregate plus diff-triggered legs; train
+  cross-checks and cheap gates (docs gated by co-change pairing and backlog
+  teeth, never a staleness heuristic); ONE full verify on an idle machine
+  with a run-bound receipt; CI re-verifies and is adjudicated
+  (`verification/verify-portfolio.md`; `harness/train-plan.md §3`, `§4`;
+  `verification/lander-duties.md §1`).
+- **5.2 Form legend, and what runs where.** *Gate*: inside verify or among
+  the cheap gates; fails closed; no switch. *Guard*: hook-mounted; one
+  signal; fails open on its own crash; one switch per rule that leaves a
+  trace; a denial names the alternative. *Hook*: a git hook carrying the
+  same rules into any harness. *Ruleset*: the hosting side refuses. *Text*:
+  advisory — a reader may reject it — including reminders with a
+  deterministic trigger (`harness/guards.md §1`, `§4`, `§5`;
+  `verification/protections.md §1`, `§2`).
+
+  | Moment | Deterministic (gate / guard / hook / ruleset) | Text |
+  |---|---|---|
+  | Lane, before commit | pregate block; matching legs-table rows (gate) | the brief's hard rules; first-contact STOPs |
+  | Wrapper, at handback | result lint (wrapper check; guard on `SubagentStop`); red→green falsification | the choices audit |
+  | Any commit | identity leg, trailer on source commits (hook); `--no-verify` refused in a hooked session (guard) | subject form (WARN) |
+  | Assembly | cross-checks; cheap gates incl. drift leg, never-weaken, ledger lint (gate); `verdict`, `identity` (guard) | kind re-derivation (documented row); the batch rule |
+  | Full verify | the receipt launcher; the resource contract's hard stops | adjudicating a red X |
+  | Landing | `landing` rule (guard); pre-push (hook); ruleset; status poster | landing authority: a ruling or a signed policy |
+  | Close-out | close-out check (gate); Stop rule (guard) | board sweep; notifications |
+  | Session start | CI signal, bindings, hook status (text with a deterministic trigger) | the memory nudge |
+  | CI | re-verify workflow; advisory lanes comment | promotion by reviewed diff |
+
+- **5.3 Blast radius is decided by content, not by path.** The
+  proportional-rigor family: first-contact STOPs (text —
+  `planning/execution-contract.md §5`); the `holds:` floor that stops a
+  train even under authority (text — `user-level/landing-policy.example.md
+  §2`); effort follows irreversibility (text — `harness/model-policy.md §2`);
+  the docs-only receipt and its classifier (guard + hook —
+  `harness/train-plan.md §4`; `verification/protections.md §1.1`);
+  path-triggered legs — `ui-pass:` on the UI glob (guard + hook), the
+  trailer on the source prefix (hook), the diff-triggered legs table (gate
+  rows — `verification/protections.md §1.2`; `verification/verify-portfolio.md`
+  "Legs that bring lane-green closer to train-green"); the change kind,
+  declared from the planned set and re-derived from the real diff — a kind
+  that rose is applied and announced, a kind that fell is a ledger entry
+  (text, documented row — `planning/execution-contract.md §9`); the
+  trivial-lane exemption (text — `skills/ROUTING.md` rule 2); never-weaken
+  over the control plane (gate — `verification/protections.md §7`). Keyed
+  by what the diff contains and what a change can undo, never by a path
+  tier; each consequence is a receipt, a leg or a STOP, never a reviewer
+  count; escalation is a ruling on the item, never a keyword. A path-tier
+  table needs one classifier and tends to grow several that disagree, and
+  a rule with two homes diverges; a content-keyed family needs no
+  classifier beyond the diff and the docs-only classifier it already binds.
+- **5.4 Landing** — one procedure, two last steps: the train branch pushed
+  and `local-verify` posted on `HEAD=`, then the pull request merged under
+  authority (default) or the documented direct push; authority is a ruling
+  on the item or an active policy with no hold firing, else HOLD; contains,
+  never equals; the batch rule; the continue contract; the ten close-out
+  duties; a skipped required check rejects (`verification/landing-modes.md
+  §1`–`§6`; `verification/lander-duties.md §2`, `§3`, `§7`, `§8`).
+- **5.5 Protections** — the three git hooks (hook), the ruleset (ruleset),
+  the status poster, the CI signal (text), the ledger lint (gate), the
+  close-out check (gate) and Stop rule (guard), never-weaken (gate)
+  (`verification/protections.md §1`–`§7`).
+- **5.6 Evaluation readiness and the artifact bank** — three evaluation
+  types never conflated; the `proves:` receipt; a skip on a required check
+  rejects; pristine acceptance; exercise the copy, never the source
+  (`verification/evaluation-readiness.md §1`–`§6`; `harness/artifact-bank.md
+  §1`–`§9`).
+- **5.7 Falsification** — the three non-negotiables above are read through
+  `verification/falsification.md`, "Known vacuity classes" and each
+  chapter's "What the test proves" (`verification/verify-portfolio.md`;
+  `harness/guards.md §13`; `verification/protections.md §10`); a lens that
+  passes when any file exists, a regex over whole-file legacy content and a
+  check ending in `|| true` are the vacuity classes this rule exists for.
+
+## 6. Interpretation end to end
+
+- **6.1 The choices ledger is a transaction point** — handback `choices:` →
+  audit → one entry per invented decision with a stable ID → unsound
+  resolved before assembly → committed with the train → the pull-request
+  body → the `## Landing` fields (mode, receipts, status, `ui-pass:`,
+  `kind:`) → the ledger lint (gate) (`interpretation/choices-ledger-README.md
+  §1`–`§4`; `verification/protections.md §5`).
+- **6.2 Memory** — one fact per file plus an index; a trail, never an
+  authority; bank names, never scratch paths; a nudge, never a block
+  (`interpretation/memory-conventions.md`).
+- **6.3 Investigation practice** — instrument first; investigate before the
+  fix mandate; STOP (a wrong causal model) versus PARK (rounds exhausted);
+  the consumer inventory before any move, split or delete; identity and
+  history (`interpretation/investigation-practice.md`;
+  `verification/examples/identity-and-history.md`).
+- **6.4 Evaluation practice** — what each result type proves, state parity,
+  honest metrics (`interpretation/evaluation-practice.md`).
+- **6.5 The improvement loop** — incident → finding → board item → pilot
+  with a measurement → reviewed diff to the operations doc
+  (`interpretation/continuous-improvement.md`; `harness/guards.md §11`).
+
+## 7. Shared infrastructure
+
+- **`skills/`** — vendored skills under a content lock, verified by
+  `skills/verify_skills_lock.py` and falsified by its test; routing by
+  factory step (`skills/ROUTING.md`); provenance (`skills/ATTRIBUTION.md`).
+- **`harness/`** — the run lifecycle's three questions and run-bound
+  verdicts (`harness/run-lifecycle.md §1`, `§5`); the report schema and its
+  machine check (`harness/report-schema.md`); the worktree ritual and the
+  import-root probe (`harness/worktree-ritual.md`); the launcher
+  (`harness/launch_lane.sh`); the train plan with the resource contract and
+  the receipt (`harness/train-plan.md`); the artifact bank
+  (`harness/artifact-bank.md`); the bulk-read contract, measurement-gated
+  (`harness/bulk-read-contract.md`); the guards — one dispatcher, rules that
+  fail open, switches that leave a trace (`harness/guards.md`); the model
+  policy — roles are the factory's, names the operator's
+  (`harness/model-policy.md`).
+- **`user-level/`** — what goes into `~/.claude` so the factory works from
+  any checkout; the only two owner-signed files: the model policy and the
+  INACTIVE landing policy, both dated (`user-level/README.md`;
+  `user-level/model-policy.example.md`; `user-level/landing-policy.example.md`).
+
+## 8. Adapters and harness neutrality
+
+Doctrine names commands, files and git operations; Claude Code, a coding
+CLI, Cursor, git hooks, CI and the hosting side are columns in adapter
+tables, not homes. Coding-CLI hooks are post-hoc and never claimed blocking;
+what binds such a lane is the wrapper's handback check and the git hooks. A
+rule file or a directory-local instruction file delivers a pointer to a
+repo document — the `reads first` column of the legs table — and is never a
+check (`harness/guards.md §2`, `§9`; `verification/protections.md §8`).
+
+## 9. What stays human
+
+Review content (whether a red→green proof is real), role and policy choices
+(who lands, which model, how CI is read), events that need reading (a purge
+in progress, a quota wall, a parallel fixer), and rules the operations doc
+exempts by design. A mechanism may require that a choice is recorded; it
+never judges whether it is right (`harness/guards.md §12`;
+`verification/protections.md §9`).
+
+## 10. Index — from a question to its home
+
+| Question | Home |
+|---|---|
+| Who may push main, and what happens when the owner is asleep? | `planning/execution-contract.md §6`; `verification/lander-duties.md §7`; `user-level/landing-policy.example.md §1` |
+| How is a number allocated, and flipped? | `planning/adr-and-numbers.md`; `verification/lander-duties.md §8` |
+| What must a receipt contain, and what is a verdict never read from? | `harness/train-plan.md §4.1`; `harness/run-lifecycle.md §2`; `harness/guards.md §7` |
+| When may a train carry one lane? | `verification/lander-duties.md §2` |
+| What may a guard never do, and when does a soft form become hard? | `harness/guards.md §1`, `§5` |
+| Where is a switch use recorded? | `harness/guards.md §4`; `interpretation/choices-ledger-README.md §1` |
+| When does a lane STOP, when does it PARK, and how many rounds does it get? | `planning/execution-contract.md §3`–`§6` |
+| What is the change kind, and who re-derives it? | `planning/execution-contract.md §9` |
+| Which legs run on a lane before commit, and where do domain checklists live? | `planning/lane-brief-template.md §4`; `verification/verify-portfolio.md` "Legs that bring lane-green closer to train-green"; `harness/guards.md §9` |
+| What may CI decide? | `verification/landing-modes.md §4.3`; `verification/ci/README.md §4` |
+| How does a docs-only train land, and what does `ui-pass:` mean? | `harness/train-plan.md §4`; `verification/protections.md §1.1`; `interpretation/choices-ledger-README.md §1` |
+| What does the branch policy contain, and deliberately not? | `verification/landing-modes.md §3`; `verification/protections.md §2` |
+| Which merge forms are refused, and how is a landing registered? | `verification/landing-modes.md §4.5`, `§4.6`; `verification/lander-duties.md §8` |
+| How is a held train presented? | `planning/decision-brief-template.md`; `planning/board-protocol.md` "Decision needed" |
+| How many notifications per transition, and which board action per event? | `planning/board-protocol.md` "Notifications", "Transaction points" |
+| What must a spec contain? | `planning/core-model.md` |
+| When is an investigation dispatched before a fix? | `planning/investigation-brief-template.md §0` |
+| What is a choice, and what is its ID? | `interpretation/choices-ledger-README.md §1`, `§2` |
+| May the heavy step start now, and how is a live lane identified? | `harness/train-plan.md §3`; `harness/run-lifecycle.md §6` |
+| What may an evaluation claim, and when is a bank copy isolated? | `verification/evaluation-readiness.md §1`, `§4`; `harness/artifact-bank.md §3` |
+| Which model runs a lane? | `harness/model-policy.md §3`, `§4`; `user-level/README.md` |
+| Which skill does a step reach for, and are the installed skills the shipped ones? | `skills/ROUTING.md`; `skills/ATTRIBUTION.md` |
+| How does a gate prove it has teeth? | `verification/falsification.md` rule 5; `harness/guards.md §11` |
+| What does a hook do on a coding CLI? | `harness/guards.md §2`, `§9`; `verification/protections.md §8` |
+| Where does a lesson go, and how is a machinery change adopted? | `interpretation/memory-conventions.md`; `interpretation/continuous-improvement.md` |
+| How does a foreign repo install? | `INSTALL.md`; `verification/examples/install-trial-node.md` |
+
+## 11. Tried against a foreign repo
+
+`INSTALL.md` was run end to end on a Node hello-world with no Python project
+on 2026-09-06 (`verification/examples/install-trial-node.md`). Which gate
+scripts port as-is, which are stack-specific and which are the source
+factory's domain choices is the table in `verification/gates/README.md`.
+The pointers in this file and in `INSTALL.md`, and the counts `INSTALL.md`
+states, are held to the tree by `verification/tests/test_hub_pointers.sh`.
+
+## 12. Provenance and what is still provisional
+
+Every chapter's last section is its honest boundary — what the source
+factory had shown when the chapter was written, and what is provisional.
+Read those before trusting a routine: the pull-request landing mode and the
+autonomous-landing column of the policy are the owner's stated defaults,
+not measured routines; the guards' false-positive rate is unknown until one
+train has run with the hooks on; the change kind
+(`planning/execution-contract.md §9`) and the diff-triggered legs
+placeholder (`planning/lane-brief-template.md §4`) are documented rows with
+no code of their own. `skills/ATTRIBUTION.md` records every adaptation from
+the source factory and the two upstream skill sets.
+
+The change-kind line and the legs placeholder were prompted by reading
+Harness Kit's `development-harness` (version 3.0.0 per its package manifest,
+MIT per that manifest; the copy read on 2026-09-06 carried no LICENSE file
+or copyright line). No text was borrowed. Deliberately NOT adopted from it,
+recorded so a later change does not re-import them: a path-glob risk-tier
+table as a merge-policy axis (required-checks, spec-required,
+human-approval, reviewer-count and auto-merge columns); a phase state
+machine (phase rule files, a phase-scoped write guard, auto-advance on a
+green test run); a tier-gated LLM review agent in CI; a type-lens gate (a
+regex security lens, an any-file spec lens, checks ending in `|| true`); a
+skills registry by stack with auto-install and trigger-matched custom
+workflows; docs-drift watch paths and staleness heuristics; an aggregate CI
+status that counts skipped as passed; rule files as a rule home or a check;
+escalation by keyword. Each either falls on the human side of
+`harness/guards.md §12` or is already carried here in a receipt-bound,
+content-keyed form (§5.3).

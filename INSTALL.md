@@ -50,9 +50,19 @@ has no Python of its own, and pin it in the verify entry (`PY ?= python3`).
    and parameterize: the gate block with the repo's pregate commands,
    `{{FIRST_CONTACT_STOPS}}` with the repo's guarded boundaries and number
    rules, `{{PARK_DESTINATION}}` with where parked remainders are tracked
-   (a board item, or the backlog row your planning gate governs). The
+   (a board item, or the backlog row your planning gate governs),
+   `{{DIFF_TRIGGERED_LEGS}}` with the repo's diff-triggered legs table
+   (`verification/verify-portfolio.md`, leg (c): touches | run | proves |
+   reads first) — seed it from the gates README's domain rows and from the
+   repo's own first-round assembly reds (grep the train ledgers' `O-`
+   entries), and keep the table in the operations doc as its one home —
+   and `{{KIND_CLASSIFIER}}` with the change-kind classifier command
+   (`planning/execution-contract.md` §9), built from the docs-only
+   classifier and the guarded-boundary list the repo binds in Step 5;
+   until it binds one the line reads `none — classifier unbound`. The
    per-lane fields (task ID, round, apparatus, proof owner, attachments,
-   ceiling, and the `Model/effort:` line filled from the operator's dated
+   ceiling, the `Kind:` line from that classifier over the planned file
+   set, and the `Model/effort:` line filled from the operator's dated
    policy — `harness/model-policy.md` §4) are filled at dispatch, never in
    the template. No template, skill or doc carries a model name as a
    default.
@@ -110,14 +120,14 @@ has no Python of its own, and pin it in the verify entry (`PY ?= python3`).
    (Python repos). Calibrate against the repo's starting point via their
    `--update` mechanisms — never by deleting assertions.
 4. Read `verification/falsification.md` and apply it from day one. Rules
-   §7–§9 govern root-cause reports: falsify the causal model before the fix
+   7–9 govern root-cause reports: falsify the causal model before the fix
    (or as the fix's first red test), refute only with a source, and keep an
    unknown cause unknown. Before writing any gate over stored evidence
    (rows, snapshots, receipts) or any progress meter that survives a retry,
    read `verification/examples/identity-and-history.md` and run its script
    once (`python3 verification/examples/identity_and_history.py`, then with
    `--plant count-all`): a gate must read what the consumer reads, and is
-   falsified in both directions (rules §10–§12).
+   falsified in both directions (rules 10–12).
 5. Read `verification/evaluation-readiness.md`. TRANSLATE its §2.1 check
    families into the repo's own pre-flight smoke (stable check ids, a
    time budget, a receipt in the §4 shape) and write, into the repo's
@@ -166,6 +176,13 @@ has no Python of its own, and pin it in the verify entry (`PY ?= python3`).
    close-out reading (`verification/lander-duties.md` §8). The drift leg and
    the duplicate-id leg run inside the registry and backlog gates you
    already wired.
+10. Write the consistency test of `verification/verify-portfolio.md` leg
+    (e): the brief's pregate block AND its diff-triggered legs table are
+    byte-equal to the operations doc's, every section the brief cites
+    exists, and every path-scoped instruction file (Step 5 item 8) mirrors
+    one legs-table row. `verification/tests/test_hub_pointers.sh` is the
+    package's own instance and the shape to copy; its `--tree --installed`
+    form over the copied doc tree also refuses `{{…}}` residue.
 
 ## Step 3 — Interpretation pillar
 1. Create `docs/choices/` with `interpretation/choices-ledger-README.md`. The
@@ -189,7 +206,7 @@ has no Python of its own, and pin it in the verify entry (`PY ?= python3`).
    default for every debugging lane; "investigate before the fix lane gets
    its mandate" is the default whenever the cause is uncertain (the brief is
    `planning/investigation-brief-template.md`; the trust rules are
-   `verification/falsification.md` §7–§9); its "Consumer inventory"
+   `verification/falsification.md` rules 7–9); its "Consumer inventory"
    section is the mandatory pre-step for every lane that deletes, moves,
    splits or renames: one row per protected element, readers in every
    language and path-keyed tool baselines included, live-versus-historical
@@ -300,7 +317,13 @@ register NO hook. Do not add a PreToolUse registration in this step.
    step — the package registers nothing. Coding CLIs get the
    `AGENTS.md.example` paragraph. Every rule that applies is written into
    the operations doc as a reviewed diff naming the guard, the switch and
-   the falsification.
+   the falsification. A rules directory (a Claude Code `.claude/rules/`
+   file with `paths:` frontmatter, a Cursor glob-scoped rule, a nested
+   `CLAUDE.md` or `AGENTS.md`) is optional; if used, every file carries the
+   path scope of ONE legs-table row and its whole body is the pointer that
+   row's `reads first` column names — never a second statement of a rule,
+   never claimed as a check (`harness/guards.md` §9, "Domain guidance
+   delivery").
 9. Install the tracked git hooks once in the primary —
    `python3 verification/protections/git_hooks.py install` (`core.hooksPath`,
    shared by every worktree; `status` exits 1 until done, and the
@@ -372,7 +395,11 @@ train is held with a decision brief (`verification/lander-duties.md` §7).
 3. Run the installed gates THE WAY THEIR RUNBOOK DOCUMENTS THEM
    (`python3 -m scripts.<gate>`, then `make verify`) and read each gate's own
    verdict line; an import-only test does not count
-   (`verification/evaluation-readiness.md` §6). If the repo serves a
+   (`verification/evaluation-readiness.md` §6). Run
+   `sh verification/tests/test_hub_pointers.sh` once on the package (the
+   hub pointers and INSTALL's counts hold) and its `--check --tree
+   --installed <docs root>` form on the copied doc tree (no dead pointer,
+   no `{{…}}` residue). If the repo serves a
    surface, run one offline functional trial against a small start state
    with fake AI roles and bank its receipt (§4 shape) as the installation's
    first evaluation artifact. Falsify the admission gate by planting the
@@ -392,4 +419,13 @@ train is held with a decision brief (`verification/lander-duties.md` §7).
 6. Mount the guards for the smoke train from assembly start; record every
    refusal and switch in the ledger; a false positive without a named
    alternative goes to WARN.
+7. Falsify the diff trigger like any gate: plant one legs-table row (a glob
+   and a one-second command) and touch one matching file in a scratch
+   lane — the pregate log must show the row ran; touch a file no row
+   matches — nothing runs. Then declare the scratch lane `source` and plant
+   a file of the `record` kind (a migration, a baseline): the lander's
+   re-derivation must print `record` and the ledger line must read
+   `kind: source→source, record` (`planning/execution-contract.md` §9.3);
+   with no classifier bound the line reads `none — classifier unbound` and
+   the step is recorded as not exercised.
 A factory whose smoke test has not run is not installed — it is copied.

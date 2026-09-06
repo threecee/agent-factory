@@ -151,16 +151,53 @@ the fix (`protections.md` §7 owns the three shipped ones).
   seconds, before the suite.
 - (c) The lane pregate is the brief's cheap block plus diff-triggered legs
   (a migration file ⇒ the migration test; a UI string ⇒ the help-copy test;
-  the registry ⇒ the pin tests). The table is the repo's; the import root
-  is pinned to the lane tree; it is never the full suite.
+  the registry ⇒ the pin tests). The table is the repo's, kept in its
+  operations doc and copied byte-equal into the brief at
+  `{{DIFF_TRIGGERED_LEGS}}` (`../planning/lane-brief-template.md` §4); the
+  import root is pinned to the lane tree; it is never the full suite. Its
+  column contract:
+
+  | touches (globs) | run (exact command from `<wt>`) | proves | reads first |
+  |---|---|---|---|
+  | `migrations/**` | `<migration head test>` | one head; the count literal bumped | `<the repo's migration doc>` |
+  | `<ui glob>` | `<copy-contract test>`, `<a11y name test>` | strings and roles unchanged or documented | `<the repo's pattern doc>` |
+  | `docs/decisions/NUMBERS.md` | `<registry pin tests>` | registry consistent | `../planning/adr-and-numbers.md` |
+  | `<gate/guard/hook source>` | `check_gate_weakening --hard`; the rule's `falsify` | criteria not weakened | `../harness/guards.md` §11 |
+
+  A row runs when one of its globs matches `git diff --name-only
+  <pin>..HEAD`; the lander re-runs the matching rows among the cheap gates
+  (`lander-duties.md` §1 step 6). Each row runs in seconds and names ONE
+  proof, judged by exit code like any gate. A row whose command is
+  skip-guarded (a test that skips on an absent build product) names the
+  build step in `proves` as its precondition, and the pregate refuses the
+  row — never reports it green — when that product is absent: a skipped row
+  is not a green row. `reads first` is where domain checklists live: a
+  pointer to the repo's own architecture or pattern document for that
+  surface, which the brief's §2 already requires read; a harness may
+  deliver that pointer as a directory-local instruction file
+  (`../harness/guards.md` §9, "Domain guidance delivery"), never as a
+  second statement of the rule. A first-round assembly red that no row
+  caught becomes a row in the same train — the assembly finding is an
+  orchestrator ledger entry (`../interpretation/choices-ledger-README.md`
+  §1), and the row is its fix. The change kind of
+  `../planning/execution-contract.md` §9 selects rows by what the diff
+  contains; it adds no row of its own.
 - (d) The never-weaken check (`gates/check_gate_weakening.py`): a baseline
   that grew without an `--update` commit, a gate changed without a test
   naming it, a net loss of `assert` lines — WARN on the first train,
   `--hard` after, a `Gate-change: ADR-NNNN` trailer as the documented
   exception.
-- (e) The brief template's pregate block is byte-equal to the operations
-  doc's block and every section the brief cites exists — a test the
-  installer writes.
+- (e) The brief template's pregate block AND its diff-triggered legs table
+  are byte-equal to the operations doc's, every section the brief cites
+  exists, and every path-scoped instruction file mirrors one legs-table row
+  — a test the installer writes. The package's own instance over its hub
+  files is `tests/test_hub_pointers.sh`: every `pillar/file.md §N` pointer
+  in the README and INSTALL resolves to a file and a numbered heading, the
+  counts INSTALL states equal the tree, and the test is self-falsified with
+  a planted dead path and a planted wrong §-number (both red, naming the
+  path). Its `--tree` mode scans every document under a root and its
+  `--installed` flag refuses `{{…}}` residue — the installer's form over
+  the copied doc tree.
 - (f) The skills lock is the existing `skills/verify_skills_lock.py`; no
   second checker.
 - (g) Only for repos whose tests set process-wide environment: every

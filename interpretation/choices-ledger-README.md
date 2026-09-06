@@ -48,10 +48,15 @@ duplicates the rules below.
   <reason>`, the pull-request number (`pr: <n>`, pr mode), `ui-pass: <path>`
   — the lander's rendered pass on a fresh build, required by the landing
   guard only when the train touches the project's UI glob
-  (../verification/protections.md §1.1) — and every logged switch or
+  (../verification/protections.md §1.1) — `kind: <declared>→<derived>`,
+  the change kind the brief declared and the kind the lander re-derived
+  from the train's real diff (../planning/execution-contract.md §9; a kind
+  that fell is an orchestrator entry in the same ledger, a kind that rose
+  is announced in the landing summary) — and every logged switch or
   enforcement change as an orchestrator entry
   (../verification/landing-modes.md §1). The ledger lint
-  (../verification/protections.md §5) checks presence only.
+  (../verification/protections.md §5) checks presence only, and does not
+  yet read the `kind:` line (a documented row).
 
 ## 2. One ID per choice, everywhere it is mentioned
 - A choice gets a stable ID when it is first written down and keeps it:

@@ -46,6 +46,20 @@ factory-specific additions:
     every check as contains-not-equals, and removes every repository name,
     port, identity, issue reference and non-English string.
 
+- **Harness Kit** (`development-harness`, version 3.0.0 per its package
+  manifest, MIT per that manifest; the copy read on 2026-09-06 carried no
+  LICENSE file or copyright line) — read, not vendored. The change-kind
+  line with its escalate-automatically / never-demote-silently rule
+  (`../planning/execution-contract.md` §9) and the diff-triggered-legs
+  placeholder (`../planning/lane-brief-template.md` §4) were prompted by
+  reading it. No text was borrowed; every sentence here is a restatement.
+  The kit deliberately does not adopt its path-tier table, merge-policy
+  columns, phase write guard, tier-gated review agent, type-lens gate,
+  skills registry or custom-workflow triggers — the README's provenance
+  section lists them so a later change does not re-import them. Should a
+  sentence ever be borrowed, this entry must first carry the upstream
+  notice, reconstructed from the upstream source.
+
 Factory adaptations to upstream skill text (recorded here so a re-vendoring
 from upstream does not silently drop them):
 

@@ -78,6 +78,10 @@ Consequences the package builds on:
   hook for a coding CLI; what such a lane can be forced to is what the
   wrapper checks at handback and what the git hooks refuse (§9,
   `run-lifecycle.md` §11 rule 3).
+- **An instruction file is never a check.** A rule file or a
+  directory-local instruction file delivers text the reader may reject —
+  never claim one as a guard, a gate or a hook (§9, "Domain guidance
+  delivery").
 
 ## 3. Dispatcher and rule contract
 
@@ -233,10 +237,11 @@ direct push carrying the `local-verify` status
 | M-14 memory nudge | `Stop` and `SessionStart` `compact` | the events log and the operations doc's mtime (the thresholds are the home's) | soft — a question, never a block | `../interpretation/memory-conventions.md` | documented |
 | M-15 dispatch preconditions, result lint, rows `raw-dispatch`, `justification`, `subagent-result` | the wrapper before launch; the wrapper at handback; pre-tool on a raw lane-shaped CLI call; pre-tool on a harness-subagent dispatch; `SubagentStop` | the brief's pin, the model policy, the quota-canary receipt, the round file, the dispatch gap (the conditions are the home's); the report's form; a lane-shaped invocation outside the wrapper; a `justification:` line (logged, not judged); a result file passing the machine check | hard (wrapper refusal, `raw-dispatch`, `justification`); `subagent-result` hard with the three-refusal rule | `run-lifecycle.md` §11 + `report-schema.md` "Machine check at handback" | documented |
 | M-16 destructive and forbidden forms | pre-tool shell / edit | see the rows below | hard, one switch per row | the row table below is the home of every row; `no-verify` is also §7, `commit-identity` is `../verification/protections.md` §1.3 | `no-verify` and `commit-identity` shipped; the others documented |
-| M-17 gate legs | cheap gates and lane pregate | duplicate registry ids, registry pin tests, diff-triggered tests, "never weaken" (a baseline that rises without an `--update` commit, a gate changed without a test change, net assertion loss), brief↔operations consistency, skills lock, env scrub, seed-in-migration | gates, no switch; the "never weaken" leg `WARN` on its first train | `../verification/verify-portfolio.md` "Legs that bring lane-green closer to train-green" + `../verification/protections.md` §7 | M-17a (duplicate ids) and M-17d (never weaken) shipped; the rest documented |
+| M-17 gate legs | cheap gates and lane pregate | duplicate registry ids, registry pin tests, the diff-triggered legs table (`{{DIFF_TRIGGERED_LEGS}}` in the brief, byte-equal to the operations doc's; a row runs when its glob matches the diff), "never weaken" (a baseline that rises without an `--update` commit, a gate changed without a test change, net assertion loss), brief↔operations consistency (the pregate block AND the legs table), skills lock, env scrub, seed-in-migration | gates, no switch; the "never weaken" leg `WARN` on its first train | `../verification/verify-portfolio.md` "Legs that bring lane-green closer to train-green" + `../verification/protections.md` §7 | M-17a (duplicate ids) and M-17d (never weaken) shipped; the rest documented |
 | M-18 watchdog | a recurring task, not a hook | every `<lane>.sentinel.json` at `--max-age-min`, the exit sentinel, log and result mtimes, the branch head on origin; one line only on change | context; nudges, never kills | `run-lifecycle.md` §11 rule 6 (consumer of `../verification/gates/lane_sentinel.py`) | documented |
 | M-19 hygiene | none — a rule about the hook table itself | every registered entry exists and its channel reaches the model | — | §10 | shipped as §10 + the settings example |
 | M-20 disk floor | pre-tool before a big spender (dispatch, assembly, serve) | `df -k <volume>` against the floor, `du -sk <tmp>` under a time budget | hard; a `du` that does not finish is a note | `train-plan.md` §3.1 row + the reminders' session-start line | documented |
+| M-21 kind | the assembly cross-check (`../verification/lander-duties.md` §1 step 3) and the landing (M-1) | the repo's kind classifier (`FACTORY_GUARD_KIND_CMD`, §8) over `BASE..HEAD` against the ledger's `kind:` line — a classification of what the diff contains, never a policy | context, never hard — the legs a kind selects are the hard ones (M-1's optional legs, M-17); a kind that fell without an `O-<n>` entry is a finding at landing | `../planning/execution-contract.md` §9 | documented |
 
 **M-16 rows.** Each row has one switch (`FACTORY_GUARD_ALLOW=<row>`) so a false
 positive never turns off the whole table.
@@ -404,6 +409,7 @@ placeholders, the live-lane legs list nothing).
 | Registry check | `FACTORY_GUARD_REGISTRY_CMD` / `FACTORY_GUARD_REGISTRY_FILE` | unset — the leg is skipped / `docs/decisions/NUMBERS.md` | repo operations doc |
 | UI pass glob | `FACTORY_GUARD_UI_GLOB` | unset — the leg is skipped; comma-separated globs; bound, a train touching them needs `ui-pass:` in the ledger | repo operations doc |
 | Docs-only classifier | `FACTORY_GUARD_DOCS_ONLY_CMD` | unset — a receipt carrying `DOCS_ONLY=1` is refused; `<cmd> <BASE> <HEAD>` (§1.1) | repo operations doc |
+| Change-kind classifier | `FACTORY_GUARD_KIND_CMD` | unset — the M-21 leg is skipped and the brief's `Kind:` line reads `none — classifier unbound`; `<cmd> <path>...` prints the applicable kinds, one per line (`../planning/execution-contract.md` §9.3); built from the docs-only classifier, the source prefix, the decisions directory, the registry file and the guarded-boundary list already bound here, so the kind and the landing legs never disagree about a path; printed on `PROTECTIONS BINDINGS:` once the leg ships (documented row) | repo operations doc |
 | Hook interpreter | `FACTORY_GUARD_PYTHON` | `<toplevel>/.venv/bin/python`, else `python3` (the shims; `../verification/protections.md` §1) | repo operations doc |
 | Protections location | `FACTORY_PROTECTIONS_DIR` | `<adapters>/../../verification/protections` — locates `git_hooks.py` and `ci_signal.sh` for the shims and the reminders script; a location like `FACTORY_GUARD_DIR`, never a rule parameter | the operator, when the chapter is kept elsewhere |
 
@@ -429,6 +435,31 @@ The entry script only locates the package (`FACTORY_GUARD_DIR`, else beside
 itself), puts the package's parent on `sys.path`, and calls `main(argv)`
 under a `__main__` guard — importing it runs nothing. It works wherever the
 two directories are copied together, and writes no bytecode into the tree.
+
+**Domain guidance delivery (advisory, never a check).** The `reads first`
+column of the diff-triggered legs table
+(`../verification/verify-portfolio.md`, "Legs that bring lane-green closer
+to train-green", leg (c)) names the repo document a lane reads before it
+touches a surface; the brief's §2 already requires that reading. A harness
+that loads instructions on demand may deliver the pointer at the moment of
+contact — the mapping, per harness:
+
+| Harness | Delivery form |
+|---|---|
+| Any harness that reads directory-local instruction files (a nested `CLAUDE.md` loaded when a file in that directory is read; a nested `AGENTS.md` read per directory by coding CLIs) | the harness-neutral form: one pointer-only file in the directory the row's `touches` globs cover, whose whole body is the `reads first` pointer |
+| Claude Code, Cursor | the refinement: a path-scoped rule file (`paths:` frontmatter; a glob-scoped rule) whose globs are the row's `touches` globs verbatim — fired when the harness READS a matching file, which covers an edit only because the harness reads before it edits |
+| Coding CLI without on-demand loading, git hooks, CI | none — the brief's `reads first` pointer is the delivery; a post-hoc hook cannot inject text before the read |
+
+Rules of the channel: a rule file loaded unconditionally is not
+path-scoped and is not this channel; no phase files (the package has no
+phase machine — phases are separated by role and tree: lanes author, the
+wrapper commits, only the lander verifies, in a train tree); the file is a
+pointer, never a second statement of a rule (one home); the installer's
+consistency test (`../verification/verify-portfolio.md`, leg (e)) checks
+each such file against its legs-table row so the two cannot drift; after a
+compaction the file fires again only when a matching file is read again
+(§2 — the `compact` reminder leg is the only guaranteed post-compaction
+channel); and none of it is a check (§2).
 
 ## 10. Hook hygiene (M-19)
 

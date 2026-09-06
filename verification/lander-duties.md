@@ -18,7 +18,12 @@ project's concrete commands and its resource contract live in
    regenerating once on the assembled tree); counter-like edits from parallel
    lanes merged "clean" can still be wrong — set base+N at assembly. Never
    predict a conflict; compute it (`git merge-tree --write-tree A B`,
-   git ≥ 2.38 — the one version requirement this file has).
+   git ≥ 2.38 — the one version requirement this file has). Re-derive the
+   change kind from `git diff --name-only <BASE>..HEAD` with the repo's
+   classifier (`../planning/execution-contract.md` §9) and write
+   `kind: <declared>→<derived>` into the ledger; a kind that rose selects
+   its legs at step 6 and is announced in the landing summary; a kind that
+   fell is an `O-<n>` entry, never applied silently.
 4. The choices ledger for the train is committed WITH the train.
 5. Build every product the gates or the suite READ, on the assembled tree,
    on every run — whether or not a file under that product's source changed
