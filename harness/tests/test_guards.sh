@@ -40,11 +40,13 @@
 #      the reminders script names the same dir
 #   9  `falsify` writes the receipt with N ok lines (N = the shipped cases) and exits 0,
 #      also under a FACTORY_GUARD_GATES binding; a planted wrong needle in the copy →
-#      exactly one FAIL line, exit 1
+#      exactly one FAIL line, exit 1 — the copy carries verification/gates beside the
+#      package, because the landing and close-out rules read a gate
 #  10  lint helper: a planted forbidden form (pgrep -f) → path:line; marked line → silent; the package's own
 #      harness/ tree is lint-clean under the default roots
 #  11  reminders: session-start prints the guards line, the GUARD BINDINGS line (unbound or
-#      the values), the DISABLED warning, the landing line; compact prints the keep-list;
+#      the values), the PROTECTIONS BINDINGS line, the DISABLED warning, the landing line;
+#      no GIT HOOKS line while the protections driver is absent; compact prints the keep-list;
 #      prompt prints LIVE LANES only while a fakecli runs with the token and dir flag —
 #      never for a shell whose text mentions them
 #  12  the settings example parses; every command path it names exists in adapters/; it
@@ -79,10 +81,13 @@ check() { # name condition-exit-code detail
 has() { case "$1" in *"$2"*) return 0 ;; esac; return 1; }
 
 # ---------------------------------------------------------------- fixtures
-fresh_copy() { # dir → a copy of guards/ + adapters/ under it
+fresh_copy() { # dir → a copy of guards/ + adapters/ under it, and verification/gates beside them
   mkdir -p "$1"
   cp -R "$SRC/guards" "$1/guards"
   cp -R "$SRC/adapters" "$1/adapters"
+  # the landing and close-out rules read a gate (verification/protections.md §5, §6); a copy of
+  # guards/ + adapters/ alone would note the missing gate loudly and replay none of their cases
+  mkdir -p "$1/verification" && cp -R "$SRC/../verification/gates" "$1/verification/gates"
   find "$1" -name __pycache__ -type d -prune -exec rm -rf {} + 2>/dev/null
 }
 COPY="$T/copy one"; fresh_copy "$COPY"
@@ -347,6 +352,9 @@ check "11a session-start names the mounted rules and the switch forms, no warnin
 check "11a2 session-start prints the bindings line with 'unbound' while nothing is bound" "$( has "$out" 'GUARD BINDINGS: cli=unbound token=unbound dir-flag=unbound gates=unbound'; echo $? )" "$out"
 out="$(rem session-start FACTORY_GUARD_CLI=fakecli FACTORY_GUARD_CLI_TOKEN=exec FACTORY_GUARD_GATES=npm)"
 check "11a3 session-start prints the bound values" "$( has "$out" 'GUARD BINDINGS: cli=fakecli token=exec dir-flag=unbound gates=npm'; echo $? )" "$out"
+check "11a4 session-start prints the PROTECTIONS BINDINGS line with 'unbound' while nothing is bound, and no GIT HOOKS line without the driver" "$( has "$out" 'PROTECTIONS BINDINGS: default-branch=unbound git-email=unbound source-prefix=unbound' && ! has "$out" 'GIT HOOKS'; echo $? )" "$out"
+out="$(rem session-start FACTORY_GUARD_DEFAULT_BRANCH=trunk FACTORY_GUARD_GIT_EMAIL=lander@example.invalid)"
+check "11a5 the PROTECTIONS BINDINGS line prints the bound values" "$( has "$out" 'PROTECTIONS BINDINGS: default-branch=trunk git-email=lander@example.invalid source-prefix=unbound'; echo $? )" "$out"
 out="$(rem session-start FACTORY_GUARD_DISABLED=1)"
 check "11b session-start warns when FACTORY_GUARD_DISABLED=1" "$( has "$out" 'WARNING: FACTORY_GUARD_DISABLED=1'; echo $? )" "$out"
 printf '{"train": "t-9"}\n' > "$STATE/landing-in-progress.json"

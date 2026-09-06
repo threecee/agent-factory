@@ -15,7 +15,7 @@ deterministic pieces against your language, build chain and domain.
 | Pillar | Question it answers | Contents |
 |---|---|---|
 | **`planning/`** | *Define why, what, how* | Board protocol (GitHub Projects as planning truth; decision briefs, one notification per transition, derived views), spec discipline, ADR + number registry, backlog discipline with closing evidence, the standing lane brief, the read-only investigation brief that precedes a fix brief when the cause is uncertain, and the execution contract (measurement baseline handed over before dispatch, a named proof owner, two complete rounds per task then park-and-split) |
-| **`verification/`** | *Prove that it works* | 24 deterministic gate scripts (one-way ratchets, secret scanning with a working-tree leg, traceability, planning-doc teeth — classified by what ports to a non-Python repo, with a JavaScript ratchet and boundary test as the worked substitution), the verify portfolio, falsification norms (with a runnable identity-and-history example: gates follow the consumer's identity, falsified in both directions), evaluation readiness (pre-flight smoke, offline functional trial and AI evaluation kept apart, one receipt schema), CI in the pinned/secret-gated regime, lander duties for landing trains (push gated on verify AND on landing authority — held with a decision brief by default) |
+| **`verification/`** | *Prove that it works* | 27 deterministic gate scripts (one-way ratchets, secret scanning with a working-tree leg, traceability, planning-doc teeth — classified by what ports to a non-Python repo, with a JavaScript ratchet and boundary test as the worked substitution), the verify portfolio, falsification norms (with a runnable identity-and-history example: gates follow the consumer's identity, falsified in both directions), evaluation readiness (pre-flight smoke, offline functional trial and AI evaluation kept apart, one receipt schema), CI in the pinned/secret-gated regime, lander duties for landing trains (push gated on verify AND on landing authority — held with a decision brief by default), landing modes (a branch policy that admits a PR merge or a direct push against one receipt-bound status; PR-mode advisory review and security lanes; git hooks that carry the landing check into any harness — `verification/landing-modes.md`, `verification/protections.md`) |
 | **`interpretation/`** | *Understand how it really works* | The choices ledger (every decision an agent made on your behalf, audited per handback, one stable ID per choice, scenarios stored with the train), memory conventions that outlive sessions, evaluation practice (what each evaluation type proves, intended product mode, state parity, honest metrics), investigation practice (instrument-first; investigate before the fix mandate; consumer inventory before any move, split or delete), a worked simplification-review example, the continuous-improvement loop |
 
 Shared infrastructure: **`skills/`** (38 vendored agent skills under a
@@ -39,9 +39,11 @@ owner).
 
 Tried against a foreign repo: `INSTALL.md` was run end to end on a Node
 hello-world with no Python project on 2026-09-06
-(`verification/examples/install-trial-node.md`). Seven of the 24 gate
-scripts port as-is (with `python3` + PyYAML); the rest are stack-specific or
-the source factory's domain choices, and the gates README says which.
+(`verification/examples/install-trial-node.md`). Ten of the 27 gate
+scripts port as-is (with `python3` + PyYAML; the three protections gates
+were added after the trial and need only stdlib + git); the rest are
+stack-specific or the source factory's domain choices, and the gates README
+says which.
 
 ## The core loop (one screen)
 
@@ -55,7 +57,10 @@ idea → board item (Planned, with a full spec) → PO approval
   → landing train (independent ready lanes share one): --no-ff pinned SHAs
     → cross-checks → build → cheap gates → resource check
     → FULL local verify green → landing authority? (ruling or active
-      policy; else HOLD with a decision brief) → push main → CI deploys
+      policy; else HOLD with a decision brief)
+    → land: train branch pushed, local-verify status on the verified SHA,
+      pull request with the choices ledger as body, merge (default) — or
+      the documented direct-push override → CI re-verifies and deploys
   → board sweep (Done + archive) → evaluation on an isolated bank copy
     → findings → new board items
   → memory: lessons that survive the session

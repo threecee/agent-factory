@@ -79,12 +79,13 @@ has no Python of its own, and pin it in the verify entry (`PY ?= python3`).
 
 ## Step 2 — Verification pillar
 1. Read `verification/gates/README.md` §"Which gates port" BEFORE copying
-   anything. Of the 24 scripts, seven are repo-agnostic decision gates
+   anything. Of the 27 scripts, ten are repo-agnostic decision gates
    (ADR index, traceability, backlog, number registry, gitleaks, number
-   provenance, sentinel); the rest are Python-stack tooling, frontend/
+   provenance, sentinel, and the three protections gates: close-out, ledger
+   lint, never-weaken — stdlib + git); the rest are Python-stack tooling, frontend/
    migration/vendoring specifics, or domain choices of the source factory,
    and one (`check_contract_touch.py`) imports a module the package does
-   not ship. Copy the seven to `scripts/` and `gitleaks.toml.example` →
+   not ship. Copy the ten to `scripts/` and `gitleaks.toml.example` →
    repo root as `.gitleaks.toml`; copy others only when the repo has the
    thing they check. The decision gates need a `python3` with **PyYAML** and
    the `gitleaks` binary, nothing else (the trial measured this in a clean
@@ -135,22 +136,36 @@ has no Python of its own, and pin it in the verify entry (`PY ?= python3`).
    test stayed green with the violation planted (it matched a module name
    Node does not use) — the falsification is what caught it; the corrected
    test is `verification/examples/node/import_boundary.test.js`.
-7. Copy and adapt `verification/ci/*.example` → `.github/workflows/`. They
-   are the source factory's files: Python `make verify` arguments, a
-   deployment target, a review prompt in Norwegian that names that
-   product's ADRs and modules. TRANSLATE every one; the REGIME is what
-   ports: full commit-SHA pinning of every action (never tags),
-   secret-gated green-skip (a missing secret is a green skip with a
-   ::notice, never a red), minimal `permissions:`, single-flight concurrency
-   where it matters. Local verify is the gate; CI verifies additionally and
-   DEPLOYS from main. `verification/ci/review-prompt.md` is the SHAPE of a
-   review prompt — point the review lane at your translation of it, never
-   at the file itself, and never store it under `docs/`.
+7. Copy and adapt `verification/ci/*.example` → `.github/workflows/` per
+   `verification/ci/README.md` (the regime that ports, the mode table per
+   file, the branch policy). They are the source factory's files below an
+   English mode header: Python `make verify` arguments, a deployment
+   target, a review prompt in Norwegian that names that product's ADRs and
+   modules. TRANSLATE every one; the REGIME is what ports: full commit-SHA
+   pinning of every action (never tags), secret-gated green-skip (a
+   missing secret is a green skip with a ::notice, never a red), minimal
+   `permissions:`, single-flight concurrency where it matters. Then apply
+   the branch policy once: `python3 verification/protections/bootstrap_ruleset.py`
+   (dry run), then `--apply`; run the repository-settings command it
+   prints; on a 403 use the classic fallback in `verification/ci/README.md`
+   §3; record the date in train-plan §5. Local verify is the gate in both
+   landing modes; CI re-verifies and deploys (`verification/landing-modes.md`
+   §4.3). `verification/ci/review-prompt.md` is the SHAPE of a review
+   prompt — point the review lane at your translation of it, never at the
+   file itself, and never store it under `docs/`.
 8. Bind everything into `make verify`. Build every product the suite reads
    BEFORE running it (`verification/verify-portfolio.md`, "Build inputs
    exist before verify"), then run it. Green before the next step.
    `verification/examples/node/Makefile` is the trial's: import-root probe,
    the four decision gates, the ratchet, the test runner.
+9. Wire the three protections gates: `python3 -m scripts.check_choices_protocol
+   --warn` among the cheap gates of the train (WARN on the first train, HARD
+   after — `verification/protections.md` §5), `python3 -m
+   scripts.check_gate_weakening` over the train range (WARN first, `--hard`
+   after), and `python3 -m scripts.check_landing_closeout --state …` as the
+   close-out reading (`verification/lander-duties.md` §8). The drift leg and
+   the duplicate-id leg run inside the registry and backlog gates you
+   already wired.
 
 ## Step 3 — Interpretation pillar
 1. Create `docs/choices/` with `interpretation/choices-ledger-README.md`. The
@@ -250,6 +265,9 @@ register NO hook. Do not add a PreToolUse registration in this step.
    `BASE=` an ancestor of it). Run its §7 falsification list once on a
    throwaway train. No assembler script ships; land from the plan by hand
    first (`verification/lander-duties.md` §6).
+   Choose the landing mode in train-plan §5 — `pr` is the default; a
+   project that declares `direct-push` writes its standing reason there
+   (`verification/landing-modes.md` §1, §5).
 6. Establish the artifact bank (`harness/artifact-bank.md`). Write its §10
    table into the repo's operations doc: bank root (the `LANE_ARTIFACT_BANK`
    directory chosen in Step 6), what counts as durable, the inventory of
@@ -283,6 +301,19 @@ register NO hook. Do not add a PreToolUse registration in this step.
    `AGENTS.md.example` paragraph. Every rule that applies is written into
    the operations doc as a reviewed diff naming the guard, the switch and
    the falsification.
+9. Install the tracked git hooks once in the primary —
+   `python3 verification/protections/git_hooks.py install` (`core.hooksPath`,
+   shared by every worktree; `status` exits 1 until done, and the
+   session-start reminder prints `GIT HOOKS:` until then) — and bind the
+   protections parameters where the hook process reads them, beside the
+   guards' (`harness/guards.md` §8): the commit identity and the trailer
+   form (`FACTORY_GUARD_GIT_EMAIL`, `FACTORY_GUARD_SOURCE_PREFIX`,
+   `FACTORY_GUARD_TRAILER_RE`, `FACTORY_GUARD_DECISIONS_DIR`), the default
+   branch and the declared landing mode (`FACTORY_GUARD_DEFAULT_BRANCH`,
+   `FACTORY_GUARD_LANDING_MODE_DEFAULT`); `verification/protections.md` §1.
+   Run `bash verification/tests/test_git_hooks.sh` and
+   `bash verification/tests/test_landing_protections.sh` on the machine that
+   will land.
 
 ## Step 6 — User level
 Follow `user-level/README.md`: add the global CLAUDE snippet to the user's
@@ -304,14 +335,21 @@ train is held with a decision brief (`verification/lander-duties.md` §7).
    choices audit on the handback, assemble a single-lane train from
    `docs/train-plan.md` (the install exception — independent ready lanes
    otherwise share a train, `verification/lander-duties.md` §2), run full
-   verify through the receipt launcher, land, sweep the FULL board
-   (`planning/board-protocol.md`, "Authority, pagination and derived
-   views"). Order matters and the trial got it wrong once: read the receipt
-   (`EXIT=0`, `HEAD=` matches, `BASE=` is an ancestor), THEN push, THEN
-   sweep — a sweep that runs after a red receipt marks work done that never
-   landed. If `origin/main` moved while you verified, the push is rejected
-   and the train is re-assembled and re-verified under a new run id
-   (`verification/lander-duties.md` §3); the failed attempt's receipt stays.
+   verify through the receipt launcher, land in pr mode — push the train
+   branch, post the `local-verify` status from the receipt, open the pull
+   request with the ledger as its body, take the owner's live ruling as the
+   authority, merge with `gh pr merge <n> --merge --match-head-commit
+   <HEAD=>`, close out per `verification/lander-duties.md` §8 — then sweep
+   the FULL board (`planning/board-protocol.md`, "Authority, pagination and
+   derived views"). Order matters and the trial got it wrong once: read the
+   receipt (`EXIT=0`, `HEAD=` matches, `BASE=` is an ancestor), THEN merge
+   or push, THEN sweep — a sweep that runs after a red receipt marks work
+   done that never landed. If `origin/main` moved while you verified, the
+   landing is rejected and the train is re-assembled and re-verified under
+   a new run id (`verification/lander-duties.md` §3); the failed attempt's
+   receipt stays. A scratch trial with a bare local origin has no
+   pull-request host and lands by direct push, saying so in its ledger
+   (`landing mode: direct-push`, `override reason:`).
    Fill the execution-contract fields for real even on the trivial task:
    `task:` is the item ID, `round: 1`, the apparatus is named, and if the
    lane cannot run it the proof owner is a role plus an exact command. Then
@@ -322,7 +360,10 @@ train is held with a decision brief (`verification/lander-duties.md` §7).
    red, remove it). For the secret gate: random-shaped secrets on a throwaway
    branch (see verification/gates/README.md — documentation keys are
    allowlisted; the working-tree leg is advisory, history is HARD; deleting
-   the branch clears it).
+   the branch clears it). Then the branch-policy falsification of
+   `verification/falsification.md` rule 16, in a THROWAWAY repository with
+   the same payload applied (`verification/ci/README.md` §5) — never on the
+   real main; record the five outcomes in the smoke protocol.
    If the repo has any evaluation or demo that runs against an instance:
    build one source from the seed, make two copies, plant an external path
    in one recorded reference and confirm the isolation check refuses it
@@ -336,7 +377,7 @@ train is held with a decision brief (`verification/lander-duties.md` §7).
    with fake AI roles and bank its receipt (§4 shape) as the installation's
    first evaluation artifact. Falsify the admission gate by planting the
    three rejections of `verification/falsification.md` rule 13.
-4. Land with the receipt read and `git push` — never an unconditional push
+4. Land with the receipt read and the merge or push — never an unconditional push
    after a verify you did not read — and only on the owner's live ruling for
    the smoke train (the owner is present for the smoke test; that ruling IS
    the authority, recorded on the smoke item). Do not treat the smoke landing

@@ -341,7 +341,7 @@ mechanism rows; this section owns the rules).
    its own child.
 3. **What a coding-CLI lane can be forced to** is what the wrapper checks at
    handback (`report-schema.md`, "Machine check at handback") plus the git
-   hooks (`../verification/protections.md`, introduced by PR13). Its hooks
+   hooks (`../verification/protections.md` §1). Its hooks
    are post-hoc; never claim a blocking one (`guards.md` §2).
 4. **A harness-subagent dispatch carries a `justification:` line** — logged,
    not judged — and a subagent lane cannot end its turn without a result
