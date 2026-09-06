@@ -43,8 +43,10 @@ Two ways in, same audit:
 1. **Elicit and trace back.** When an implementer reports done, ask: *"While
    working on this, which choices did you make that you're not confident of?
    List all."* — but treat the self-report as a starting point, not the
-   boundary: agents under-report. Trace the history yourself — the session's
-   steps, subagent reports, diffs, commits — and collect every decision that
+   boundary: agents under-report, and a digest of the handback written by a
+   helper is input of the same rank, never the boundary either. Trace the
+   history yourself — the session's steps, subagent reports, diffs, commits
+   — and collect every decision that
    is in the work but not in the original spec or prompt. Sweep the
    architectural categories, not just the suspect fixes: data shapes and
    formats, storage and naming schemes, API contracts and their error
@@ -96,9 +98,16 @@ Two ways in, same audit:
 ## The Choices Ledger
 
 A dedicated file that outlives every pass: `choices.md` beside the plan
-(`specs/<feature>/choices.md` when a spec owns the work). One entry per
-audited choice:
+(`specs/<feature>/choices.md` when a spec owns the work). In the factory the
+ledger is the train protocol, `docs/choices/<train>.md`, and
+`interpretation/choices-ledger-README.md` owns its protocol (IDs, where the
+scenario is stored, handback → protocol); the entry format is the same. One
+entry per audited choice:
 
+- **ID** — stable from first mention: `<lane>-<n>` (or `O-<n>` for the
+  orchestrator's own), continued — not restarted — for choices the audit
+  finds that the implementer did not report. The same ID goes into the
+  self-report, the sidecar, the ledger, the fix commit and any amendment.
 - **When** — pass or commit it landed in.
 - **The choice** — a one-line headline, then the ELI5 scenario: the
   triggering event, what the work does today, what the unbuilt alternative
@@ -134,6 +143,14 @@ Rules of the ledger:
   and so has one that keeps the scenario but leans on labels the build
   invented ("the retry envelope", "the evidence seam") without defining them
   where they're used.
+- **The scenario is stored where the ledger is stored.** An entry whose
+  scenario lives only in a scratchpad, a session, or a chat has no scenario:
+  the next reader has none of those. Unsound and needs-user entries carry
+  the scenario inline; a sound entry may point to a sidecar only if the
+  sidecar is committed or banked beside the ledger under the same ID. A
+  corrected entry names the proof a stranger can re-run (test id, commit,
+  banked log), and an amended verdict keeps its ID with the amendment
+  appended and dated — a new ID severs the proof from the decision.
 
 ## Rules
 
@@ -158,8 +175,9 @@ Rules of the ledger:
 ## Done
 
 The audit is done when every invented choice in the pass has a ledger entry
-with a verdict, every unsound entry names the corrected decision to redo
-from, every needs-user entry carries a reversible provisional call, and the
+with an ID and a verdict, every unsound entry names the corrected decision to
+redo from, every needs-user entry carries a reversible provisional call, every
+scenario is stored beside the ledger rather than in a scratchpad, and the
 ledger has been presented — grouped by verdict, least-confident-first within
 each group, every entry readable ELI5 without follow-up questions — to
 whoever acts next, with the tree untouched. A handback that shows the diff
