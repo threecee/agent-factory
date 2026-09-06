@@ -1,0 +1,196 @@
+{
+  "version": 1,
+  "digest": "sha256 over LC_ALL=C-sorted '<relpath>\\t<sha256(file)>\\n' lines per skill dir; see verify_skills_lock.py",
+  "skills": {
+    "audit-choices": {
+      "origin": "dzhng/skills (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "c089aa257004b793100db205c0e1641cdfbd4b756bc4200d4be06a06362e3466",
+      "files": 1
+    },
+    "audit-performance": {
+      "origin": "dzhng/skills (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "cf9d0d0e64093a9ca675047b3a433aa985a7bf65f6642685dabe057b73d4ea55",
+      "files": 1
+    },
+    "brainstorming": {
+      "origin": "obra/superpowers (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "814aac5b5b041377521b108acad46189e8c9f65f4b8cf96f6611c14c21c3204a",
+      "files": 8
+    },
+    "bulk-reader": {
+      "origin": "threecee/varde (this repo's license); adapted, see ATTRIBUTION.md",
+      "tree_sha256": "2b7f6c9fae87c02fe741513451faff9a863f1089765f067bbe47c30a5c847552",
+      "files": 1
+    },
+    "claude": {
+      "origin": "dzhng/skills (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "2e54d06deb4d5906930009751e5a4b854a2ee5150cee0f6c8d29d527ce6c82c9",
+      "files": 1
+    },
+    "close-spec": {
+      "origin": "dzhng/skills (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "ce39fc8a88f4909eeb9fedbd8bedec51d0219dc6de9147a51b6e665fa51df5db",
+      "files": 1
+    },
+    "code-review": {
+      "origin": "dzhng/skills (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "078e4822c3f78ab4da1d3fb10f562ce15046323a7618e219154a9222321e0533",
+      "files": 1
+    },
+    "codex": {
+      "origin": "dzhng/skills (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "2311ba89f47e64ae2df514d806d70d67a28fd2213ba8e67388416fe5b9cd62df",
+      "files": 1
+    },
+    "compare-screenshots": {
+      "origin": "dzhng/skills (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "59825822ac067010ffb4fe3888928a113dad4e195d1330fbb889672ce35f7755",
+      "files": 3
+    },
+    "dispatching-parallel-agents": {
+      "origin": "obra/superpowers (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "62f91b31cd3d3af0d339b424980bd5d7614afa1429454f36843cef31dc259bea",
+      "files": 1
+    },
+    "eli5": {
+      "origin": "dzhng/skills (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "2412e75c6897afafe22ec8f7c353e498edc1a99d82cfd58b7872846e065106af",
+      "files": 1
+    },
+    "eval-skills": {
+      "origin": "dzhng/skills (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "24c93d9b8e148773c73a1f5e2b65f89c37d66863accbff9554ce97b735c787bb",
+      "files": 1
+    },
+    "executing-plans": {
+      "origin": "obra/superpowers (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "4e5aeddd8e677743e765f2fc0de2368813c7d10c2098dbe0238411bad5cb6cd5",
+      "files": 1
+    },
+    "explore-unknowns": {
+      "origin": "dzhng/skills (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "becc5825336f798a25dbc0e0905b7f02b6511a0d4c39432d4a37593fe39b63e0",
+      "files": 7
+    },
+    "finishing-a-development-branch": {
+      "origin": "obra/superpowers (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "846d9cd277d36897bc57a6032189200058c7d3880304a2d95249236796db3aec",
+      "files": 1
+    },
+    "handback-digest": {
+      "origin": "threecee/varde (this repo's license); adapted, see ATTRIBUTION.md",
+      "tree_sha256": "8c21ba53cf2c99470106ca76e874ba26361a89ef2c3f0a9b0acd9bc06512072a",
+      "files": 1
+    },
+    "implement-spec": {
+      "origin": "dzhng/skills (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "c1b4efa234b1b2fd7c141d9848401ae76cecf126e407900548f281737c7627d5",
+      "files": 1
+    },
+    "implement-spec-with-codex": {
+      "origin": "dzhng/skills (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "1457ee638443de2ddd2a30b21b27f267d8ac600da83bcd0ea626f000b0716ed9",
+      "files": 1
+    },
+    "independent-lane-review": {
+      "origin": "factory addition (this repo's license)",
+      "tree_sha256": "a941de5f0722ceb002861fc501d65cab1e3bebe7d3c1fcedd184480c0f71584f",
+      "files": 2
+    },
+    "log-triage": {
+      "origin": "threecee/varde (this repo's license); adapted, see ATTRIBUTION.md",
+      "tree_sha256": "9f5a201b681886fcaeed5f3ee08072ad1643ffba5fe23a38b2a0f9ec38ff876e",
+      "files": 1
+    },
+    "preview-shots": {
+      "origin": "dzhng/skills (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "e020041eadf04a4bd0659ecc63288ae2ffb905cf55c4d6977e3c92a23388ef30",
+      "files": 1
+    },
+    "receiving-code-review": {
+      "origin": "obra/superpowers (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "26176d521bbe327c340eae7598f617c8bac55422a2470a55aeec063303c8d0ae",
+      "files": 1
+    },
+    "refactor-clean": {
+      "origin": "dzhng/skills (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "8986b70eae7eb34ded0ddce1fbaacc20b285ae9d1e769e19f33040d0e47a6704",
+      "files": 1
+    },
+    "requesting-code-review": {
+      "origin": "obra/superpowers (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "3898b212a05cb7ce34afdfa886945c0228ad65d4fcb1bd078c8b6ec66faa58f6",
+      "files": 2
+    },
+    "review": {
+      "origin": "dzhng/skills (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "d6ff357dd31c937aa75fa813fcf70ea9a82fe37cb8000fda8c27c94c21ec2751",
+      "files": 1
+    },
+    "screenshot-critique": {
+      "origin": "dzhng/skills (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "a4108988f6621f98ee29c68c239f68376798b7f2cb80c1246f32e3d4836addcb",
+      "files": 1
+    },
+    "subagent-driven-development": {
+      "origin": "obra/superpowers (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "ae8f46998b3413e2ef82972a71561ef70d91382127c89d6c48d9f4cfdc350e70",
+      "files": 6
+    },
+    "systematic-debugging": {
+      "origin": "obra/superpowers (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "78b5f178ea93f9c8a6f83ca4a811a4bc6f9964fca40ee7e3a646fa0c9af34ada",
+      "files": 11
+    },
+    "test-driven-development": {
+      "origin": "obra/superpowers (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "9555e04f8a9dfe9d8f49c2428a2b47e3bc90341f3ff29285986d9dd6a14e304b",
+      "files": 2
+    },
+    "using-git-worktrees": {
+      "origin": "obra/superpowers (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "7ad3675e9a3d6b6590998e075bccd0f3aab1cacd227baf6482992de3f3bb79d4",
+      "files": 1
+    },
+    "using-superpowers": {
+      "origin": "obra/superpowers (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "d86427a95f0b510c359d4106a3e8d6df91855e5ee9e6c9a809ad6f656289e32f",
+      "files": 4
+    },
+    "verification-before-completion": {
+      "origin": "obra/superpowers (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "ff07df275a8ccd4094df294fdf8bd3c7645bfebaf55e7240722004b3b2e4d182",
+      "files": 1
+    },
+    "write-docs": {
+      "origin": "dzhng/skills (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "5904a6680400e0b0dd899e6bef4e37d75541ac0c434186786a273dccdb31ff93",
+      "files": 1
+    },
+    "write-skills": {
+      "origin": "dzhng/skills (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "b761ab8cb834a6e463943e6eb0907fa61db26c2c86a832a84ae903de62f4b2f8",
+      "files": 1
+    },
+    "write-spec": {
+      "origin": "dzhng/skills (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "b7b87392e2b0d6c796cc096e95cfcb03b236e54729fce5978d23aa033a94d709",
+      "files": 1
+    },
+    "write-tests": {
+      "origin": "dzhng/skills (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "4b5895ddc83660eb281279926fb82a51a05cb26190ef5347e4445bc4cf899125",
+      "files": 1
+    },
+    "writing-plans": {
+      "origin": "obra/superpowers (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "cc53861972ad065621fe3110446bdcacf1334f8b70c67fa1559bec076b0e60ec",
+      "files": 2
+    },
+    "writing-skills": {
+      "origin": "obra/superpowers (MIT); upstream commit ref unrecorded at vendoring",
+      "tree_sha256": "bdc4dc4623b1ba60a05dce02eaca8652bc8d152aadfb1bd1813e3c0a66a20ca0",
+      "files": 7
+    }
+  }
+}
