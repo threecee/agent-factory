@@ -4,11 +4,12 @@ trailer on source commits, HARD; the subject form, WARN.
 The tracked shim ``verification/protections/githooks/commit-msg`` feeds the proposed message
 to the dispatcher as event ``GitCommitMsg``. Two legs, each with its own switch:
 
-* ``commit-refs`` (HARD): when the staged diff touches ``FACTORY_SOURCE_PREFIX`` (default
-  ``src/``; comma-separated prefixes) the message must carry the decision-record trailer
-  (``FACTORY_TRAILER_RE``, default ``^Refs: (ADR-\\d{4})``) and every referenced record must
-  exist under ``FACTORY_DECISIONS_DIR`` (default ``docs/decisions``) on disk or in the same
-  commit — a claimed number is a dangling reference until its file exists. Merges
+* ``commit-refs`` (HARD): when the staged diff touches ``FACTORY_GUARD_SOURCE_PREFIX``
+  (default ``src/``; comma-separated prefixes) the message must carry the decision-record
+  trailer (``FACTORY_GUARD_TRAILER_RE``, default ``^Refs: (ADR-\\d{4})``) and every referenced
+  record must exist under ``FACTORY_GUARD_DECISIONS_DIR`` (default ``docs/decisions``) on disk
+  or in the same commit — a claimed number is a dangling reference until its file exists (the
+  three are §8 parameters of harness/guards.md). Merges
   (``MERGE_HEAD`` present, or an amended merge commit) and subjects starting ``Revert "``,
   ``Merge `` (this covers the host's ``Merge pull request`` commit), ``fixup! `` or
   ``squash! `` are exempt — the boarded or reverted commits carry the trailer. The touched
@@ -19,6 +20,10 @@ to the dispatcher as event ``GitCommitMsg``. Two legs, each with its own switch:
 * ``commit-subject`` (WARN, context only): the subject should read
   ``<type>(<scope>): <imperative>``; it becomes a refusal only by a reviewed diff to the
   operations doc after one train.
+
+Switches: ``FACTORY_GUARD_ALLOW=commit-refs`` or ``=commit-subject`` silences one leg —
+the leg answers a «switched off» verdict under its own id and the dispatcher logs the use;
+``FACTORY_GUARD_ALLOW=commit-msg`` (the module's id) silences both legs, as for any rule.
 
 A hook runs on local commits only: a merge commit the host writes for a pull request never
 passes here, and a range scan over history (a trailer or identity gate) must exempt it as
@@ -41,9 +46,9 @@ SUBJECT_ID = "commit-subject"
 EVENTS = frozenset({"GitCommitMsg"})
 MATCHER = None
 
-SOURCE_PREFIX_VAR = "FACTORY_SOURCE_PREFIX"
-TRAILER_RE_VAR = "FACTORY_TRAILER_RE"
-DECISIONS_DIR_VAR = "FACTORY_DECISIONS_DIR"
+SOURCE_PREFIX_VAR = "FACTORY_GUARD_SOURCE_PREFIX"
+TRAILER_RE_VAR = "FACTORY_GUARD_TRAILER_RE"
+DECISIONS_DIR_VAR = "FACTORY_GUARD_DECISIONS_DIR"
 DEFAULT_SOURCE_PREFIX = "src/"
 DEFAULT_TRAILER_RE = r"^Refs: (ADR-\d{4})"
 DEFAULT_DECISIONS_DIR = "docs/decisions"

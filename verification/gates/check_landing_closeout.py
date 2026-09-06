@@ -27,6 +27,15 @@ the same lines.
     python3 -m scripts.check_landing_closeout --state <state file> [--primary <dir>] [--floor-gb N]
         [--port-range A-B] [--build-check <cmd>] [--default-branch main]
 
+The default branch is ``--default-branch``, else the state file's ``default_branch``, else
+``FACTORY_GUARD_DEFAULT_BRANCH`` (default ``main``).
+
+Python API the close-out Stop rule consumes in-process (``harness/guards/rules/closeout.py``,
+located as ``harness/guards/rules/_gates.py`` says), beside the documented invocation form:
+``primary_of(run, tree)`` and ``closeout(state, primary, run=, floor_gb=, port_range=,
+build_check=, offline=, environ=) -> (duties, notes)``, each duty with ``.line()``. Their
+signatures are part of the contract (gates/README.md).
+
 Planted falsifications the package test runs (verification/tests/test_landing_protections.sh
 case 21): a merged, unreaped train tree → the reap duty naming unlink + remove; reaped → exit
 0; pr mode with the pull request OPEN → duty; the remote train branch present → duty;
@@ -48,6 +57,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
 Runner = Callable[..., subprocess.CompletedProcess[str]]
+DEFAULT_BRANCH_VAR = "FACTORY_GUARD_DEFAULT_BRANCH"
 REGISTRY_PATH = pathlib.Path("docs/decisions/NUMBERS.md")
 RITUAL_LINKS = (".venv", ".env", "frontend/node_modules", "node_modules")
 
@@ -317,7 +327,7 @@ def closeout(
     environ = os.environ if environ is None else environ
     head = str(state.get("head") or "")
     train = str(state.get("train") or "")
-    branch = str(state.get("default_branch") or environ.get("FACTORY_DEFAULT_BRANCH") or "main")
+    branch = str(state.get("default_branch") or environ.get(DEFAULT_BRANCH_VAR) or "main")
     boarders = state.get("boarders") if isinstance(state.get("boarders"), Mapping) else {}
     if not head:
         return [], ["the state file carries no head — nothing to check"]

@@ -135,6 +135,7 @@ def case_tree(
     registered: str | None = None,  # None | "push" | "merge"
     lane_checkout: bool = False,
     push_train: bool = True,
+    receipt_extra: str = "",  # optional receipt lines after LOG= (train-plan §4: DOCS_ONLY=1)
 ) -> Tree:
     """A copy of the template varied for one case; ``ledger`` is ``"green"``, ``None`` (no
     ledger committed) or the ledger text to commit (``{artifacts}``/``{boarder}`` filled)."""
@@ -169,7 +170,7 @@ def case_tree(
     receipt_head = OTHER_SHA if head_mismatch else head
     (artifacts / "wtest-1.log").write_text("verify log\n", encoding="utf-8")
     (artifacts / "wtest-1.exit").write_text(
-        f"EXIT={exit_code}\nBASE={base.main_sha}\nHEAD={receipt_head}\nLOG={artifacts / 'wtest-1.log'}\n",
+        f"EXIT={exit_code}\nBASE={base.main_sha}\nHEAD={receipt_head}\nLOG={artifacts / 'wtest-1.log'}\n{receipt_extra}",
         encoding="utf-8",
     )
     if registered == "push":
@@ -243,6 +244,17 @@ BROKEN_LEDGER = LEDGER.replace("(sound, H).\n**alpha-2**", "(sound).\n**alpha-2*
 # A ledger whose lane section is renamed: the lint faults it only when the boarder list comes
 # from the train's merge commits, never from the ledger itself.
 RENAMED_LEDGER = LEDGER.replace("## Lane `alpha` — boarded {boarder} — two sound", "## Lane `beta` — boarded {boarder} — two sound")
+# A ledger whose «## Landing» section carries the rendered pass (choices-ledger README §1).
+UI_PASS_LEDGER = LEDGER.replace(
+    "local-verify: skipped (no host in the fixture)\n",
+    "local-verify: skipped (no host in the fixture)\nui-pass: {artifacts}/pass.png\n",
+)
+
+
+def direct_push_ledger(template: str) -> str:
+    """A ledger template filled for the direct-push fixture (``{artifacts}``/``{boarder}`` stay
+    for ``case_tree`` to fill)."""
+    return template.replace("{mode}", "direct-push").replace("{mode_lines}", "override reason: fixture\n").replace("{date}", "2026-09-06")
 
 
 def landing_cases(workdir: pathlib.Path) -> list[FalsificationCase]:
@@ -293,4 +305,13 @@ def landing_cases(workdir: pathlib.Path) -> list[FalsificationCase]:
     cases.append(_case("merged-boarder-without-ledger-section", "deny", "missing section «## Lane `alpha`»", tree, f"FACTORY_GUARD_ALLOW=landing {PUSH}"))
     tree = case_tree(workdir, "escape", exit_code="2")
     cases.append(_case("landing-switch-skips-the-receipt", "allow", "", tree, f"FACTORY_GUARD_ALLOW=landing {PUSH}"))
+    # The optional legs, bound (protections.md §1.1): the boarder's src/ files changed since BASE.
+    tree = case_tree(workdir, "ui-glob")
+    cases.append(_case("ui-glob-without-ui-pass-line", "deny", "without a «ui-pass:» line in the ledger", tree, env={"FACTORY_GUARD_UI_GLOB": "src/*"}))
+    tree = case_tree(workdir, "ui-pass", ledger=direct_push_ledger(UI_PASS_LEDGER))
+    cases.append(_case("ui-glob-with-ui-pass-line", "allow", "", tree, env={"FACTORY_GUARD_UI_GLOB": "src/*"}))
+    tree = case_tree(workdir, "docs-only-unbound", receipt_extra="DOCS_ONLY=1\n")
+    cases.append(_case("docs-only-receipt-without-classifier", "deny", "no docs-only classifier is bound", tree))
+    tree = case_tree(workdir, "docs-only-rejected", receipt_extra="DOCS_ONLY=1\n")
+    cases.append(_case("docs-only-receipt-classifier-rejects", "deny", "the classifier rejects the diff", tree, env={"FACTORY_GUARD_DOCS_ONLY_CMD": "false"}))
     return cases

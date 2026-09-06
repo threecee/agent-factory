@@ -3,7 +3,7 @@
 The landing rule runs the ledger lint (``check_choices_protocol``) and the close-out rule
 runs ``check_landing_closeout``; both live with the other gates, which an installed
 repository keeps under ``scripts/`` and this package under ``verification/gates/``. The
-search order is ``FACTORY_GATES_DIR``, then ``<repo>/scripts``, then
+search order is ``FACTORY_GUARD_GATES_DIR`` (a §8 parameter), then ``<repo>/scripts``, then
 ``<repo>/verification/gates``, then the package's own ``verification/gates`` when the two
 directories are still side by side. A gate that is not found is reported by the caller as
 a loud context note, never as a crash and never as a denial (harness/guards.md §3).
@@ -19,7 +19,7 @@ import sys
 from collections.abc import Mapping
 from types import ModuleType
 
-GATES_DIR_VAR = "FACTORY_GATES_DIR"
+GATES_DIR_VAR = "FACTORY_GUARD_GATES_DIR"
 _PACKAGE = pathlib.Path(__file__).resolve().parents[1]  # …/guards
 # The kit keeps the package at harness/guards and the gates at verification/gates; a copy
 # that keeps guards/ and verification/gates side by side (the package tests) is found too.

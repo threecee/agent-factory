@@ -96,8 +96,8 @@ def _git_ok(repo_root: pathlib.Path, *args: str) -> bool:
 
 def _landed_refs(repo_root: pathlib.Path) -> list[str]:
     """The refs that mean "on the default branch" here: ``origin/<default>`` and/or a local
-    ``<default>`` (``FACTORY_DEFAULT_BRANCH``, default ``main``)."""
-    branch = os.environ.get("FACTORY_DEFAULT_BRANCH") or "main"
+    ``<default>`` (``FACTORY_GUARD_DEFAULT_BRANCH``, default ``main``)."""
+    branch = os.environ.get("FACTORY_GUARD_DEFAULT_BRANCH") or "main"
     return [
         ref
         for ref in (f"origin/{branch}", branch)

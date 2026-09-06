@@ -5,10 +5,11 @@ The tracked shim ``verification/protections/githooks/pre-commit`` runs the dispa
 event ``GitPreCommit``. One leg ships, ``commit-identity`` (HARD): the author and committer
 e-mail git will write — ``git var GIT_AUTHOR_IDENT`` / ``GIT_COMMITTER_IDENT``, which honour
 the environment (``GIT_AUTHOR_EMAIL``, ``GIT_COMMITTER_EMAIL``, ``EMAIL``, ``--author``)
-before ``user.email`` — must be one of the declared identities in ``FACTORY_GIT_EMAIL``
-(comma-separated). The identity is declared, never guessed: with the variable unset the leg
-checks nothing and says so once (a context WARN). A config-only check lets an environment
-override through; the source factory rewrote thousands of commits after one.
+before ``user.email`` — must be one of the declared identities in ``FACTORY_GUARD_GIT_EMAIL``
+(comma-separated; a §8 parameter of harness/guards.md). The identity is declared, never
+guessed: with the variable unset the leg checks nothing and says so on every commit (a
+context WARN — an unbound parameter is visible, never silent). A config-only check would let
+an environment override through; ``git var`` reads what git will write.
 
 A second leg is described, not shipped: ``commit-secrets`` materialises the STAGED blobs
 (``git show :<path>``, never the working tree) into a shadow tree and scans them with the
@@ -34,7 +35,7 @@ from guards._common import ALLOW, FalsificationCase, GuardContext, Verdict, cont
 ID = "commit-identity"
 EVENTS = frozenset({"GitPreCommit"})
 MATCHER = None
-EMAIL_VAR = "FACTORY_GIT_EMAIL"
+EMAIL_VAR = "FACTORY_GUARD_GIT_EMAIL"
 IDENT_VARS: tuple[tuple[str, str], ...] = (("author", "GIT_AUTHOR_IDENT"), ("committer", "GIT_COMMITTER_IDENT"))
 IDENT_ENV: tuple[str, ...] = ("GIT_AUTHOR_EMAIL", "GIT_COMMITTER_EMAIL", "EMAIL")
 _IDENT_EMAIL_RE = re.compile(r"<([^>]*)>")

@@ -3,6 +3,8 @@
 #
 #   verification/protections/ci_signal.sh [--workflow verify.yml] [--branch main]
 #
+# The branch defaults to FACTORY_GUARD_DEFAULT_BRANCH (the §8 parameter the landing rule, the
+# hooks and the close-out gate read), else main; the reminders script passes the same value.
 # Prints nothing and exits 0 when `gh` is missing or `gh auth status` fails (offline is
 # silent). Otherwise, line 1 is the last conclusion of the workflow on the default branch:
 #   CI main: GREEN (<run id>, <sha8>)
@@ -14,7 +16,7 @@
 # calls it at session start when it is executable (harness/guards.md §9, CI row).
 set -u
 
-WORKFLOW="verify.yml"; BRANCH="main"
+WORKFLOW="verify.yml"; BRANCH="${FACTORY_GUARD_DEFAULT_BRANCH:-main}"
 while [ $# -gt 0 ]; do
   case "$1" in
     --workflow) [ $# -ge 2 ] || exit 2; WORKFLOW="$2"; shift 2 ;;

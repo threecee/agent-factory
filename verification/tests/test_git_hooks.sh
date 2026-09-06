@@ -9,12 +9,14 @@
 # self-falsification in verification/protections.md §10 ran the mutated scratch copies).
 #
 # Every git command runs under `env -i` with FACTORY_GUARD_STATE_DIR and FACTORY_GUARD_LOG
-# under the temp dir, FACTORY_GUARD_OFFLINE=1, FACTORY_GIT_EMAIL declared, and every switch
-# scrubbed — a direct call without the state-dir override writes into the primary checkout's
-# events log (harness/guards.md §3).
+# under the temp dir, FACTORY_GUARD_OFFLINE=1, FACTORY_GUARD_GIT_EMAIL declared, and every
+# switch scrubbed — a direct call without the state-dir override writes into the primary
+# checkout's events log (harness/guards.md §3).
 #
 # Cases (verification/protections.md §10 lists what each proves):
-#   1  `git_hooks.py status` exits 1 before install naming core.hooksPath; 0 after; shims +x
+#   1  `git_hooks.py status` exits 1 before install naming core.hooksPath; 0 after; shims +x;
+#      the session-start reminder prints GIT HOOKS before install and not after (keyed on
+#      `status`); a foreign core.hooksPath reads as not installed and `install` replaces it loudly
 #   2  direct push: `git push origin HEAD:main` without a receipt → rejected with GUARD landing,
 #      origin/main unchanged; green receipt for HEAD → accepted; red receipt → rejected;
 #      receipt for another HEAD → rejected naming both sha8
@@ -22,15 +24,21 @@
 #   4  commit-msg: source without trailer → rejected; trailer + record → accepted; `--amend -m`
 #      dropping the trailer → rejected with "measured against HEAD~1"; dangling record →
 #      rejected; docs-only → accepted; merge commit → accepted; bad subject → WARN, exit 0
-#   5  pre-commit identity: config ≠ FACTORY_GIT_EMAIL → rejected; equal → accepted;
+#   5  pre-commit identity: config ≠ FACTORY_GUARD_GIT_EMAIL → rejected; equal → accepted;
 #      GIT_AUTHOR_EMAIL override → rejected; declaration unset → accepted with the WARN
 #   6  switches through the git hooks: FACTORY_GUARD_ALLOW=landing in the environment → accepted
-#      + an events-log allow-switch line; the state-dir allow file honoured from the linked worktree
+#      + an events-log allow-switch line; the state-dir allow file honoured from the linked
+#      worktree; the landing switch never covers the lint (a ledger only the lint can fault is
+#      refused through the shim; landing,protocol lets it through with the override note)
 #   8  landing rule via the harness entry: `gh pr merge 7 --merge --match-head-commit <HEAD>`
 #      with a green receipt → allow; without → deny; --squash/--rebase/--auto/--admin → deny
 #      naming the merge form; `gh pr create` from lane/* → deny; PostToolUse after the merge with
 #      origin/main advanced by a merge commit whose SECOND PARENT is HEAD → state file (mode pr)
 #      + duties context; origin/main not containing HEAD → exit 2
+#   9  the shims copied to <toplevel>/.githooks with the driver under <toplevel>/verification/
+#      protections: `install` prefers .githooks; a commit through the copied shim reaches the
+#      guards (wrong identity refused, declared accepted); shims with no driver anywhere let the
+#      commit through with the one loud line (fail-open)
 #   7  `git push --no-verify` bypasses the hook (git's own escape — the harness `no-verify`
 #      rule, harness/tests/test_guards.sh case 4, is the only refusal of the flag); run last
 set -u
@@ -72,8 +80,10 @@ OUT="$T/out"; ERR="$T/err"; RC=0
 # every command under a scrubbed environment; leading VAR=value operands are honoured by env
 genv() {
   env -i PATH="$PATH" HOME="$HOME" GIT_TERMINAL_PROMPT=0 FACTORY_GUARD_STATE_DIR="$STATE" FACTORY_GUARD_LOG="$LOG" \
-    FACTORY_GUARD_OFFLINE=1 FACTORY_GUARD_PYTHON="$PY" FACTORY_GIT_EMAIL="$DECLARED" "$@"
+    FACTORY_GUARD_OFFLINE=1 FACTORY_GUARD_PYTHON="$PY" FACTORY_GUARD_GIT_EMAIL="$DECLARED" "$@"
 }
+REM="$COPY/harness/adapters/factory_reminders.sh"
+reminder() { printf '{}' | genv CLAUDE_PROJECT_DIR="$1" /bin/sh "$REM" session-start 2>/dev/null; }
 run() { genv "$@" > "$OUT" 2> "$ERR"; RC=$?; }
 accepted() { [ "$RC" -eq 0 ] && ! has "$(cat "$ERR")" 'GUARD'; }
 payload() { # event command cwd
@@ -131,11 +141,20 @@ HEAD1="$(git -C "$W" rev-parse HEAD)"
 # ---------------------------------------------------------------- case 1
 ( cd "$P" && genv python3 "$DRIVER" status --hooks-dir "$SHIMS" ) > "$OUT" 2> "$ERR"; RC=$?
 check "1a status exits 1 before install and names core.hooksPath" "$( [ "$RC" -eq 1 ] && has "$(cat "$OUT")" 'core.hooksPath is «(unset)»'; echo $? )" "rc=$RC $(cat "$OUT" "$ERR")"
+out="$(reminder "$P")"
+check "1a2 the session-start reminder prints GIT HOOKS before install (keyed on the driver's status)" "$( has "$out" 'GIT HOOKS: not installed'; echo $? )" "$out"
 ( cd "$P" && genv python3 "$DRIVER" install --hooks-dir "$SHIMS" ) > "$OUT" 2> "$ERR"; RC=$?
 check "1b install sets core.hooksPath (absolute: the shims live outside the repo)" "$( [ "$RC" -eq 0 ] && [ "$(git -C "$P" config --get core.hooksPath)" = "$SHIMS" ]; echo $? )" "rc=$RC $(cat "$OUT" "$ERR") hooksPath=$(git -C "$P" config --get core.hooksPath)"
 ( cd "$P" && genv python3 "$DRIVER" status --hooks-dir "$SHIMS" ) > "$OUT" 2> "$ERR"; RC=$?
 check "1c status exits 0 after install" "$( [ "$RC" -eq 0 ]; echo $? )" "rc=$RC $(cat "$OUT" "$ERR")"
+out="$(reminder "$P")"
+check "1c2 the reminder is silent about the hooks after install" "$( has "$out" 'FACTORY GUARDS' && ! has "$out" 'GIT HOOKS'; echo $? )" "$out"
 check "1d the three shims are executable" "$( [ -x "$SHIMS/pre-commit" ] && [ -x "$SHIMS/commit-msg" ] && [ -x "$SHIMS/pre-push" ]; echo $? )"
+F="$T/foreign hooks repo"; git init -q -b main "$F"; git -C "$F" config core.hooksPath .husky/_
+out="$(reminder "$F")"
+check "1e a core.hooksPath another tool set reads as not installed to the reminder, never as done" "$( has "$out" 'GIT HOOKS: not installed'; echo $? )" "$out"
+( cd "$F" && genv python3 "$DRIVER" install --hooks-dir "$SHIMS" ) > "$OUT" 2> "$ERR"; RC=$?
+check "1f install over a foreign core.hooksPath says so loudly and replaces it" "$( [ "$RC" -eq 0 ] && has "$(cat "$OUT")" 'replacing core.hooksPath «.husky/_»' && has "$(cat "$OUT")" 'chain your existing hooks' && [ "$(git -C "$F" config --get core.hooksPath)" = "$SHIMS" ]; echo $? )" "rc=$RC $(cat "$OUT" "$ERR")"
 
 # ---------------------------------------------------------------- case 2
 run git -C "$W" push origin HEAD:main
@@ -198,14 +217,14 @@ check "4h a subject outside <type>(<scope>): form is a WARN on stderr, exit 0" "
 git -C "$W" config user.email wrong@example.invalid
 printf 'i\n' > "$W/docs/i.md"; run git -C "$W" add -A
 run git -C "$W" commit -q -m 'docs(x): i'
-check "5a config identity ≠ FACTORY_GIT_EMAIL → rejected naming both" "$( [ "$RC" -ne 0 ] && has "$(cat "$ERR")" 'GUARD commit-identity: the identity git will write is «wrong@example.invalid»' && has "$(cat "$ERR")" "$DECLARED"; echo $? )" "rc=$RC err=$(cat "$ERR")"
+check "5a config identity ≠ FACTORY_GUARD_GIT_EMAIL → rejected naming both" "$( [ "$RC" -ne 0 ] && has "$(cat "$ERR")" 'GUARD commit-identity: the identity git will write is «wrong@example.invalid»' && has "$(cat "$ERR")" "$DECLARED"; echo $? )" "rc=$RC err=$(cat "$ERR")"
 git -C "$W" config user.email "$DECLARED"
 run git -C "$W" commit -q -m 'docs(x): i'
 check "5b the declared identity → accepted" "$( accepted; echo $? )" "rc=$RC err=$(cat "$ERR")"
 printf 'j\n' > "$W/docs/j.md"; run git -C "$W" add -A
 run GIT_AUTHOR_EMAIL=employer@example.invalid git -C "$W" commit -q -m 'docs(x): j'
 check "5c GIT_AUTHOR_EMAIL over a declared config → rejected via git var" "$( [ "$RC" -ne 0 ] && has "$(cat "$ERR")" '«employer@example.invalid» (author, git var)' && has "$(cat "$ERR")" 'unset GIT_AUTHOR_EMAIL GIT_COMMITTER_EMAIL EMAIL'; echo $? )" "rc=$RC err=$(cat "$ERR")"
-run FACTORY_GIT_EMAIL= git -C "$W" commit -q -m 'docs(x): j'
+run FACTORY_GUARD_GIT_EMAIL= git -C "$W" commit -q -m 'docs(x): j'
 check "5d declaration unset → accepted with the identity-not-declared WARN" "$( [ "$RC" -eq 0 ] && has "$(cat "$ERR")" 'identity not declared'; echo $? )" "rc=$RC err=$(cat "$ERR")"
 check "5e the log shows only the declared identity" "$( [ "$(git -C "$W" log --format='%ae %ce' | tr ' ' '\n' | sort -u)" = "$DECLARED" ]; echo $? )" "$(git -C "$W" log --format='%ae %ce' | sort -u)"
 
@@ -219,6 +238,21 @@ printf 'K = 1\n' > "$W/src/pkg/k.py"; run git -C "$W" add -A
 run git -C "$W" commit -q -m 'feat(pkg): k without refs'
 rm -f "$STATE/factory-guard-allow"
 check "6c the state-dir allow file is honoured from the linked worktree (file: source logged)" "$( accepted && grep 'allow-switch' "$STATE/factory-events.log" | grep -q 'file:factory-guard-allow=commit-refs'; echo $? )" "rc=$RC err=$(cat "$ERR") $(tail -2 "$STATE/factory-events.log")"
+# a ledger only the lint can fault (no confidence marks): the landing switch skips the receipt,
+# the lint still refuses through the real shim — protections.md §5, the same as the harness rule
+python3 - "$W/docs/choices/x.md" <<'EOF'
+import pathlib, sys; p = pathlib.Path(sys.argv[1]); t = p.read_text(encoding="utf-8"); assert t.count("(sound, H).") == 2; p.write_text(t.replace("(sound, H).", "(sound)."), encoding="utf-8")
+EOF
+run git -C "$W" add -A; run git -C "$W" commit -q -m 'docs(x): ledger without confidence marks'
+HEADL="$(git -C "$W" rev-parse HEAD)"
+run FACTORY_GUARD_ALLOW=landing git -C "$W" push origin HEAD:main
+check "6d FACTORY_GUARD_ALLOW=landing through the shim never covers the lint: refused GUARD protocol, origin/main unchanged" "$( [ "$RC" -ne 0 ] && has "$(cat "$ERR")" 'GUARD protocol: the ledger lint (M-7)' && has "$(cat "$ERR")" 'entry without a confidence' && [ "$(git -C "$O" rev-parse main)" = "$HEADS" ]; echo $? )" "rc=$RC err=$(cat "$ERR")"
+run FACTORY_GUARD_ALLOW=landing,protocol git -C "$W" push origin HEAD:main
+check "6e both switches → accepted with the override note on stderr, the protocol switch logged by the dispatcher" "$( [ "$RC" -eq 0 ] && has "$(cat "$ERR")" 'ledger lint overridden' && [ "$(git -C "$O" rev-parse main)" = "$HEADL" ] && grep 'allow-switch' "$STATE/factory-events.log" | grep -q 'protocol'; echo $? )" "rc=$RC err=$(cat "$ERR") $(tail -2 "$STATE/factory-events.log")"
+python3 - "$W/docs/choices/x.md" <<'EOF'
+import pathlib, sys; p = pathlib.Path(sys.argv[1]); t = p.read_text(encoding="utf-8"); p.write_text(t.replace("(sound).", "(sound, H)."), encoding="utf-8")
+EOF
+run git -C "$W" add -A; run git -C "$W" commit -q -m 'docs(x): ledger restored'
 
 # ---------------------------------------------------------------- case 8
 printf 'p\n' > "$W/docs/p.md"; run git -C "$W" add -A; run git -C "$W" commit -q -m 'docs(x): p'
@@ -252,6 +286,32 @@ rm -f "$STATE/landing-in-progress.json"
 printf 'q\n' > "$W/docs/q.md"; run git -C "$W" add -A; run git -C "$W" commit -q -m 'docs(x): q'
 hook PostToolUse "$(payload PostToolUse "git push origin HEAD:main" "$W")"
 check "8h PostToolUse when origin/main does not contain HEAD → exit 2, did not register" "$( [ "$RC" -eq 2 ] && has "$(cat "$ERR")" 'did not register' && has "$(cat "$ERR")" 'git log HEAD..origin/main'; echo $? )" "rc=$RC err=$(cat "$ERR")"
+
+# ---------------------------------------------------------------- case 9
+# the adopter's layout: the shims copied to <toplevel>/.githooks, the driver and the guards
+# under the toplevel (verification/protections + harness/guards, where INSTALL keeps them)
+P9="$T/githooks repo"; git init -q -b main "$P9"
+git -C "$P9" config user.email "$DECLARED"; git -C "$P9" config user.name lander; git -C "$P9" config commit.gpgsign false
+mkdir -p "$P9/.githooks" "$P9/verification"
+cp "$SHIMS"/pre-commit "$SHIMS"/commit-msg "$SHIMS"/pre-push "$P9/.githooks/"
+cp -R "$COPY/verification/protections" "$P9/verification/protections"; cp -R "$COPY/harness" "$P9/harness"
+printf 'seed\n' > "$P9/README.md"; git -C "$P9" add -A; git -C "$P9" commit -q -m init
+( cd "$P9" && genv python3 "$P9/verification/protections/git_hooks.py" install ) > "$OUT" 2> "$ERR"; RC=$?
+check "9a install prefers <toplevel>/.githooks and writes it relative" "$( [ "$RC" -eq 0 ] && [ "$(git -C "$P9" config --get core.hooksPath)" = ".githooks" ]; echo $? )" "rc=$RC $(cat "$OUT" "$ERR") hooksPath=$(git -C "$P9" config --get core.hooksPath)"
+git -C "$P9" config user.email wrong@example.invalid
+printf 'a\n' > "$P9/docs.md"; run git -C "$P9" add -A
+run git -C "$P9" commit -q -m 'docs(x): a'
+check "9b a commit through the copied shim finds the driver under the toplevel and the guards refuse the wrong identity" "$( [ "$RC" -ne 0 ] && has "$(cat "$ERR")" 'GUARD commit-identity: the identity git will write is «wrong@example.invalid»'; echo $? )" "rc=$RC err=$(cat "$ERR")"
+git -C "$P9" config user.email "$DECLARED"
+run git -C "$P9" commit -q -m 'docs(x): a'
+check "9c the declared identity is accepted through the copied shim" "$( accepted && [ "$(git -C "$P9" log -1 --format=%s)" = 'docs(x): a' ]; echo $? )" "rc=$RC err=$(cat "$ERR")"
+P10="$T/no driver repo"; git init -q -b main "$P10"
+git -C "$P10" config user.email "$DECLARED"; git -C "$P10" config user.name lander; git -C "$P10" config commit.gpgsign false
+mkdir -p "$P10/.githooks"; cp "$SHIMS"/pre-commit "$SHIMS"/commit-msg "$SHIMS"/pre-push "$P10/.githooks/"
+git -C "$P10" config core.hooksPath .githooks
+printf 'seed\n' > "$P10/README.md"; run git -C "$P10" add -A
+run git -C "$P10" commit -q -m init
+check "9d shims that find no driver anywhere print one loud line per hook and let the commit through (fail-open)" "$( [ "$RC" -eq 0 ] && has "$(cat "$ERR")" 'factory git hook pre-commit: git_hooks.py not found' && has "$(cat "$ERR")" 'the commit goes through' && [ "$(git -C "$P10" log -1 --format=%s)" = 'init' ]; echo $? )" "rc=$RC err=$(cat "$ERR")"
 
 # ---------------------------------------------------------------- case 7
 git -C "$W" fetch -q origin; git -C "$W" reset -q --hard origin/main

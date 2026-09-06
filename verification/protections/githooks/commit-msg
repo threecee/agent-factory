@@ -2,11 +2,23 @@
 # Factory git hook «commit-msg» (verification/protections.md §1, mechanism M-10). Installed once per
 # repository by `python3 verification/protections/git_hooks.py install` (core.hooksPath; shared
 # by every linked worktree). Runs the same rules, switches and log as the harness hook through
-# ../git_hooks.py: deny = exit 2 + the message on stderr; WARN = text on stderr, exit 0. Switch
-# per rule: FACTORY_GUARD_ALLOW=<id> in the environment or one id per line in the state
+# the driver git_hooks.py: deny = exit 2 + the message on stderr; WARN = text on stderr, exit 0.
+# Switch per rule: FACTORY_GUARD_ALLOW=<id> in the environment or one id per line in the state
 # directory's allow file (logged); FACTORY_GUARD_DISABLED=1 only while the apparatus is down.
+# The driver is FACTORY_PROTECTIONS_DIR/git_hooks.py, else the one beside this directory, else
+# <toplevel>/verification/protections or <toplevel>/scripts/protections (the shims may be copied
+# to <toplevel>/.githooks); none found = one loud line and the commit goes through (fail-open).
 # Never runs the verify portfolio — that is the lander's step.
 here=$(cd "$(dirname "$0")" && pwd -P)
-py="${FACTORY_GUARD_PYTHON:-$here/../../../.venv/bin/python}"
+root=$(git rev-parse --show-toplevel 2>/dev/null || pwd -P)
+drv=""
+for c in "${FACTORY_PROTECTIONS_DIR:-/nonexistent}/git_hooks.py" "$here/../git_hooks.py" "$root/verification/protections/git_hooks.py" "$root/scripts/protections/git_hooks.py"; do
+  [ -f "$c" ] && drv="$c" && break
+done
+if [ -z "$drv" ]; then
+  echo "factory git hook commit-msg: git_hooks.py not found (FACTORY_PROTECTIONS_DIR, $here/.., $root/verification/protections, $root/scripts/protections) — nothing checked, the commit goes through (verification/protections.md §1)" >&2
+  exit 0
+fi
+py="${FACTORY_GUARD_PYTHON:-$root/.venv/bin/python}"
 [ -x "$py" ] || py=$(command -v python3 || echo python3)
-exec "$py" "$here/../git_hooks.py" commit-msg "$@"
+exec "$py" "$drv" commit-msg "$@"

@@ -3,14 +3,17 @@ outside the harness hook, in the direct-push override mode.
 
 The tracked shim ``verification/protections/githooks/pre-push`` feeds git's ref lines to the
 dispatcher as event ``GitPrePush``. For every update whose remote ref is the default branch
-(``refs/heads/<FACTORY_DEFAULT_BRANCH>``, default ``main``) this rule runs *the same* landing
-check as the ``landing`` rule (``landing.check`` over a ``git push <remote> HEAD:<default>``
-payload) — receipt for exactly HEAD, boarders, ledger, optional legs, the ledger lint — so
-the guard also holds for a coding-CLI session, a plain terminal and a foreign harness. A
-local SHA other than HEAD is refused (a receipt binds exactly HEAD); a deletion of the default
-branch is refused; a push of any other destination (``lane/*``, ``train/*``) is silent — the
-integration-branch push is never gated. The rule's id is the landing rule's (``landing``): it
-is the same guard, and the same switch.
+(``refs/heads/<FACTORY_GUARD_DEFAULT_BRANCH>``, default ``main``) this rule runs *the same*
+landing check as the ``landing`` rule (``landing.check`` over a ``git push <remote>
+HEAD:<default>`` payload) — receipt for exactly HEAD, boarders, ledger, optional legs, the
+ledger lint — so the guard also holds for a coding-CLI session, a plain terminal and a
+foreign harness. A local SHA other than HEAD is refused (a receipt binds exactly HEAD); a
+deletion of the default branch is refused; a push of any other destination (``lane/*``,
+``train/*``) is silent — the integration-branch push is never gated. The rule's id is the
+landing rule's (``landing``): it is the same guard, and the same switch — and, like the
+landing rule, it carries ``HONORS_ALLOW`` so that ``FACTORY_GUARD_ALLOW=landing`` skips the
+receipt, boarder and registry checks but never the ledger lint (protections.md §5); without
+it the dispatcher would answer «switched off» before ``landing.check`` could lint.
 
 Git's own ``--no-verify`` cannot be removed here; the ``no-verify`` rule refuses the flag inside
 a hooked session, and the branch policy makes the flag harmless. This hook never runs the
@@ -29,6 +32,7 @@ from guards.rules import landing
 ID = landing.ID
 EVENTS = frozenset({"GitPrePush"})
 MATCHER = None
+HONORS_ALLOW = True  # the landing switch never silences the lint (protections.md §5); landing.check decides
 ZERO_SHA = "0" * 40
 
 
@@ -99,6 +103,9 @@ def falsification_cases(workdir: pathlib.Path) -> list[FalsificationCase]:
     red = fx.case_tree(workdir, "hook-red", exit_code="2")
     to_main = [("refs/heads/train/wtest", red.head, "refs/heads/main", red.main_sha)]
     green = fx.case_tree(workdir, "hook-green")
+    # A red receipt AND a ledger only the lint can fault: the landing switch skips the receipt
+    # but the lint still refuses through the hook, exactly as through the harness rule.
+    lint = fx.case_tree(workdir, "hook-lint-switch", ledger=fx.direct_push_ledger(fx.BROKEN_LEDGER), exit_code="2")
     return [
         case("hook-main-without-green-receipt", "deny", "GUARD landing: the receipt is red", red, to_main),
         case("hook-main-green-train", "allow", "", green, [("refs/heads/train/wtest", green.head, "refs/heads/main", green.main_sha)]),
@@ -107,4 +114,12 @@ def falsification_cases(workdir: pathlib.Path) -> list[FalsificationCase]:
         case("hook-lane-branch-is-silent", "allow", "", red, [("refs/heads/lane/alpha", red.boarder_sha, "refs/heads/lane/alpha", red.boarder_sha)]),
         case("hook-train-branch-is-silent", "allow", "", red, [("refs/heads/train/wtest", red.head, "refs/heads/train/wtest", "0" * 40)]),
         case("hook-landing-switch", "allow", "", red, to_main, FACTORY_GUARD_ALLOW=ID),
+        case(
+            "hook-landing-switch-does-not-cover-the-lint",
+            "deny",
+            "GUARD protocol: the ledger lint (M-7)",
+            lint,
+            [("refs/heads/train/wtest", lint.head, "refs/heads/main", lint.main_sha)],
+            FACTORY_GUARD_ALLOW=ID,
+        ),
     ]

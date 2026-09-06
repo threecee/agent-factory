@@ -18,11 +18,16 @@ boarder the choices ledger records still heads its branch on origin (``git ls-re
 ledger ``<ledger-dir>/<train>.md`` exists with no ``unsound`` entry lacking a fix note; for a
 merge, ``--match-head-commit`` equals ``HEAD=``. Optional legs run when bound: the registry
 check when the registry file changed since ``BASE`` (``FACTORY_GUARD_REGISTRY_CMD``), a
-``ui-pass:`` line in the ledger when the diff touches ``FACTORY_GUARD_UI_GLOB``, and the
-docs-only classifier when the receipt says ``DOCS_ONLY=1`` (``FACTORY_GUARD_DOCS_ONLY_CMD``).
-The ledger lint (``check_choices_protocol --at-push``, protections.md §5) runs under its own
-switch ``protocol``; ``FACTORY_GUARD_ALLOW=landing`` skips the receipt, boarder and registry
-checks but never the lint, and vice versa (``HONORS_ALLOW``).
+``ui-pass: <path>`` line in the ledger's ``## Landing`` section when the diff touches
+``FACTORY_GUARD_UI_GLOB`` (choices-ledger README §1), and the docs-only classifier when the
+receipt carries the optional line ``DOCS_ONLY=1`` (``FACTORY_GUARD_DOCS_ONLY_CMD <BASE>
+<HEAD>``; harness/train-plan.md §4). The boarders the train carries are read by the gate's
+``boarders_from_merges`` (the merge commits since ``BASE``) — one derivation for the guard and
+the gate. The ledger lint (``check_choices_protocol --at-push``, protections.md §5) runs under
+its own switch ``protocol``; ``FACTORY_GUARD_ALLOW=landing`` skips the receipt, boarder and
+registry checks but never the lint, and vice versa (``HONORS_ALLOW``). A switched ``protocol``
+leg answers a context note under its own id; the dispatcher logs that switch use, the rule
+writes no events-log line itself (harness/guards.md §4).
 
 PostToolUse after a push or a merge: origin is fetched and the landing counts as registered
 when ``origin/<default>`` CONTAINS ``HEAD`` (``git merge-base --is-ancestor``) — never equals:
@@ -36,7 +41,9 @@ only notes, after the fact, when the combined status on the landed commit lacks 
 Inputs: the artifacts directory from a ``FACTORY_GUARD_ARTIFACTS=<dir>`` prefix on the
 command (or the environment), else the ledger's ``receipts:`` line; the train name from the
 branch ``train/<name>``; the ledger directory from ``FACTORY_GUARD_LEDGER_DIR`` (default
-``docs/choices``); the default branch from ``FACTORY_DEFAULT_BRANCH`` (default ``main``).
+``docs/choices``); the default branch from ``FACTORY_GUARD_DEFAULT_BRANCH`` (default ``main``);
+the project's declared landing mode from ``FACTORY_GUARD_LANDING_MODE_DEFAULT`` (default ``pr``).
+Every binding is a ``FACTORY_GUARD_*`` parameter of harness/guards.md §8.
 
 The guard never pushes, never merges, never rewrites a receipt, never accepts a receipt for
 another HEAD, and never bypasses a hold — it can only refuse.
@@ -56,7 +63,6 @@ from guards._common import (
     FalsificationCase,
     GuardContext,
     Verdict,
-    append_event,
     basename,
     command_of,
     context_note,
@@ -85,7 +91,8 @@ STATE_FILE = "landing-in-progress.json"
 SWITCHED = Verdict("allow", ID, "switched off")
 LINT_GATE = "check_choices_protocol"
 
-DEFAULT_BRANCH_VAR = "FACTORY_DEFAULT_BRANCH"
+DEFAULT_BRANCH_VAR = "FACTORY_GUARD_DEFAULT_BRANCH"
+LANDING_MODE_DEFAULT_VAR = "FACTORY_GUARD_LANDING_MODE_DEFAULT"
 ARTIFACTS_VAR = "FACTORY_GUARD_ARTIFACTS"
 LEDGER_DIR_VAR = "FACTORY_GUARD_LEDGER_DIR"
 REGISTRY_CMD_VAR = "FACTORY_GUARD_REGISTRY_CMD"
@@ -99,7 +106,6 @@ STATUS_CONTEXT = "local-verify"
 
 _TRAIN_BRANCH_RE = re.compile(r"^train/(?P<train>.+)$")
 _LANE_BRANCH_RE = re.compile(r"^lane/")
-_BOARD_SUBJECT_RE = re.compile(r"\bboard (?P<lane>[A-Za-z0-9._-]+) \((?P<sha>[0-9a-f]{40})\)")
 _RECEIPTS_LINE_RE = re.compile(r"^\s*receipts:\s*`?(.+?)`?\s*$", re.M | re.I)  # a path may carry spaces
 _UI_PASS_RE = re.compile(r"^\s*ui-pass:\s*\S", re.M | re.I)
 _PR_NUMBER_RE = re.compile(r"(\d+)/?$")
@@ -248,25 +254,6 @@ def artifacts_dir(command: str, context: GuardContext, ledger_text: str | None) 
     return pathlib.Path(raw).expanduser() if raw else None
 
 
-def merged_boarders(context: GuardContext, cwd: pathlib.Path, base: str, head: str) -> dict[str, str]:
-    """``lane -> second parent`` for every merge commit in ``base..head`` whose subject reads
-    ``… board <lane> (<sha>)`` (harness/train-plan.md §2 row 2) — the boarders the train
-    actually carries, read from git, independent of what the ledger says."""
-    code, listing = git(context, cwd, "log", "--merges", "--format=%H%x09%s", f"{base}..{head}")
-    named: dict[str, str] = {}
-    if code != 0:
-        return named
-    for line in listing.splitlines():
-        sha, _, subject = line.partition("\t")
-        match = _BOARD_SUBJECT_RE.search(subject)
-        if not match:
-            continue
-        code, parent = git(context, cwd, "rev-parse", f"{sha}^2")
-        if code == 0 and parent:
-            named[match.group("lane")] = parent
-    return named
-
-
 def newest_receipt(directory: pathlib.Path, train: str | None) -> pathlib.Path | None:
     candidates = sorted(directory.glob(f"{train}-*.exit")) if train else []
     if not candidates:
@@ -391,13 +378,18 @@ def _boarders(state: _State) -> dict[str, str]:
 
 def _merged(state: _State) -> dict[str, str]:
     """The boarders the train carries (merge commits since BASE, else since the merge-base
-    with the default branch)."""
+    with the default branch) — read by the gate's ``boarders_from_merges``, the one derivation
+    the guard and the lint share (protections.md §5)."""
     if state.merged is None:
+        gate = _gate(state)
         base = state.values.get("BASE")
         if not base:
             code, base = git(state.context, state.cwd, "merge-base", f"origin/{default_branch(state.context.environ)}", state.head)
             base = base if code == 0 and base else ""
-        state.merged = merged_boarders(state.context, state.cwd, base, state.head) if base else {}
+        if gate is None or not base:
+            state.merged = {}
+        else:
+            state.merged = dict(gate.boarders_from_merges(state.cwd, base, state.head, run=state.context.run))  # type: ignore[attr-defined]
     return state.merged
 
 
@@ -546,7 +538,7 @@ def _lint(state: _State) -> Verdict | None:
     if gate is None:
         state.notes.append(
             f"GUARD landing: the ledger lint ({LINT_GATE}.py) was not found under "
-            f"{_gates.GATES_DIR_VAR}, <repo>/scripts or <repo>/verification/gates — schema not checked."
+            f"{_gates.GATES_DIR_VAR}, <repo>/scripts or <repo>/verification/gates — boarders and schema not checked."
         )
         return None
     findings = gate.protocol_findings(  # type: ignore[attr-defined]
@@ -554,21 +546,13 @@ def _lint(state: _State) -> Verdict | None:
         _lint_boarders(state),
         train=state.train,
         at_push=True,
-        default_mode=state.context.environ.get("FACTORY_LANDING_MODE_DEFAULT") or "pr",
+        default_mode=state.context.environ.get(LANDING_MODE_DEFAULT_VAR) or "pr",
     )
     if not findings:
         return None
     if state.context.switched_off(PROTOCOL_ID):
-        # A leg-level switch: the dispatcher sees a context note, not a switched-off rule, so
-        # the leg writes its own allow-switch line (harness/guards.md §4: every use logged).
-        append_event(
-            state.context.state_dir,
-            state.session,
-            state.context.event,
-            "allow-switch",
-            PROTOCOL_ID,
-            f"FACTORY_GUARD_ALLOW={PROTOCOL_ID}: {len(findings)} lint finding(s) delivered as context",
-        )
+        # A leg-level switch: the note carries the leg's id, and the dispatcher logs the
+        # switch use for any context note under a switched id (harness/guards.md §4).
         return context_note(
             PROTOCOL_ID,
             f"GUARD protocol: ledger lint overridden (FACTORY_GUARD_ALLOW={PROTOCOL_ID}) — record the "

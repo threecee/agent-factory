@@ -1,6 +1,6 @@
 """BACKLOG.md truthfulness + drift check (ADR-0090, backlog-as-index).
 
-Varde keeps `docs/design-notes/` as the DESIGN source of truth and `docs/BACKLOG.md` as the
+The source factory keeps `docs/design-notes/` as the DESIGN source of truth and `docs/BACKLOG.md` as the
 single canonical STATUS/PRIORITY INDEX over it (ADR-0090): rather than adopting an off-repo
 tracker (GitHub Projects, Jira, ...), which would split the source of truth across two systems
 and reintroduce the exact drift the software-factory gates elsewhere exist to prevent. This

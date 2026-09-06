@@ -23,7 +23,7 @@ before it:
 
 | Mode | Step 10 | When |
 |---|---|---|
-| `pr` (the default) | push the integration branch, post the status, open the train pull request with the ledger as body, merge it with `--merge --match-head-commit <HEAD=>` under landing authority (§4) | the project's declared mode in train-plan §5 unless it says otherwise |
+| `pr` (the default) | push the integration branch, post the status, open the train pull request with the ledger as body, merge it with `--merge --match-head-commit <HEAD=>` under landing authority (§4) | every project, unless train-plan §5 declares `direct-push` with a standing reason |
 | `direct-push` (the documented override) | push the integration branch, post the status, `<verdict check> && git push origin HEAD:main` in one statement (§5) | a project that declares it in train-plan §5 with a standing reason, or one train with an `override reason:` in its ledger |
 
 The per-train record is the ledger's `## Landing` section: `landing mode:
@@ -37,15 +37,11 @@ overrides a `pr` default. The ledger lint reads both (protections.md §5).
    BOTH modes (`git push origin HEAD:refs/heads/train/<name>`); the push of
    an integration branch is never gated by the landing guard, and the branch
    is deleted at close-out (§6).
-2. **ONE `local-verify` status is posted on the receipt's `HEAD=`** with
-   `verification/protections/post_local_verify.sh <receipt.exit>` — context
-   `local-verify`, state `success`, description `EXIT=0 run=<run-id>`. The
-   poster refuses `EXIT≠0` and a `HEAD=` that is not the tree's HEAD, is
-   idempotent by read-back (it asks the host whether the status already
-   stands; no local state file), is run by the lander and never by a lane,
-   and never posts any state but success. A posting the lander skipped (no
-   host, an air-gapped scratch trial) is a ledger entry:
-   `local-verify: skipped <reason>`.
+2. **ONE `local-verify` status is posted on the receipt's `HEAD=`** by the
+   lander with `verification/protections/post_local_verify.sh
+   <receipt.exit>` — what the poster refuses, reads back and never posts is
+   `protections.md` §3; a posting the lander skipped (no host, an air-gapped
+   scratch trial) is a ledger entry: `local-verify: skipped <reason>`.
 
 The status is a receipt binding — the host holds proof that a green receipt
 existed for exactly this SHA — not access control; nothing here says
@@ -169,7 +165,7 @@ A check written as equality reports every pr-mode landing as unregistered.
 ## 5. Mode `direct-push` — the documented override
 
 **When.** A project declares it in train-plan §5 with a standing reason (the
-reference factory's own mode: one account, no reviewer, CI as watch-and-
+source factory's own mode: one account, no reviewer, CI as watch-and-
 report), or one train carries `override reason:` in its ledger — CI
 unavailable, an incident landing, a host without pull requests (a bare local
 origin in a scratch trial).
@@ -205,46 +201,30 @@ and recorded in the ledger.
 
 ## 6. Close-out — identical in both modes
 
-The lander duties after registration are one list, `lander-duties.md` §8,
-whatever the mode: origin/main contains the receipt HEAD; the pull request
-reads merged (pr); the remote train branch is deleted; the registry rows are
-flipped; the board is swept with ONE `landed` notification keyed on the
-train HEAD; the primary is fast-forwarded; merged worktrees are reaped after
-the ancestor check; served instances are torn down by port; the build
-product is fresh; disk is above the floor. `check_landing_closeout` prints
-the open ones as commands; the close-out Stop rule delivers the same list
-(protections.md §6).
+The lander duties after registration are ONE list whatever the mode —
+`lander-duties.md` §8 owns it; `check_landing_closeout` prints the open ones
+as commands and the close-out Stop rule delivers the same list
+(`protections.md` §6).
 
 ## 7. Session-start CI signal
 
-`verification/protections/ci_signal.sh` prints, when the host CLI is
-authenticated, one line for the last run of the verify workflow on the
-default branch — `CI main: GREEN (<run id>, <sha8>)` or `CI main: RED
-<conclusion> (<run id>, <sha8>; <failing jobs>) — a red X is three different
-things …` — and one line for open train pull requests with their
-`local-verify` and `verify` state. Offline it prints nothing. It is a
-signal, never a verdict: it suggests no merge and no push. Adapters: the
-harness reminders script calls it at session start (plain stdout reaches the
-model there); a coding-CLI wrapper prints it before the first prompt.
+The session starts with the last CI conclusion for the default branch and
+the open train pull requests, offline silent, a signal never a verdict —
+`protections.md` §4 owns the script, its line shapes and its adapters.
 
-## 8. Adapter table
+The adapters of every mechanism this file relies on — harness hook, coding
+CLI, git, CI, server — are one table, `protections.md` §8.
 
-| Mechanism | Claude Code hook | Coding CLI | git | CI | Server |
-|---|---|---|---|---|---|
-| Landing guard (M-1, both modes) | `PreToolUse`/`PostToolUse` on `git push … main`, `gh pr merge`, `gh pr create` via the PR12 dispatcher | the wrapper runs the poster and the merge or push; the AGENTS.md paragraph forbids `--no-verify` and lane pushes | `pre-push` re-runs the guard for `refs/heads/main` | — | the branch policy refuses a tip without the status |
-| Status poster | run by the lander as a shell step | run by the wrapper | — | — | the status the policy requires |
-| CI signal (M-12) | `SessionStart` plain stdout via the reminders script | printed by the wrapper before the first prompt | — | `verify` on `pull_request` + `push main`; the advisory lanes on `pull_request` | — |
-| Close-out (M-13) | `Stop` deny with the checklist; `SessionStart compact|resume` as context | the wrapper prints `check_landing_closeout` at handback | — | — | — |
+## 8. What this file does not claim, and provenance
 
-## 9. What this file does not claim, and provenance
-
-- The reference factory lands by direct push (its declared mode, with the
+- The source factory lands by direct push (its declared mode, with the
   standing reason above); the pull-request mode is the generalized default
   by owner ruling and has NOT been exercised there at the time of writing.
 - The branch-policy falsification (`falsification.md` rule 16) has not been
-  run against a live host by the reference; it is INSTALL step 7's duty in a
-  throwaway repository. The package tests prove the hooks over a bare local
-  origin and the bootstrap against a fake host CLI (protections.md §10).
+  run against a live host by the source factory; it is INSTALL step 7's
+  duty in a throwaway repository. The package tests prove the hooks over a
+  bare local origin and the bootstrap against a fake host CLI
+  (protections.md §10).
 - No merge automation ships: no auto-merge, no merge queue, no bot approval.
   Authority is read by the lander at the merge or the push.
 - Provenance: distilled from a source factory's 2026 analysis of what could

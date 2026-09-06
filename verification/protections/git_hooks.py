@@ -18,9 +18,18 @@ here; the ``no-verify`` rule refuses that flag inside a hooked session.
     python3 verification/protections/git_hooks.py install [--hooks-dir <dir>]
         sets core.hooksPath once per repository (shared by every linked worktree) to the
         tracked shims — ``<toplevel>/.githooks`` when it exists, else the directory beside
-        this driver — relative when inside the toplevel, absolute otherwise; chmod +x
+        this driver — relative when inside the toplevel, absolute otherwise; chmod +x. A
+        core.hooksPath that already points elsewhere (another tool's hooks) is replaced
+        with one loud ``replacing core.hooksPath <old>`` line: chain the old hooks from the
+        shims, or keep them with --hooks-dir.
     python3 verification/protections/git_hooks.py status
-        exit 1 until installed and every shim is executable
+        exit 1 until installed and every shim is executable — the verdict the session-start
+        reminder keys its GIT HOOKS line on (a foreign hooksPath is «not installed» too)
+
+The shims locate this driver themselves (``FACTORY_PROTECTIONS_DIR``, the directory beside
+theirs, ``<toplevel>/verification/protections``, ``<toplevel>/scripts/protections``), so a
+copy of the shims under ``<toplevel>/.githooks`` works; a shim that finds no driver lets the
+commit or push through with one loud line.
 
 The guards package is located through ``FACTORY_GUARD_DIR``, else ``harness/guards`` beside
 this package, else ``<toplevel>/harness/guards``, else ``<toplevel>/scripts/guards``; its
@@ -137,7 +146,7 @@ def status_problems(repo: pathlib.Path, directory: pathlib.Path | None = None) -
     directory = directory or hooks_dir(repo)
     expected = config_value(repo, directory)
     configured = _git(repo, "config", "--get", "core.hooksPath")
-    resolved = (repo / configured).resolve() if configured and not pathlib.Path(configured).is_absolute() else (pathlib.Path(configured).resolve() if configured else None)
+    resolved = _resolved_hooks_path(repo, configured)
     problems: list[str] = []
     if resolved != directory.resolve():
         problems.append(f"core.hooksPath is «{configured or '(unset)'}», not {expected}")
@@ -150,10 +159,23 @@ def status_problems(repo: pathlib.Path, directory: pathlib.Path | None = None) -
     return problems
 
 
+def _resolved_hooks_path(repo: pathlib.Path, configured: str | None) -> pathlib.Path | None:
+    if not configured:
+        return None
+    path = pathlib.Path(configured).expanduser()
+    return (path if path.is_absolute() else repo / path).resolve()
+
+
 def install(repo: pathlib.Path, directory: pathlib.Path | None = None) -> list[str]:
     directory = directory or hooks_dir(repo)
     value = config_value(repo, directory)
     steps: list[str] = []
+    current = _git(repo, "config", "--get", "core.hooksPath")
+    if current and _resolved_hooks_path(repo, current) != directory.resolve():
+        steps.append(
+            f"replacing core.hooksPath «{current}» — chain your existing hooks from the shims in "
+            f"{value}, or keep them with --hooks-dir {current} (verification/protections.md §1)"
+        )
     subprocess.run(["git", "-C", str(repo), "config", "core.hooksPath", value], check=True, timeout=30)
     steps.append(f"git config core.hooksPath {value}")
     for hook in HOOKS:

@@ -20,15 +20,18 @@
 #         POST whose body equals the example JSON; identical round-trip → unchanged, --check 0;
 #         evaluate stored → update, --apply → PUT rulesets/<id>, --check 1; 403 → paid-plan hint;
 #         no gh → --check offline exit 0, --strict exit 2; --enforcement evaluate → the reminder
-#   15–20 ci_signal.sh: RED with the failing job and the --log-failed hint; GREEN exact line;
-#         auth failure silent; no gh silent; an open train PR → the Open trains line; none → no line
+#   15–20 ci_signal.sh: RED with the failing job and the --log-failed hint; GREEN exact line, and
+#         for FACTORY_GUARD_DEFAULT_BRANCH when bound; auth failure silent; no gh silent; an open
+#         train PR → the Open trains line; none → no line
 #   21    check_landing_closeout: merged unreaped train tree → reap duty with unlink + remove;
 #         remote train branch → duty; pr mode OPEN → duty, MERGED → none; origin/main containing
 #         HEAD through a merge commit → no remote duty; primary behind → ff duty; floor 0 → silent
 #   22    the closeout Stop rule through the harness entry: deny with the checklist; three → context;
 #         allow-file word → allow; manual deletion → state-removed event
 #   23    check_choices_protocol: missing → HARD; entry without ID; unsound without fix; hedge;
-#         --at-push without ## Landing; complete → OK; --warn exit 0
+#         --at-push without ## Landing; complete → OK; --warn exit 0; a boarder read from the
+#         train's own merge commit (no --boarders; base from the merge-base, then from the
+#         receipt's BASE=) whose lane section is missing → HARD naming the section
 #   24    drift leg: claimed row whose file is on origin/main → HARD naming the number; lane-only → silent
 #   25    duplicate-id leg through check_backlog
 #   26    check_gate_weakening: baseline grew; gate without test; assert loss; Gate-change trailer;
@@ -193,6 +196,8 @@ run env FAKE_GH_RUN='34015490459 failure 806ca842f82719d025ea3eae1c564ab3859b64b
 check "15 RED main → the failing job and the --log-failed hint, never a verdict" "$( [ "$RC" -eq 0 ] && has "$(cat "$OUT")" 'CI main: RED failure (34015490459, 806ca842; make verify)' && has "$(cat "$OUT")" 'gh run view 34015490459 --log-failed' && ! has "$(cat "$OUT")" 'merge'; echo $? )" "rc=$RC out=$(cat "$OUT")"
 run env FAKE_GH_RUN='1 success 0123456789abcdef0123456789abcdef01234567' "$CI"
 check "16 GREEN main → the exact one line" "$( [ "$RC" -eq 0 ] && [ "$(cat "$OUT")" = 'CI main: GREEN (1, 01234567)' ]; echo $? )" "rc=$RC out=$(cat "$OUT")"
+run env FACTORY_GUARD_DEFAULT_BRANCH=trunk FAKE_GH_RUN='1 success 0123456789abcdef0123456789abcdef01234567' "$CI"
+check "16b FACTORY_GUARD_DEFAULT_BRANCH binds the branch the signal asks for and names" "$( [ "$RC" -eq 0 ] && [ "$(cat "$OUT")" = 'CI trunk: GREEN (1, 01234567)' ] && grep -q -- '--branch trunk' "$GHLOG"; echo $? )" "rc=$RC out=$(cat "$OUT") calls=$(calls)"
 run env FAKE_GH_AUTH=1 FAKE_GH_RUN='1 failure abc' "$CI"
 check "17 auth failure → silent, exit 0" "$( [ "$RC" -eq 0 ] && [ ! -s "$OUT" ]; echo $? )" "rc=$RC out=$(cat "$OUT")"
 nogh "$CI" > "$OUT" 2> "$ERR"; RC=$?
@@ -241,7 +246,7 @@ git -C "$P2" pull -q --ff-only origin main
 STATE3="$T/guard state"; LOG3="$T/guard.jsonl"
 stop_payload() { python3 -c 'import json,sys; print(json.dumps({"hook_event_name":"Stop","session_id":sys.argv[1],"stop_hook_active":False,"cwd":sys.argv[2]}))' "$1" "$P2"; }
 hook() { # event payload
-  printf '%s' "$2" | genv FACTORY_GUARD_STATE_DIR="$STATE3" FACTORY_GUARD_LOG="$LOG3" FACTORY_GUARD_OFFLINE=1 FACTORY_GATES_DIR="$T/scripts" FACTORY_GUARD_DISK_FLOOR_GB=0 PYTHONDONTWRITEBYTECODE=1 python3 "$ENTRY" "$1" > "$OUT" 2> "$ERR"; RC=$?
+  printf '%s' "$2" | genv FACTORY_GUARD_STATE_DIR="$STATE3" FACTORY_GUARD_LOG="$LOG3" FACTORY_GUARD_OFFLINE=1 FACTORY_GUARD_GATES_DIR="$T/scripts" FACTORY_GUARD_DISK_FLOOR_GB=0 PYTHONDONTWRITEBYTECODE=1 python3 "$ENTRY" "$1" > "$OUT" 2> "$ERR"; RC=$?
 }
 mkdir -p "$STATE3"; cp "$STATE2/landing-in-progress.json" "$STATE3/landing-in-progress.json"
 hook Stop "$(stop_payload s-1)"
@@ -362,6 +367,33 @@ gate "$LR" python3 -m scripts.check_choices_protocol t --boarders alpha --at-pus
 check "23i --warn prints [WARN] and exits 0" "$( [ "$RC" -eq 0 ] && has "$(cat "$OUT")" '[WARN] '; echo $? )" "rc=$RC out=$(cat "$OUT")"
 gate "$LR" TRAIN_NAME=t python3 -m scripts.check_choices_protocol --boarders alpha
 check "23j the train name comes from TRAIN_NAME when omitted" "$( [ "$RC" -eq 0 ] && has "$(cat "$OUT")" 'ledger t.md'; echo $? )" "rc=$RC out=$(cat "$OUT")"
+# the boarders come from the train's own merge commits (one derivation with the landing guard):
+# a train that boarded alpha, a ledger whose only lane section is beta, no --boarders
+MR="$T/merge repo"; newrepo "$MR"; printf 'x\n' > "$MR/README.md"; git -C "$MR" add -A; git -C "$MR" commit -q -m init
+MBASE="$(git -C "$MR" rev-parse HEAD)"; git -C "$MR" update-ref refs/remotes/origin/main HEAD
+git -C "$MR" checkout -q -b lane/alpha; printf 'a\n' > "$MR/a.md"; git -C "$MR" add -A; git -C "$MR" commit -q -m 'feat(a): a'
+MALPHA="$(git -C "$MR" rev-parse HEAD)"
+git -C "$MR" checkout -q -b train/t main; git -C "$MR" merge -q --no-ff lane/alpha -m "train(t): board alpha ($MALPHA)"
+mkdir -p "$MR/docs/choices"
+cat > "$MR/docs/choices/t.md" <<EOF
+# Choices ledger — train t (test)
+
+## Lane \`beta\` — boarded $MALPHA — one sound
+
+**beta-1** The helper stays (sound, H).
+
+## Orchestrator choices
+
+**O-1 — single boarder:** single-lane train — priority P1 (test) (sound, H).
+EOF
+gate "$MR" python3 -m scripts.check_choices_protocol t
+check "23k without --boarders the merge commit's boarder is read (base = merge-base with origin/main): the missing alpha section is HARD" "$( [ "$RC" -eq 1 ] && has "$(cat "$OUT")" '[HARD] missing section «## Lane `alpha`» for boarder alpha' && has "$(cat "$OUT")" '1 boarder(s)'; echo $? )" "rc=$RC out=$(cat "$OUT") err=$(cat "$ERR")"
+ART3="$T/merge art"; mkdir -p "$ART3"; printf 'EXIT=0\nBASE=%s\nHEAD=%s\nLOG=%s/t-1.log\n' "$MBASE" "$(git -C "$MR" rev-parse HEAD)" "$ART3" > "$ART3/t-1.exit"
+git -C "$MR" update-ref -d refs/remotes/origin/main
+gate "$MR" python3 -m scripts.check_choices_protocol t --receipts "$ART3"
+check "23l with no origin/main the base comes from the newest receipt's BASE= under --receipts: the same finding" "$( [ "$RC" -eq 1 ] && has "$(cat "$OUT")" '[HARD] missing section «## Lane `alpha`»'; echo $? )" "rc=$RC out=$(cat "$OUT") err=$(cat "$ERR")"
+gate "$MR" python3 -m scripts.check_choices_protocol t
+check "23m with neither a base nor --boarders the lint falls back to the ledger's own sections (0 findings)" "$( [ "$RC" -eq 0 ] && has "$(cat "$OUT")" '0 finding(s)'; echo $? )" "rc=$RC out=$(cat "$OUT") err=$(cat "$ERR")"
 
 # ---------------------------------------------------------------- case 24: the drift leg
 DR="$T/drift repo"; newrepo "$DR"

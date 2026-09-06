@@ -45,7 +45,24 @@ outside a Python repo, and one script cannot run anywhere as shipped.
 
 `check_number_provenance.py` is repo-agnostic in shape (a positive annotation
 on a narrow claim surface) but its default surface list names the source
-factory's files; set the surface for your repo.
+factory's files; set the surface for your repo. `src/kripos`, wherever a
+docstring or a constant names it, is the source factory's package path —
+substitute `src/<package>` when porting.
+
+**Two gates carry a Python API beside the documented invocation.** The
+harness guards import them in-process (located as
+`../../harness/guards/rules/_gates.py` says: `FACTORY_GUARD_GATES_DIR`, then
+`<repo>/scripts`, then `<repo>/verification/gates`, then beside the
+package), so these function signatures are part of the contract and a
+re-copy must keep them: `check_choices_protocol.py` —
+`boarders_from_merges(repo_root, base, head, run=)` (the ONE derivation of
+the boarders a train carries, shared by the landing guard and the gate's
+CLI), `boarders_from_text(text)`, `unsound_without_fix(text)`,
+`protocol_findings(text, boarders, train=, at_push=, default_mode=)`;
+`check_landing_closeout.py` — `primary_of(run, tree)`, `closeout(state,
+primary, run=, floor_gb=, port_range=, build_check=, offline=, environ=)`
+returning `(duties, notes)` with `Duty.line()`. Every other gate's contract
+is its docstring and its CLI only.
 
 ## Dependency clusters (ship together)
 `check_backlog.py` imports `check_traceability.py` AND `check_migration_heads.py`;

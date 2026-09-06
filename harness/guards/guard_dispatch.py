@@ -14,8 +14,10 @@ any ``FAIL``; it writes ``<out>/<lane>-guard-falsification.log`` (guards.md §11
 The dispatcher reads the payload from stdin and the event from ``argv[1]`` (falling back to
 the payload's ``hook_event_name``), resolves the switches (§4) from four logged sources,
 runs every rule registered for the event (§3), writes one JSON line per invocation to
-``FACTORY_GUARD_LOG`` and one events-log line per denial and per switch use to the state
-directory (§3), and answers the harness:
+``FACTORY_GUARD_LOG`` and one events-log line per denial and per switch use — a silenced
+rule, a leg answering «switched off» under its own id, or a context note under a switched
+id — to the state directory (§3; rules never write that log themselves), and answers the
+harness:
 
 * any ``deny`` → the refusal on stderr, exit 2 (the harness blocks the tool call);
 * otherwise every ``context`` note → ``hookSpecificOutput.additionalContext`` JSON on
@@ -96,6 +98,8 @@ SWITCHED_OFF = "switched off"
 SWITCH_VARS = ("FACTORY_GUARD_ALLOW", "FACTORY_GUARD_DISABLED")
 # The §8 parameters the falsification runner scrubs so the receipt proves the SHIPPED tables
 # (guards.md §11); the operator's binding is proved by the first live train, not the receipt.
+# Every binding a rule or a gate reads is listed here — an operator's FACTORY_GUARD_SOURCE_PREFIX
+# must not turn a planted src-without-trailer case green for the wrong reason.
 PARAMETER_VARS = (
     "FACTORY_GUARD_GATES",
     "FACTORY_GUARD_CLI",
@@ -104,6 +108,21 @@ PARAMETER_VARS = (
     "FACTORY_GUARD_PORT_RANGE",
     "FACTORY_GUARD_DATA_VOLUME",
     "FACTORY_GUARD_DISK_FLOOR_GB",
+    # the protections chapter's bindings (verification/protections.md)
+    "FACTORY_GUARD_DEFAULT_BRANCH",
+    "FACTORY_GUARD_GIT_EMAIL",
+    "FACTORY_GUARD_SOURCE_PREFIX",
+    "FACTORY_GUARD_TRAILER_RE",
+    "FACTORY_GUARD_DECISIONS_DIR",
+    "FACTORY_GUARD_LANDING_MODE_DEFAULT",
+    "FACTORY_GUARD_GATES_DIR",
+    "FACTORY_GUARD_ARTIFACTS",
+    "FACTORY_GUARD_LEDGER_DIR",
+    "FACTORY_GUARD_REGISTRY_CMD",
+    "FACTORY_GUARD_REGISTRY_FILE",
+    "FACTORY_GUARD_UI_GLOB",
+    "FACTORY_GUARD_DOCS_ONLY_CMD",
+    "FACTORY_GUARD_PYTHON",
 )
 VERDICT_LOG = "factory-guard.log"
 
@@ -342,13 +361,21 @@ def _run_rules(
 
 
 def _record_events(
-    state_dir: pathlib.Path, session: str, event: str, verdicts: list[Verdict], sources: list[str]
+    state_dir: pathlib.Path,
+    session: str,
+    event: str,
+    verdicts: list[Verdict],
+    sources: list[str],
+    allowed: frozenset[str] = frozenset(),
 ) -> None:
-    """The events log: one line per denial and per switch that silenced a rule."""
+    """The events log: one line per denial and per switch use. A switch use is a rule the
+    dispatcher silenced or a leg that answered «switched off» under its own id, and a
+    context note under a switched id — a leg (the landing rule's ``protocol``) that delivered
+    its finding as context instead of a refusal. One mechanism: rules never write this log."""
     for verdict in verdicts:
         if verdict.kind == "deny":
             append_event(state_dir, session, event, "deny", verdict.id, verdict.message)
-        elif verdict.message == SWITCHED_OFF:
+        elif verdict.message == SWITCHED_OFF or (verdict.kind == "context" and verdict.id in allowed):
             append_event(state_dir, session, event, "allow-switch", verdict.id, "; ".join(sources))
 
 
@@ -388,7 +415,7 @@ def dispatch(
     }
     record["messages"] = [verdict.message for verdict in verdicts if verdict.kind != "allow"]
     _log(log_path, record)
-    _record_events(state_dir, session_of(payload), event, verdicts, sources)
+    _record_events(state_dir, session_of(payload), event, verdicts, sources, allowed)
     return _emit(event, verdicts, stdout, stderr)
 
 

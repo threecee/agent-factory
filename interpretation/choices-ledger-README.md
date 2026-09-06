@@ -45,8 +45,11 @@ duplicates the rules below.
 - The ledger's `## Landing` section records `landing mode: pr|direct-push`,
   `override reason:` when direct-push is used against a pr default, the
   receipt run id(s) (`receipts: <dir>`), `local-verify: posted|skipped
-  <reason>`, the pull-request number (`pr: <n>`, pr mode), and every logged
-  switch or enforcement change as an orchestrator entry
+  <reason>`, the pull-request number (`pr: <n>`, pr mode), `ui-pass: <path>`
+  — the lander's rendered pass on a fresh build, required by the landing
+  guard only when the train touches the project's UI glob
+  (../verification/protections.md §1.1) — and every logged switch or
+  enforcement change as an orchestrator entry
   (../verification/landing-modes.md §1). The ledger lint
   (../verification/protections.md §5) checks presence only.
 

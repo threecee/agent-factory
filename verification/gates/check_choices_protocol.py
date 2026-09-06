@@ -3,10 +3,12 @@
 Reads ``<ledger-dir>/<train>.md`` and checks the ledger's FORM — never its truth:
 
   * the title (first heading) names the train;
-  * one ``## Lane `<name>``` section per boarder — boarders from ``--boarders``, else the
-    ``board <lane> (<sha>)`` lines of ``<train>-*.log`` under ``--receipts``, else the lane
-    sections the ledger itself carries — and every lane section names its boarded SHA
-    (40 hex, in the header or on a ``boarded: <sha>`` line; lander-duties §1 step 2);
+  * one ``## Lane `<name>``` section per boarder — boarders from ``--boarders``, plus the
+    train's own merge commits since ``--base`` (the newest receipt's ``BASE=`` under
+    ``--receipts``, else the merge-base with ``origin/<default>``) whose subject reads
+    ``board <lane> (<sha>)`` (harness/train-plan.md §2 row 2), else the lane sections the
+    ledger itself carries — and every lane section names its boarded SHA (40 hex, in the
+    header or on a ``boarded: <sha>`` line; lander-duties §1 step 2);
   * every entry line carries a stable ID (``**<lane>-<n>**`` / ``**O-<n>**``, optionally
     ``<train>/``-prefixed, or ``id: <id>``), a verdict word (sound | unsound | needs-user) and
     a confidence (H | M | L, or high | medium | low); a lane section with no entry says
@@ -29,13 +31,22 @@ runs it as a WARN cheap gate on the train tree with ``TRAIN_NAME`` and ``TRAIN_A
 exported (harness/train-plan.md §2 row 6).
 
     python3 -m scripts.check_choices_protocol <train> [--ledger-dir docs/choices] [--boarders a,b]
-        [--receipts <dir>] [--warn] [--at-push] [--default-mode pr|direct-push] [--repo-root .]
+        [--receipts <dir>] [--base <sha>] [--default-branch main] [--warn] [--at-push]
+        [--default-mode pr|direct-push] [--repo-root .]
     python3 -m scripts.check_choices_protocol            # train from $TRAIN_NAME, receipts from $TRAIN_ARTIFACTS
+
+Python API the landing guard consumes in-process (``harness/guards/rules/landing.py``, located
+as ``harness/guards/rules/_gates.py`` says), beside the documented invocation form:
+``boarders_from_merges(repo_root, base, head, run=…)`` — the ONE derivation of the boarders a
+train carries, shared by the guard and this gate; ``boarders_from_text(text)``;
+``unsound_without_fix(text)``; ``protocol_findings(text, boarders, train=, at_push=,
+default_mode=)``. Their signatures are part of the contract (gates/README.md).
 
 Planted falsifications the package test runs (verification/tests/test_landing_protections.sh
 case 23): missing ledger → HARD; an entry line without an ID → HARD naming the line; unsound
 without a fix note → HARD; a hedge phrase → HARD; ``--at-push`` without ``## Landing`` → HARD;
-the complete ledger → OK; ``--warn`` → findings printed, exit 0.
+the complete ledger → OK; ``--warn`` → findings printed, exit 0; a boarder read from the
+train's merge commit whose lane section is missing → HARD naming the section.
 """
 
 from __future__ import annotations
@@ -44,19 +55,24 @@ import argparse
 import os
 import pathlib
 import re
+import subprocess
 import sys
+from collections.abc import Callable
 
 TRAIN_ENV = "TRAIN_NAME"
 ARTIFACTS_ENV = "TRAIN_ARTIFACTS"
+DEFAULT_BRANCH_VAR = "FACTORY_GUARD_DEFAULT_BRANCH"
 DEFAULT_LEDGER_DIR = "docs/choices"
 LANDING_HEADER = "## Landing"
 MODES = ("pr", "direct-push")
+Runner = Callable[..., subprocess.CompletedProcess[str]]
 
 SECTION_RE = re.compile(r"^## ", re.M)
 LANE_HEADER_RE = re.compile(r"^## Lane `(?P<lane>[^`]+)`")
 SHA_RE = re.compile(r"\b[0-9a-f]{40}\b")
+FULL_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 BOARDED_LINE_RE = re.compile(r"^\s*boarded:\s*`?([0-9a-f]{40})`?", re.M | re.I)
-BOARD_LOG_RE = re.compile(r"\bboard (?P<lane>[A-Za-z0-9._-]+) \((?P<sha>[0-9a-f]{40})\)")
+BOARD_SUBJECT_RE = re.compile(r"\bboard (?P<lane>[A-Za-z0-9._-]+) \((?P<sha>[0-9a-f]{40})\)")
 ENTRY_ID_RE = re.compile(
     r"(?:\*\*|`|\bid:\s*)(?:[A-Za-z0-9._-]+/)?(?P<id>[a-z][a-z0-9]*(?:-[a-z0-9]+)*-\d+|O-\d+)\b"
 )
@@ -114,17 +130,56 @@ def boarders_from_text(text: str) -> dict[str, str]:
     return boarders
 
 
-def boarders_from_logs(receipts: pathlib.Path, train: str) -> dict[str, str]:
-    """``lane -> SHA`` from every ``board <lane> (<sha>)`` line in ``<train>-*.log``."""
-    boarders: dict[str, str] = {}
-    for log in sorted(receipts.glob(f"{train}-*.log"), key=lambda path: path.stat().st_mtime):
+def _git(run: Runner, cwd: pathlib.Path, *args: str, timeout: float = 30.0) -> tuple[int, str]:
+    try:
+        result = run(["git", "-C", str(cwd), *args], capture_output=True, text=True, check=False, timeout=timeout)
+    except (OSError, subprocess.SubprocessError) as error:
+        return 127, str(error)
+    return result.returncode, (result.stdout or "").strip()
+
+
+def boarders_from_merges(repo_root: pathlib.Path, base: str | None, head: str = "HEAD", *, run: Runner = subprocess.run) -> dict[str, str]:
+    """``lane -> second parent`` for every merge commit in ``base..head`` whose subject reads
+    ``… board <lane> (<sha>)`` (harness/train-plan.md §2 row 2) — the boarders the train
+    actually carries, read from git and independent of what the ledger says. The landing
+    guard calls this same function, so the guard and the gate share one derivation. Empty
+    without a base, outside git, or when git fails (the caller falls back to the sections)."""
+    named: dict[str, str] = {}
+    if not base:
+        return named
+    code, listing = _git(run, repo_root, "log", "--merges", "--format=%H%x09%s", f"{base}..{head}")
+    if code != 0:
+        return named
+    for line in listing.splitlines():
+        sha, _, subject = line.partition("\t")
+        match = BOARD_SUBJECT_RE.search(subject)
+        if not match:
+            continue
+        code, parent = _git(run, repo_root, "rev-parse", f"{sha}^2")
+        if code == 0 and parent:
+            named[match.group("lane")] = parent
+    return named
+
+
+def receipt_base(receipts: pathlib.Path | None, train: str) -> str | None:
+    """``BASE=`` of the newest ``<train>-*.exit`` receipt under ``receipts`` (train-plan §4)."""
+    if receipts is None or not receipts.is_dir():
+        return None
+    for path in sorted(receipts.glob(f"{train}-*.exit"), key=lambda p: p.stat().st_mtime, reverse=True):
         try:
-            text = log.read_text(encoding="utf-8", errors="replace")
+            lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
         except OSError:
             continue
-        for match in BOARD_LOG_RE.finditer(text):
-            boarders[match.group("lane")] = match.group("sha")
-    return boarders
+        for line in lines:
+            if line.startswith("BASE="):
+                value = line[5:].strip()
+                return value if FULL_SHA_RE.match(value) else None
+    return None
+
+
+def merge_base(repo_root: pathlib.Path, default_branch: str, *, run: Runner = subprocess.run) -> str | None:
+    code, sha = _git(run, repo_root, "merge-base", f"origin/{default_branch}", "HEAD")
+    return sha if code == 0 and sha else None
 
 
 def entry_lines(section: str) -> list[str]:
@@ -224,10 +279,10 @@ def protocol_findings(
     return findings
 
 
-def _boarders(listed: str, receipts: pathlib.Path | None, train: str) -> list[str]:
+def _boarders(listed: str, repo_root: pathlib.Path, base: str | None) -> list[str]:
+    """``--boarders`` plus the train's merged boarders since ``base`` (one derivation, above)."""
     boarders = [name for name in listed.split(",") if name]
-    if receipts is not None and receipts.is_dir():
-        boarders += [lane for lane in boarders_from_logs(receipts, train) if lane not in boarders]
+    boarders += [lane for lane in boarders_from_merges(repo_root, base) if lane not in boarders]
     return boarders
 
 
@@ -238,12 +293,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--ledger-dir", default=DEFAULT_LEDGER_DIR)
     parser.add_argument("--boarders", default="")
     parser.add_argument("--receipts", type=pathlib.Path, default=None, help=f"default: ${ARTIFACTS_ENV}")
+    parser.add_argument("--base", default=None, help="default: the newest receipt's BASE=, else the merge-base with origin/<default>")
+    parser.add_argument("--default-branch", default=None, help=f"default: ${DEFAULT_BRANCH_VAR}, else main")
     parser.add_argument("--warn", action="store_true", help="print findings, exit 0")
     parser.add_argument("--at-push", action="store_true", help="also require the «## Landing» section")
     parser.add_argument("--default-mode", choices=MODES, default="pr")
     args = parser.parse_args(argv)
     train = args.train or os.environ.get(TRAIN_ENV)
     receipts = args.receipts or (pathlib.Path(os.environ[ARTIFACTS_ENV]) if os.environ.get(ARTIFACTS_ENV) else None)
+    branch = args.default_branch or os.environ.get(DEFAULT_BRANCH_VAR) or "main"
     if not train:
         print(f"[HARD] train name missing: give <train> or set {TRAIN_ENV} (the assembler exports it)")
         return 1
@@ -251,7 +309,8 @@ def main(argv: list[str] | None = None) -> int:
     if not path.is_file():
         print(f"[HARD] ledger missing: {path}")
         return 0 if args.warn else 1
-    boarders = _boarders(args.boarders, receipts, train)
+    base = args.base or receipt_base(receipts, train) or merge_base(args.repo_root, branch)
+    boarders = _boarders(args.boarders, args.repo_root, base)
     findings = protocol_findings(
         path.read_text(encoding="utf-8"), boarders, train=train, at_push=args.at_push, default_mode=args.default_mode
     )

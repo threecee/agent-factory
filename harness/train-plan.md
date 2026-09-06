@@ -138,6 +138,7 @@ running <test runner> (pid …)`), never a bare non-zero exit.
 |---|---|---|
 | Run log | `<artifacts>/<run-id>.log` | Every command, its label and its output; the shared env file's CONTENTS never appear in it |
 | Exit receipt | `<artifacts>/<run-id>.exit` | Lines `EXIT=<code>`, `BASE=<full sha>`, `HEAD=<full sha>`, `LOG=<path>`; written atomically (temp file + rename) when the run ends, whatever the outcome |
+| Docs-only line (optional) | a fifth line `DOCS_ONLY=1` in the exit receipt | Written ONLY by a run whose launcher classified the diff as documentation-only with the project's classifier and skipped the heavy step on that ground; the landing guard then re-runs the classifier (`FACTORY_GUARD_DOCS_ONLY_CMD <BASE> <HEAD>`, `../verification/protections.md` §1.1) and refuses the receipt when no classifier is bound or it rejects the diff. The §4.2 launcher never writes it |
 | Overwrite policy | never | A run id that already has a log or exit file is refused; the next attempt gets the next run id |
 
 ### 4.1 The verdict rule (this section is its home)
@@ -229,8 +230,8 @@ The repo is not the source factory; every value is a local choice.
 | 9 | `git fetch -q origin && git rev-parse origin/main` → equals `BASE=` in the receipt, else read what landed; `git rev-parse --verify api-validation^{commit}` ×4 → each equals the SHA merged at step 2 |
 | 10a | `git push origin HEAD:refs/heads/train/t-42` |
 | 10b | `verification/protections/post_local_verify.sh ~/trains/t-42-1.exit` → `posted local-verify on 4d7e2b9c (run t-42-1)` |
-| 10c | `gh pr create --base main --head train/t-42 --title "train(t-42): 4 lanes" --body-file docs/choices/t-42.md` → PR #318; the URL on the four items; `gh pr view 318 --json headRefOid,statusCheckRollup,mergeStateStatus` → head `4d7e2b9c…`, `verify` success, `CLEAN` |
-| 10d | `test "$(~/bin/landing-authority)" = AUTHORITY && gh pr merge 318 --merge --match-head-commit 4d7e2b9c1a0f8e6d5c4b3a2f1e0d9c8b7a6f5e4d` |
+| 10c-pr | `gh pr create --base main --head train/t-42 --title "train(t-42): 4 lanes" --body-file docs/choices/t-42.md` → PR #318; the URL on the four items; `gh pr view 318 --json headRefOid,statusCheckRollup,mergeStateStatus` → head `4d7e2b9c…`, `verify` success, `CLEAN` |
+| 10d-pr | `test "$(~/bin/landing-authority)" = AUTHORITY && gh pr merge 318 --merge --match-head-commit 4d7e2b9c1a0f8e6d5c4b3a2f1e0d9c8b7a6f5e4d` |
 | 10c-direct (the override, when the project declares it) | `grep -qx 'EXIT=0' ~/trains/t-42-1.exit && grep -qx "HEAD=$(git rev-parse HEAD)" ~/trains/t-42-1.exit && test "$(~/bin/landing-authority)" = AUTHORITY && git push origin HEAD:main` |
 | 11 | `git push origin --delete train/t-42`; `gh pr view 318 --json state --jq .state` → `MERGED`; `gh project item-list 7 --owner acme --limit 200 --format json` → sweep; `git -C ~/src/app pull --ff-only origin main`; `git worktree remove ~/src/app-trains/t-42`; `python3 -m scripts.check_landing_closeout --state ~/src/app/.factory-guard/landing-in-progress.json` → `every lander duty closed` |
 
@@ -246,7 +247,7 @@ LOG=/Users/dev/trains/t-42-1.log
 Resume after a conflict in step 2: resolve, `git commit`, re-commit the
 protocol (step 4), then run from step 3 with run id `t-42-2` through the same
 launcher; `t-42-1.exit` stays on disk with `EXIT=1` and `t-42-2.exit` is the
-receipt step 10 reads — and step 10c becomes `gh pr edit 318 --body-file
+receipt step 10 reads — and step 10c-pr becomes `gh pr edit 318 --body-file
 docs/choices/t-42.md` with the new receipt HEAD in the merge form.
 
 ## 7. Falsify the plan before trusting it

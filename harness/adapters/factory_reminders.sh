@@ -11,7 +11,9 @@
 #
 # Parameters (guards.md §8), all optional: FACTORY_GUARD_STATE_DIR, FACTORY_GUARD_DIR,
 # FACTORY_GUARD_CLI, FACTORY_GUARD_CLI_TOKEN, FACTORY_GUARD_CLI_DIR_FLAG,
-# FACTORY_GUARD_DATA_VOLUME, FACTORY_GUARD_PORT_RANGE, FACTORY_GUARD_DISK_FLOOR_GB.
+# FACTORY_GUARD_DATA_VOLUME, FACTORY_GUARD_PORT_RANGE, FACTORY_GUARD_DISK_FLOOR_GB; the
+# protections chapter's (verification/protections.md): FACTORY_PROTECTIONS_DIR,
+# FACTORY_GUARD_DEFAULT_BRANCH and the bindings the PROTECTIONS BINDINGS line prints.
 
 INPUT=$(cat 2>/dev/null || true)
 HERE=$(cd "$(dirname "$0")" && pwd -P)
@@ -87,12 +89,19 @@ case "${1:-}" in
     # never silent (guards.md §8 names how a binding reaches the hook process).
     printf 'GUARD BINDINGS: cli=%s token=%s dir-flag=%s gates=%s port-range=%s (unbound = the identity refusal prints placeholders, the live-lane legs list nothing, verdict gates only its default table)\n' \
       "${FACTORY_GUARD_CLI:-unbound}" "${FACTORY_GUARD_CLI_TOKEN:-unbound}" "${FACTORY_GUARD_CLI_DIR_FLAG:-unbound}" "${FACTORY_GUARD_GATES:-unbound}" "${FACTORY_GUARD_PORT_RANGE:-unbound}"
+    # The protections chapter's §8 bindings (verification/protections.md), same rule: unbound is
+    # visible here — the documented default applies where one exists, else the leg is skipped.
+    printf 'PROTECTIONS BINDINGS: default-branch=%s git-email=%s source-prefix=%s trailer-re=%s decisions-dir=%s landing-mode-default=%s gates-dir=%s ledger-dir=%s artifacts=%s registry-cmd=%s registry-file=%s ui-glob=%s docs-only-cmd=%s python=%s (unbound = the documented default where one exists — main, src/, ^Refs: (ADR-\\d{4}), docs/decisions, pr, docs/choices, docs/decisions/NUMBERS.md — else that leg is skipped and says so)\n' \
+      "${FACTORY_GUARD_DEFAULT_BRANCH:-unbound}" "${FACTORY_GUARD_GIT_EMAIL:-unbound}" "${FACTORY_GUARD_SOURCE_PREFIX:-unbound}" "${FACTORY_GUARD_TRAILER_RE:-unbound}" "${FACTORY_GUARD_DECISIONS_DIR:-unbound}" "${FACTORY_GUARD_LANDING_MODE_DEFAULT:-unbound}" "${FACTORY_GUARD_GATES_DIR:-unbound}" "${FACTORY_GUARD_LEDGER_DIR:-unbound}" "${FACTORY_GUARD_ARTIFACTS:-unbound}" "${FACTORY_GUARD_REGISTRY_CMD:-unbound}" "${FACTORY_GUARD_REGISTRY_FILE:-unbound}" "${FACTORY_GUARD_UI_GLOB:-unbound}" "${FACTORY_GUARD_DOCS_ONLY_CMD:-unbound}" "${FACTORY_GUARD_PYTHON:-unbound}"
     [ "${FACTORY_GUARD_DISABLED:-0}" = "1" ] && printf '%s\n' "WARNING: FACTORY_GUARD_DISABLED=1 — every factory guard is off in this session."
     PROTECTIONS="${FACTORY_PROTECTIONS_DIR:-$HERE/../../verification/protections}"
-    # The git hooks (verification/protections.md §1, M-10) exist only once core.hooksPath points
-    # at the tracked shims — one command in the primary, every worktree.
-    HOOKS_PATH=$(git -C "${CLAUDE_PROJECT_DIR:-.}" config --get core.hooksPath 2>/dev/null)
-    [ -n "$HOOKS_PATH" ] || printf 'GIT HOOKS: core.hooksPath is not set — run python3 %s/git_hooks.py install once in the primary (verification/protections.md §1; the identity, trailer and landing checks then hold in every session and terminal).\n' "$PROTECTIONS"
+    # The git hooks (verification/protections.md §1, M-10) hold only while core.hooksPath points
+    # at the tracked shims and every shim is executable — the driver's own `status` verdict, so
+    # a hooksPath that another tool set (its hooks, not the factory's) is named too, never read
+    # as installed. No driver beside the package = nothing to install = silent.
+    if [ -f "$PROTECTIONS/git_hooks.py" ]; then
+      ( cd "${CLAUDE_PROJECT_DIR:-.}" && python3 "$PROTECTIONS/git_hooks.py" status >/dev/null 2>&1 ) || printf 'GIT HOOKS: not installed — core.hooksPath does not point at the tracked shims, or a shim is not executable (python3 %s/git_hooks.py status names the cause; a hooksPath another tool set is replaced with a loud line, chain its hooks from the shims). Run python3 %s/git_hooks.py install once in the primary (verification/protections.md §1; the identity, trailer and landing checks then hold in every session and terminal).\n' "$PROTECTIONS" "$PROTECTIONS"
+    fi
     if [ -f "$STATE_DIR/landing-in-progress.json" ]; then
       TRAIN=$(sed -nE 's/.*"train": *"([^"]+)".*/\1/p' "$STATE_DIR/landing-in-progress.json" | head -1)
       MODE=$(sed -nE 's/.*"mode": *"([^"]+)".*/\1/p' "$STATE_DIR/landing-in-progress.json" | head -1)
@@ -100,8 +109,9 @@ case "${1:-}" in
     fi
     disk_line
     # CI signal (guards.md §9, CI row; verification/protections.md §4): the protections chapter
-    # ships ci_signal.sh; this script calls it when executable, absent = silent.
-    [ -x "$PROTECTIONS/ci_signal.sh" ] && "$PROTECTIONS/ci_signal.sh"
+    # ships ci_signal.sh; this script calls it when executable, absent = silent — for the
+    # project's default branch, the same binding the landing rule and the hooks read.
+    [ -x "$PROTECTIONS/ci_signal.sh" ] && "$PROTECTIONS/ci_signal.sh" --branch "${FACTORY_GUARD_DEFAULT_BRANCH:-main}"
     ;;
 
   compact)
