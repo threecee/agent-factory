@@ -55,3 +55,32 @@
    tested against a mechanism that may not exist. The fix mandate is
    falsifiable only for the mechanisms the evidence supports; for the rest
    it is a promise to observe, and is labeled as one.
+10. **A gate over stored evidence is falsified in BOTH directions.** Plant a
+    false red and a false green, and require the gate to survive each:
+    - *False red:* a historical unavailable row whose scope has a valid
+      successor the consumer selects. The gate must stay green and report it
+      as history (`unavailable_superseded`), not as a violation.
+    - *False green:* a live unavailable row — the row the consumer selects —
+      under a role that was configured to deliver. The gate must fail with a
+      message naming the live count (`unavailable_live`), not the total.
+    Both counts appear in the receipt (`../harness/artifact-bank.md` §5).
+    Message check (rule 2) applies: a gate that fails with `unavailable=666`
+    when the consumer sees 1 has mis-described the failure. The principle
+    lives in `../interpretation/investigation-practice.md` (Identity and
+    history); the planted rows and expected verdicts are in
+    `examples/identity-and-history.md` §1.
+11. **Identity gates are planted with a wrong-but-newer candidate.** Where
+    the consumer resolves an artifact by a content key, plant a decoy with a
+    NEWER mtime (or later insertion) and the wrong key. A gate that selects
+    the decoy is red; a gate that resolves by the consumer's key and rejects
+    a missing key is green. Copy operations reorder mtimes — the planted
+    decoy is the realistic case, not a corner. Example §2.
+12. **Incremental work is falsified on three axes.** For any plan that
+    reuses partial results when its inputs move: (a) an unchanged identity
+    is NOT recomputed (assert the exact set sent to the expensive step);
+    (b) a changed identity IS recomputed and the old result is retired only
+    by exact precedence — a weaker result never replaces a stronger current
+    one of the same identity; (c) progress after a retry starts from the
+    stored receipt and never regresses. The falsification for (c) is the old
+    `restart at 0` initialization: with it reverted in, the store's own
+    regression guard must turn red. Example §3.
