@@ -96,6 +96,9 @@ that runs everything and stops at the first red gate).
    one train done this way end to end.
 2. Establish the memory conventions (`interpretation/memory-conventions.md`)
    and the evaluation practice (`interpretation/evaluation-practice.md`).
+   Evaluation practice presumes an artifact bank: every full evaluation runs
+   on an isolated copy of a banked pristine source, never on the source and
+   never on leftover state (`harness/artifact-bank.md` §3, §6).
 3. Read `interpretation/investigation-practice.md` — instrument-first is the
    default for every debugging lane; "investigate before the fix lane gets
    its mandate" is the default whenever the cause is uncertain (the brief is
@@ -129,7 +132,8 @@ repo's operations doc (the template carries it).
 3. Follow `harness/worktree-ritual.md` (worktree from a pinned SHA, symlinked
    env dirs gitignored, one lane one writer under the launcher's writer lock,
    the wrapper commits — coding CLIs often cannot commit in linked worktrees,
-   and the import-root proof for your stack) and `harness/report-schema.md`
+   the import-root proof for your stack, and the teardown checks: bank
+   gitignored valuables before removal) and `harness/report-schema.md`
    (sentinel + structured report carrying `run_id:`, `task:`/`round:`,
    `measurements:`, `revision_table:` with a named proof owner, the mandatory
    `choices:` self-report and its `<lane>-choices.md` sidecar). Circuit
@@ -146,6 +150,16 @@ repo's operations doc (the template carries it).
    nothing else (§4.1). Run its §7 falsification list once on a throwaway
    train. No assembler script ships; land from the plan by hand first
    (`verification/lander-duties.md` §6).
+6. Establish the artifact bank (`harness/artifact-bank.md`). Write its §10
+   table into the repo's operations doc: bank root (the `LANE_ARTIFACT_BANK`
+   directory chosen in Step 6), what counts as durable, the inventory of
+   every config key / manifest field / database column that stores a path,
+   the seed and its hash, the renewal cadence, the role names the receipt
+   reports, retention. Then run `sh harness/examples/copy-isolation.sh` and
+   read its output: it is the red→red→red→green shape your own isolation
+   check must reproduce against the product's real path inventory. A
+   factory whose pristine acceptance is "the manifest hashes match" is not
+   installed.
 
 ## Step 6 — User level
 Follow `user-level/README.md`: add the global CLAUDE snippet to the user's
@@ -169,6 +183,11 @@ recommended user-level skills.
    red, remove it). For the secret gate: random-shaped secrets on a throwaway
    branch (see verification/gates/README.md — documentation keys are
    allowlisted; the working-tree leg is advisory, history is HARD).
+   If the repo has any evaluation or demo that runs against an instance:
+   build one source from the seed, make two copies, plant an external path
+   in one recorded reference and confirm the isolation check refuses it
+   (`harness/artifact-bank.md` §3); confirm the source's hash is unchanged
+   after a run on a copy (§6).
 3. Land with `make verify && git push` — never an unconditional push after a
    verify you did not read.
 4. Falsify the round counter: re-dispatch the same item under a new lane

@@ -21,9 +21,11 @@ deterministic pieces against your language, build chain and domain.
 Shared infrastructure: **`skills/`** (35 vendored, hash-locked agent skills),
 **`harness/`** (parameterized lane launcher with run-bound receipts and its
 test, the run lifecycle, worktree ritual, board bootstrap, report schema
-with a choices sidecar, the train plan with its resource contract),
+with a choices sidecar, the train plan with its resource contract, the
+artifact-bank contract — pristine acceptance, isolated copies, receipts
+that tell a deliberate fake from a promised-but-failed role),
 **`user-level/`** (what goes into `~/.claude` so the factory works
-from any checkout).
+from any checkout, including the local bank root).
 
 ## The core loop (one screen)
 
@@ -37,7 +39,8 @@ idea → board item (Planned, with a full spec) → PO approval
   → landing train (independent ready lanes share one): --no-ff pinned SHAs
     → cross-checks → build → cheap gates → resource check
     → FULL local verify green → push main → CI deploys
-  → board sweep (Done + archive) → evaluation → findings → new board items
+  → board sweep (Done + archive) → evaluation on an isolated bank copy
+    → findings → new board items
   → memory: lessons that survive the session
 ```
 
