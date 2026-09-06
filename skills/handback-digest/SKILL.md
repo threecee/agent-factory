@@ -5,9 +5,12 @@ description: Draft one choices-ledger entry per choice in a lane handback, in th
 
 # Handback Digest
 
-The handback-digest command reads a lane's handback (`<lane>-result.md` per
-`harness/report-schema.md`, plus the `<lane>-choices.md` sidecar when the
-lane filed one) and drafts one structured entry per choice: headline, a
+The handback-digest command reads a lane's handback (the report the launcher
+places at `LANE_RESULT_PATH` — `<lane>.<run-id>.result.md`,
+`harness/run-lifecycle.md` §3 — written to the fields in
+`harness/report-schema.md`, plus the `<lane>-choices.md` sidecar its
+`choices_sidecar:` field names whenever `choices:` is non-empty) and drafts
+one structured entry per choice: headline, a
 provisional verdict, confidence, and one concrete end-to-end scenario, with
 terms defined in place. The rules live in `harness/bulk-read-contract.md`;
 this skill is the invocation and the hand-over to the audit.
@@ -47,7 +50,8 @@ never the final verdict (contract §3 rule 7):
    walked scenario, gap, reach, verdict, confidence — see
    `interpretation/choices-ledger-README.md`) so the auditor edits an entry
    rather than re-typing it; the auditor writes the verdict and the entry
-   into the train's ledger under the stable choice ID (introduced by PR6).
+   into the train's ledger under the stable choice ID
+   (`interpretation/choices-ledger-README.md` §2).
 3. Never treat the digest as already reviewed, never paste it into the ledger
    unedited, and never let it edit any file (it does not).
 

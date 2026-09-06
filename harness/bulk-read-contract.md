@@ -9,10 +9,12 @@ rule about routing large reads through a cheaper worker; the skills
 (`skills/bulk-reader`, `skills/log-triage`, `skills/handback-digest`) point
 here and carry only invocation and scope.
 
-Depends on `planning/execution-contract.md` and the handback fields in
-`harness/report-schema.md` (both introduced by PR1) for what a handback
-contains, and on the stable choice ID in `interpretation/choices-ledger-README.md`
-(introduced by PR6) for how a digest entry is tied to the audited ledger entry.
+Depends on `planning/execution-contract.md` (§2 measurement baseline, §3
+complete rounds — the counts §7 below reads) and the handback fields in
+`harness/report-schema.md` (`choices:` and its `<lane>-choices.md` sidecar)
+for what a handback contains, and on the stable choice ID in
+`interpretation/choices-ledger-README.md` §2 for how a digest entry is tied to
+the audited ledger entry.
 
 ## 1. The problem and the boundary
 
@@ -59,8 +61,8 @@ spec) is a separate, voluntary contract with its own review path and is
    shunt questions. The answer leads every bullet with the exact identifier and
    claims no line precision it cannot support.
 3. **Explicit input boundary.** By default a shunt accepts only files inside
-   the repository and the lane's scratchpad (the launcher's per-lane
-   directory; see `harness/run-lifecycle.md`, introduced by PR2). Any other
+   the repository and the lane's run directory (the launcher's
+   `LANE_RUN_DIR`; `harness/run-lifecycle.md` §2–§3). Any other
    path is refused with the offending path named and a distinct exit code,
    before any worker is invoked. An explicit opt-in flag exists for reviewed
    material only; the reviewer confirms the material is approved for the
@@ -112,13 +114,13 @@ repository's operations doc (`{{PARAM}}` in the skills refers to this table).
 | Bulk-read command | `{{BULK_READ_CMD}}` | `python scripts/factory/bulk_read.py` (Python repos) or any CLI honouring §3 rules 2–6 | repo operations doc |
 | Log-triage command | `{{LOG_TRIAGE_CMD}}` | `python scripts/factory/log_triage.py` | repo operations doc |
 | Handback-digest command | `{{HANDBACK_DIGEST_CMD}}` | `python scripts/factory/handback_digest.py` | repo operations doc |
-| Line threshold | `{{SHUNT_MIN_LINES}}` | env `SHUNT_MIN_LINES`; one factory chose 350 after checking round-trip cost against its worker | operator (`user-level/`) |
+| Line threshold | `{{SHUNT_MIN_LINES}}` | env `SHUNT_MIN_LINES`; one factory started at 350 as an untried default — the value is tried against round-trip cost in §7, never inherited; unbound, the adapter in §8 is inert | operator (`user-level/`) |
 | Worker chain | `{{SHUNT_WORKERS}}` | env `SHUNT_WORKERS`, comma-separated aliases; each alias maps to a provider/model in code; unknown alias fails closed | operator (`user-level/`) |
 | Session disable | `{{SHUNT_DISABLE}}` | env `SHUNT_DISABLED=1` | operator; set only while workers are down |
 | Path exemptions | `{{SHUNT_ALLOW}}` | env `SHUNT_ALLOW`, comma-separated globs (absolute or repo-relative) | operator |
 | External opt-in | `{{ALLOW_EXTERNAL_FLAG}}` | `--allow-external` | the reviewer of that one input |
-| Input roots | — | repository root + lane scratchpad from the launcher | `harness/run-lifecycle.md` (PR2) |
-| Measurement log | `{{SHUNT_LOG}}` | env `SHUNT_LOG`; default a gitignored JSONL under the repo; named per train during the pilot | operator; banked per `harness/artifact-bank.md` (PR5) during the pilot |
+| Input roots | — | repository root + the launcher's `LANE_RUN_DIR` | `harness/run-lifecycle.md` §3 |
+| Measurement log | `{{SHUNT_LOG}}` | env `SHUNT_LOG`; default a gitignored JSONL under the repo; named per train during the pilot | operator; banked as produced per `harness/artifact-bank.md` §2 during the pilot |
 | Log-file pattern | `{{LOG_GLOBS}}` | globs that identify run/verify logs (routes to log-triage instead of bulk-read) | repo operations doc |
 | Worker timeout | — | per-call ceiling in the worker adapter (one factory used 180 s) | repo operations doc |
 
@@ -139,7 +141,9 @@ printf 'line %d\n' $(seq 1 400) > big.txt
 echo 'CANARY-DO-NOT-ECHO' >> big.txt
 
 # 2. Every worker fails (fake binary that exits 1, or an unreachable chain).
+#    Bind the threshold too: an unbound threshold leaves the adapter inert (§8).
 export SHUNT_WORKERS=unreachable-alias        # or: PATH="$PWD/fake-bin:$PATH"
+export SHUNT_MIN_LINES=350                    # the value under trial, not a constant
 
 # 3. The shunt itself: must exit 3 and echo nothing from the file.
 {{BULK_READ_CMD}} big.txt --question 'which line holds the canary?' ; echo "exit=$?"
@@ -158,10 +162,12 @@ Check, in order:
 
 Record the trial (date, command, exit codes, the eight verdicts) in the
 operations doc next to the parameter table. The trial is repeated whenever
-the adapter or the worker chain changes. The source factory pinned steps 3, 6
-and 7 as tests against a fake worker binary; steps 4, 5 and 8 it proved by
-hand at activation — repeat all eight in your own harness rather than
-inheriting that.
+the adapter or the worker chain changes. The source factory pinned steps 3,
+4, 6 and 7 as tests against a fake worker binary and tested the block message
+of step 5 — but that message named two hatches (the bounded read and the
+disable variable), not three, so the source would not pass step 5 as written
+here; step 8 has no pinned test there. Repeat all eight in your own harness
+rather than inheriting any of that.
 
 ## 6. Fact preservation (critical facts and IDs)
 
@@ -180,8 +186,8 @@ the pilot, fix the check:
    name, a merged pair). Misstated counts worse than missed: it is acted on.
 5. Confirm every preserved fact by a bounded read of the cited line (rule 4).
 
-Worked example, a 540-line design spec with eight slices, question "list
-every slice with its name and scope files":
+The form of the record, illustrated on a 540-line design spec with eight
+slices and the question "list every slice with its name and scope files":
 
 ```
 fact list (written first)         | worker answer            | score
@@ -192,14 +198,16 @@ S8 <name> — files h, i            | S8 <name> — h, i         | preserved
                                    | 8/8 preserved, 0 missed, 0 misstated
 ```
 
-That table is the only sourced probe behind this contract: eight points
-correct, 31 s wall-clock, 93 160 input / 894 output worker tokens over 542
-lines, one worker, one file, one question. It is evidence that the worker
-answered; it is **not** a representative token accounting and it says
-nothing about a train-level saving. Two more properties the pilot has to
-show, which that probe did not: exact-ID preservation on a log (line numbers
-under duplication) and on a handback (SHAs, gate names, negations such as
-"not run" surviving into the digest).
+That table shows the method; it is not a sourced measurement. The one sourced
+probe behind this contract — eight points judged correct after the fact, 31 s
+wall-clock, 93 160 input / 894 output worker tokens over 542 lines, one
+worker, one file, one question — was run **without** a pre-written fact list
+and without preserved/missed/misstated scoring, so it is evidence that the
+worker answered, not a §6 result. It is **not** a representative token
+accounting and it says nothing about a train-level saving. Two more
+properties the pilot has to show, which that probe did not: exact-ID
+preservation on a log (line numbers under duplication) and on a handback
+(SHAs, gate names, negations such as "not run" surviving into the digest).
 
 ## 7. The pilot: hook off versus hook on
 
@@ -255,7 +263,8 @@ exists, the adapter does exactly this and nothing more:
   `grep`, `wc`, `git diff --stat` and narrow `sed` spans are never blocked.
 
 Minimal Read-side adapter (stdlib only; the line count and the message are
-the whole policy):
+the whole policy; the threshold is read from the operator's environment and
+the adapter is inert while it is unbound — rule 10, no constant in code):
 
 ```python
 #!/usr/bin/env python3
@@ -263,11 +272,12 @@ import json, os, sys, fnmatch
 DISABLE, MIN, ALLOW = "SHUNT_DISABLED", "SHUNT_MIN_LINES", "SHUNT_ALLOW"
 CMD = "{{BULK_READ_CMD}}"  # bind to the command from contract §4
 if os.environ.get(DISABLE) == "1": sys.exit(0)
+if not os.environ.get(MIN, "").isdigit(): sys.exit(0)  # unbound threshold: inert (§4)
 tool_input = json.load(sys.stdin).get("tool_input", {})
 path = tool_input.get("file_path")
 if not path or tool_input.get("offset") is not None or tool_input.get("limit") is not None: sys.exit(0)
 if any(p and fnmatch.fnmatch(path, p) for p in os.environ.get(ALLOW, "").split(",")): sys.exit(0)
-limit = int(os.environ.get(MIN, "350"))
+limit = int(os.environ[MIN])
 try:
     with open(path, "rb") as fh:
         if sum(1 for _ in fh) <= limit: sys.exit(0)
