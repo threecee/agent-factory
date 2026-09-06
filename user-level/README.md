@@ -10,7 +10,11 @@ So the factory works from ANY checkout on the machine:
 3. **User-level skills:** copy the skills your user should have everywhere
    (recommended minimum: `audit-choices`, `eli5`, `write-spec`,
    `systematic-debugging`, `verification-before-completion`) from `../skills/`
-   to `~/.claude/skills/`. Repo-level installs cover the rest.
+   to `~/.claude/skills/`. Repo-level installs cover the rest. The copies
+   are verifiable against the package lock from any directory:
+   `python3 ../skills/verify_skills_lock.py --check --root ~/.claude/skills
+   --lock ../skills/skills-lock.json` reports the skills you copied as
+   verified and the ones you did not as missing — read only the first kind.
 4. **Artifact bank root:** choose one durable directory outside every
    repository and outside every scratchpad (e.g. `~/<project>-bank/`),
    export it as `LANE_ARTIFACT_BANK` in every shell that dispatches lanes,
@@ -40,3 +44,17 @@ So the factory works from ANY checkout on the machine:
    otherwise; the example stays inactive. The package hold floor
    (`landing-policy.example.md` §2 `holds:`, its one home) stops a train
    regardless of the policy.
+7. **Model policy (required before the first dispatch):** copy
+   `model-policy.example.md` to `~/.claude/model-policy.md` and fill every
+   row you will dispatch into: the exact model id from the provider's live
+   list, the invocation form, the effort token, a probe date and result,
+   `valid_from` (today, never a future date), `review_by`, and your
+   signature. It is a user-level file because it describes YOUR accounts and
+   machine; the repo's operations doc points at it by path and never copies
+   the table (`../harness/model-policy.md` §3 rule 1). The package ships no
+   model names — a copy with placeholders binds nothing. Temporary
+   exceptions (a quota wall, a retired provider) are `authorizations:` rows
+   with an end and, when lifted early, a `revoked_at`; they never become the
+   default by expiring (§6 there). Revisit the names on `review_by`; a
+   policy past that date is stale, and the reading rules for a stale or
+   inherited policy are §3 rule 3 and the worked example in §9.

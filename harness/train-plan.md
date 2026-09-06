@@ -137,7 +137,11 @@ running <test runner> (pid …)`), never a bare non-zero exit.
 
 A train's verdict is the `EXIT=` line of the exit receipt whose run id the
 lander launched. `BASE=` and `HEAD=` say which tree that verdict is about and
-must equal the tree the lander is about to push. A missing receipt means the
+must equal the tree the lander is about to push — and `BASE=` must be an
+ancestor of `HEAD=` (`git merge-base --is-ancestor $BASE HEAD`): a green
+receipt whose base is not an ancestor verified a train that main has already
+moved away from, and the push is rejected (the install trial hit exactly this;
+`../verification/lander-duties.md` §3 is the re-assembly). A missing receipt means the
 run did not finish — not that it failed, not that it passed. Never judge from
 a pipe status, a wrapper's `$?`, a backgrounded job's status, or a log tail.
 `setsid cmd; echo $?` is the classic trap: on util-linux `setsid` forks when

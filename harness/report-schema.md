@@ -15,7 +15,7 @@ task: <board item ID>            # the round counter follows THIS, not the lane 
 round: <1|2>
 status: built | parked | blocked | refused | failed
 branch: <branch>
-head_sha: <sha>
+head_sha: <sha>                  # the worktree HEAD when the report was written — the pin, when the wrapper commits; the wrapper records the handback commit in the choices protocol
 files_touched:
   - <path>
 gates:

@@ -24,9 +24,6 @@ import sys
 from collections import Counter
 from typing import Literal, NamedTuple
 
-from alembic.config import Config
-from alembic.script import ScriptDirectory
-
 ALEMBIC_INI = "alembic.ini"
 MIGRATIONS_DIR = "migrations"
 NUMBERS_PATH = pathlib.Path("docs/decisions/NUMBERS.md")
@@ -161,6 +158,13 @@ def migration_registry_counts(repo_root: pathlib.Path | None = None) -> tuple[in
 
 def get_heads(repo_root: pathlib.Path | None = None) -> list[str]:
     """Return the alembic revision heads for the repo's migration graph."""
+    # Imported here, not at module top: the NUMBERS-registry helpers this module
+    # exports to check_backlog.py have no alembic dependency, and a repository
+    # without migrations must be able to run those without installing alembic
+    # (agent-factory install trial, 2026-09-06). Logic unchanged.
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+
     repo_root = (repo_root or pathlib.Path.cwd()).resolve()
     cfg = Config(str(repo_root / ALEMBIC_INI))
     cfg.set_main_option("script_location", str(repo_root / MIGRATIONS_DIR))

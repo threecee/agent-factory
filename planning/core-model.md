@@ -26,10 +26,13 @@ factories rot into vibes.
 4. **How — the standing lane brief.** Dispatch happens from ONE template
    (lane-brief-template.md), parameterized per lane: pinned repo SHA, own
    worktree, assigned ADR/migration numbers (or an explicit STOP rule),
-   the spec as contract, the pregate block, the report schema, and the
+   the spec as contract, the pregate block, the report schema, the
    execution-contract parameters (task ID, round, apparatus, proof owner,
-   attachments, ceiling). Briefs are never re-authored by hand per lane;
-   drift in the template is a reviewed change.
+   attachments, ceiling), and the model/effort line filled from the
+   operator's dated policy (../harness/model-policy.md §4 — the factory
+   defines roles and the parameters that carry a choice; the operator's
+   file binds names for a stated period). Briefs are never re-authored by
+   hand per lane; drift in the template is a reviewed change.
 5. **Proof — the execution contract.** Every lane runs under
    execution-contract.md: the evidence the task implies is attached before
    dispatch and a named owner reruns the apparatus the lane cannot run (§2);
@@ -52,3 +55,9 @@ factories rot into vibes.
   retry: it does not consume a round, and a round does not answer it.
 - Date everything with the actual current date; a future-dated approval is a
   governance bug an honest lane will refuse to build on. (This happened.)
+- Who builds is a policy question with three separate answers — role
+  policy, availability, history — kept apart in the operator's dated model
+  policy (../harness/model-policy.md §1). A model or tier change is an
+  owner decision (Decision needed); an effort change inside an approved
+  role is an orchestrator call recorded in the brief and the ledger; a
+  model name is never evidence, approved deliveries are (§7 there).

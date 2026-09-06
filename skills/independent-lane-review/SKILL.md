@@ -24,10 +24,10 @@ that survive independent re-derivation on more than one model are the ones to tr
 ## The panel: who reviews, on what models
 
 Dispatch **2–3 reviewers per lane**, each a fresh agent on a **different model**, per the
-PO's standing build-model policy for adversarial review (`docs/FACTORY.md`, the
-build-model-policy table — the adversarial-review row pins `claude-opus` / `claude-sonnet`;
-a third reviewer from another family, e.g. a codex or grok second pass, sharpens the
-diversity further where quota allows). Every panellist gets the **identical** crafted
+operator's dated model policy (`harness/model-policy.md` §2, the "investigation and
+second-family review" role; the live file is `~/.claude/model-policy.md`). The policy names
+the models; this skill names only the requirement — at least two model FAMILIES, and a
+third from yet another family where the policy has one. Every panellist gets the **identical** crafted
 context and rubric; the only thing that differs is the model. The dispatch template
 ([lane-reviewer.md](lane-reviewer.md)) carries a `[REVIEWER_MODEL]` slot so each dispatch
 names its model.
