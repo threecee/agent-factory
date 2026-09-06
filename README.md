@@ -23,7 +23,8 @@ Shared infrastructure: **`skills/`** (35 vendored, hash-locked agent skills),
 test, the run lifecycle, worktree ritual, board bootstrap, report schema
 with a choices sidecar, the train plan with its resource contract, the
 artifact-bank contract — pristine acceptance, isolated copies, receipts
-that tell a deliberate fake from a promised-but-failed role),
+that tell a deliberate fake from a promised-but-failed role — and the
+measurement-gated bounded bulk-read contract),
 **`user-level/`** (what goes into `~/.claude` so the factory works
 from any checkout, including the local bank root).
 

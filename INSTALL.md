@@ -131,6 +131,11 @@ Copy `skills/` → `.agents/skills/` and symlink `.claude/skills` to it. Verify
 the hash lock (`skills-lock.json`). Write the skill-routing table into the
 repo's operations doc (the template carries it).
 
+Three of the skills (`bulk-reader`, `log-triage`, `handback-digest`) are the
+bounded bulk-read pilot. They are inert until you bind the commands and
+variables in `harness/bulk-read-contract.md` §4 in the operations doc; they
+register NO hook. Do not add a PreToolUse registration in this step.
+
 ## Step 5 — Harness
 1. Keep `harness/launch_lane.sh` where it is (it is repo-agnostic and takes
    everything as a parameter — worktree, run id, receipt directory, brief,
@@ -177,6 +182,10 @@ repo's operations doc (the template carries it).
    check must reproduce against the product's real path inventory. A
    factory whose pristine acceptance is "the manifest hashes match" is not
    installed.
+7. Optional, measurement-gated: `harness/bulk-read-contract.md` — route large
+   reads through a cheaper worker. Bind its parameters (§4), run the
+   worker-down trial (§5) and the off/on pilot (§7) before registering the
+   adapter (§8). Installing the contract activates nothing.
 
 ## Step 6 — User level
 Follow `user-level/README.md`: add the global CLAUDE snippet to the user's
