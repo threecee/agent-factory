@@ -80,14 +80,23 @@ that runs everything and stops at the first red gate).
 1. Create `docs/choices/` with `interpretation/choices-ledger-README.md`. The
    choices audit is a TRANSACTION POINT: every lane handback is audited with
    the `audit-choices` skill and recorded in `docs/choices/<train>.md` BEFORE
-   assembly; unsound choices are resolved before the train is built.
+   assembly; unsound choices are resolved before the train is built. Every
+   choice carries one stable ID (`<train>/<lane>-<n>`) from self-report to
+   fix commit, and its walked scenario is stored in the protocol or in a
+   sidecar committed under `docs/choices/<train>/` — never in a scratchpad
+   (README §2–§3). `interpretation/examples/simplification-review.md` shows
+   one train done this way end to end.
 2. Establish the memory conventions (`interpretation/memory-conventions.md`)
    and the evaluation practice (`interpretation/evaluation-practice.md`).
 3. Read `interpretation/investigation-practice.md` — instrument-first is the
-   default for every debugging lane, and "investigate before the fix lane
-   gets its mandate" is the default whenever the cause is uncertain (the
-   brief is `planning/investigation-brief-template.md`; the trust rules are
-   `verification/falsification.md` §7–§9).
+   default for every debugging lane; "investigate before the fix lane gets
+   its mandate" is the default whenever the cause is uncertain (the brief is
+   `planning/investigation-brief-template.md`; the trust rules are
+   `verification/falsification.md` §7–§9); and its "Consumer inventory"
+   section is the mandatory pre-step for every lane that deletes, moves,
+   splits or renames: one row per protected element, readers in every
+   language and path-keyed tool baselines included, live-versus-historical
+   decided per file by executing readers.
 
 ## Step 4 — Skills
 Copy `skills/` → `.agents/skills/` and symlink `.claude/skills` to it. Verify
