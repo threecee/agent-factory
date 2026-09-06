@@ -26,9 +26,16 @@ factories rot into vibes.
 4. **How — the standing lane brief.** Dispatch happens from ONE template
    (lane-brief-template.md), parameterized per lane: pinned repo SHA, own
    worktree, assigned ADR/migration numbers (or an explicit STOP rule),
-   the spec as contract, the pregate block, the report schema. Briefs are
-   never re-authored by hand per lane; drift in the template is a reviewed
-   change.
+   the spec as contract, the pregate block, the report schema, and the
+   execution-contract parameters (task ID, round, apparatus, proof owner,
+   attachments, ceiling). Briefs are never re-authored by hand per lane;
+   drift in the template is a reviewed change.
+5. **Proof — the execution contract.** Every lane runs under
+   execution-contract.md: the evidence the task implies is attached before
+   dispatch and a named owner reruns the apparatus the lane cannot run (§2);
+   a task gets two complete rounds, counted on its board item ID, then it is
+   parked and split (§3). The brief parameterizes this contract; it does not
+   restate it.
 
 ## Decision hygiene
 
@@ -39,5 +46,9 @@ factories rot into vibes.
 - Anything the owner must rule on gets board status **Decision needed** and,
   when volume warrants, an interactive decision document (one card per
   decision: the problem, the plan, action buttons) rather than a chat scroll.
+  A product or scope question that surfaces mid-lane is filed the moment it
+  surfaces, with evidence and a recommendation; the lane continues the
+  reversible part (execution-contract.md §4). A decision is never spent as a
+  retry: it does not consume a round, and a round does not answer it.
 - Date everything with the actual current date; a future-dated approval is a
   governance bug an honest lane will refuse to build on. (This happened.)
