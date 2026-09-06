@@ -36,9 +36,9 @@ checkpoint) and drop the other's duplicate — never both.
    wants the lander to land verified P1 trains without a live ruling, the
    owner copies `landing-policy.example.md` to `~/.claude/landing-policy.md`,
    fills every field, sets `status: ACTIVE` and signs it. Nothing to install
-   otherwise; the example stays inactive. The unsound-choice, migration, ADR,
-   calibration and first-contact-STOP holds stop a train regardless of the
-   policy (`landing-policy.example.md` §2 `holds:`).
+   otherwise; the example stays inactive. The package hold floor
+   (`landing-policy.example.md` §2 `holds:`, its one home) stops a train
+   regardless of the policy.
 ```
 
 ## 2. `INSTALL.md`

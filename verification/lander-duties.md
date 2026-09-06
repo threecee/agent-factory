@@ -54,10 +54,10 @@ INACTIVE as shipped. Read it as the owner's grant, never as a template.
 4. **Authority → land**, only if ALL hold: the policy covers this train's
    kind (e.g. a single P1 fix lane against an In-flight, owner-approved
    item — the owner's definition, not the package's); every `requires:` line
-   of the policy is met by steps 1–8; NO `holds:` category fires. The floor
-   the policy may not remove: an unresolved unsound choice, a new migration
-   or schema head, a new or changed ADR, a calibration/baseline change, any
-   first-contact STOP. Any of these → step 2, even under authority.
+   of the policy is met by steps 1–8; NO `holds:` category fires. The
+   non-removable floor of that list is enumerated ONCE, in the landing
+   policy §2 `holds:` — read it there; this file does not repeat it. Any
+   floor entry firing → step 2, even under authority.
 5. **After an autonomous landing:** the train's choices ledger names the
    policy (file, `valid_until`, `signed`) and the item it landed for; the
    `landed` notification is the owner's first contact with it. The owner

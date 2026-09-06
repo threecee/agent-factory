@@ -24,25 +24,59 @@ WHO granted WHAT, for HOW LONG, and what still stops.
    repo may narrow it with its own `docs/landing-policy.md`; the narrower
    rule wins. Neither file is created by the installer.
 2. A policy is active only when ALL hold: the file exists at the active
-   path, it has a line `status: ACTIVE` and no line `status: INACTIVE`,
-   `valid_until` is in the future, and `granted_by` and `signed` are
-   filled. Anything else — file missing, `INACTIVE`, expired, unsigned, an
-   `example` in the path — means **no authority**.
+   path and the path does not contain `example`; it has a line
+   `status: ACTIVE` and no line `status: INACTIVE`; `valid_until` is a real
+   `YYYY-MM-DD` date and today is not later than it (the policy is valid
+   through that day, expired from the next); `granted_by` and `signed` are
+   filled with something other than the `<placeholder>` of §2. Anything
+   else — file missing, `INACTIVE`, expired, a placeholder date, unsigned,
+   an `example` in the path — means **no authority**. This paragraph and
+   the check below are the same list; if one changes, both change.
 3. The check, run by the lander before any push (adapt the path):
 
    ```sh
    p=~/.claude/landing-policy.md
-   test -f "$p" && grep -q '^status: ACTIVE' "$p" \
-     && ! grep -q '^status: INACTIVE' "$p" \
-     && expr "$(sed -n 's/^valid_until: *//p' "$p" | head -1)" \> "$(date +%F)" >/dev/null \
-     && echo AUTHORITY || echo "NO AUTHORITY -> hold + decision brief"
+   today=$(date +%Y%m%d)
+   until=$(sed -n 's/^valid_until: *\([0-9]\{4\}\)-\([0-9]\{2\}\)-\([0-9]\{2\}\).*/\1\2\3/p' "$p" 2>/dev/null | head -1)
+   if test -f "$p" \
+      && case "$p" in *example*) false;; *) true;; esac \
+      && grep -Eq '^status: *ACTIVE([[:space:]]|$)' "$p" \
+      && ! grep -Eq '^status: *INACTIVE' "$p" \
+      && grep -Eq '^granted_by: *[^<[:space:]]' "$p" \
+      && grep -Eq '^signed: *[^<[:space:]]' "$p" \
+      && test -n "$until" && test "$until" -ge "$today"
+   then echo AUTHORITY
+   else echo "NO AUTHORITY -> hold + decision brief"
+   fi
    ```
 
-   POSIX sh/bash/zsh; ISO dates compare as strings. Against this example
-   file the check prints `NO AUTHORITY` (the status line says `INACTIVE`).
-   That is the correct result for a fresh install. Falsify it once on the
-   machine: a scratch copy with `status: ACTIVE` and a future `valid_until`
-   must print `AUTHORITY`; the same copy with a past date must not.
+   POSIX sh/bash/zsh, locale-independent: the date is matched as digits
+   and compared as an integer (`YYYYMMDD`), never as a string — string
+   comparison of `<YYYY-MM-DD>` against a date is collation-dependent and
+   fails OPEN under `LC_ALL=C`. A trailing comment on the `valid_until`
+   line (the §2 template keeps one) is ignored by the match. A field
+   whose first character is `<` is a placeholder and fails. Against this
+   example file the check prints `NO AUTHORITY` (the status line says
+   `INACTIVE`). That is the correct result for a fresh install.
+
+   Falsify it once on the machine, on scratch copies of this file with
+   the path adapted, under `LC_ALL=C` as well as the login locale; the
+   expected outputs are the definition of §1.2, not a courtesy:
+
+   | Scratch copy | Expected |
+   |---|---|
+   | this file unchanged | `NO AUTHORITY` |
+   | all fields filled, `status: ACTIVE`, `valid_until` next year | `AUTHORITY` |
+   | same, `valid_until` last year | `NO AUTHORITY` |
+   | same, `valid_until` = today, with the template's trailing `# renew…` comment | `AUTHORITY` (valid through the day) |
+   | same, `valid_until` = yesterday | `NO AUTHORITY` |
+   | ONLY the two `status:` lines flipped to ACTIVE, every `<placeholder>` left | `NO AUTHORITY` |
+   | all filled and ACTIVE, but `signed: <owner initials + date>` left | `NO AUTHORITY` |
+   | all filled and ACTIVE, `granted_by:` empty | `NO AUTHORITY` |
+   | all filled and ACTIVE, copy saved under a path containing `example` | `NO AUTHORITY` |
+
+   A check that prints `AUTHORITY` for any row but the second and fourth
+   is a bug in the check, and no train lands on it until it is fixed.
 4. No authority is not an error. It routes the finished train to the hold
    path in `../verification/lander-duties.md` § Landing authority: train kept
    intact, decision brief filed, one notification, wait.
@@ -54,7 +88,7 @@ status: INACTIVE                 # ACTIVE | INACTIVE
 granted_by: <owner name or role> # the person who can be asked "did you mean this?"
 granted_to: lander               # the role, never a model or vendor name
 valid_from: <YYYY-MM-DD>
-valid_until: <YYYY-MM-DD>        # short; renew deliberately. Expired = INACTIVE
+valid_until: <YYYY-MM-DD>        # short; renew deliberately. Valid through this day; expired = INACTIVE
 signed: <owner initials + date>  # a policy nobody signed is a draft
 
 # What the authority covers. Everything not listed is NOT covered.
@@ -71,8 +105,10 @@ covers:
       - board sweep
       - ONE notification per transition (board-protocol § Notifications)
 
-# What STOPS even with authority. The first four are the package floor
-# and may not be removed; the owner may only add.
+# What STOPS even with authority. All five entries below are the package
+# floor and may not be removed or narrowed; the owner may only add. This
+# list is the ONE home of the floor — lander-duties and board-protocol
+# point here, they do not repeat it.
 holds:
   - an unresolved unsound entry in the choices ledger
   - a new migration / schema head, or any change to the migration chain
@@ -136,7 +172,8 @@ stated policy, not a measured routine.
 - A template that ships ACTIVE. The example is INACTIVE and stays so.
 - A place for model names, vendor names, ports, project IDs or paths other
   than the active path. Those belong in the operator's dated model policy
-  (`../harness/model-policy.md`, introduced by PR7) and the repo anchor.
+  (a separate `harness/` document, if the package ships one) and the repo
+  anchor.
 - A second source of truth for the protocol. If a rule about briefs,
   transitions or notifications is needed, it goes to
   `../planning/board-protocol.md`, and this file links to it.

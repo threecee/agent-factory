@@ -72,8 +72,10 @@ the keying rule that prevents a fourth.
 ## 3. Rules
 
 1. **Readable without the conversation.** No "as discussed", no scratchpad
-   paths, no session links as the only evidence. Banked evidence only
-   (`../harness/artifact-bank.md`, introduced by PR5).
+   paths, no session links as the only evidence. Banked evidence only —
+   copied to a location outside every checkout and scratch area, pinned
+   by SHA or timestamp (the package's `harness/` pillar describes the
+   evidence bank where it ships one).
 2. **Options carry consequences, not adjectives.** Each option names what
    it costs, what it breaks, and what it makes measurable. "Faster" is not
    a consequence; "repeats the previous run's caveat that the AI layers
@@ -114,9 +116,10 @@ before every background warmer has finished on the served copy.
 > **Artifact held:** none yet at 03:00 — the fresh warm-up is the blocker.
 >
 > **Problem:** the fresh AI-on warm-up of the 25k case did not converge:
-> the timeline warmer failed both attempts (identity of its inputs moved
-> under it during warming). The readiness rule cannot be met, and the
-> pristine gate would reject the resulting copy anyway.
+> the timeline warmer failed both attempts. Suspected mechanism: the
+> identity of its inputs moved under it during warming — suspected, not
+> shown. The readiness rule cannot be met, and the pristine gate would
+> reject the resulting copy anyway.
 >
 > **Evidence:** warm-up log, immutable database copy, manifest and wrapper
 > banked under `<bank>/archive/<case>-standup-<blocker id>-<timestamp>/`.
@@ -154,17 +157,29 @@ before every background warmer has finished on the served copy.
 > **Decision 2026-09-06: A.** Train landed (main `<sha>`, blocker closed).
 > Rerun starts now: fresh warm-up under the landed code → pristine → copy
 > + smoke → wave. Status → In flight.
-> Standing policy from here: orchestrator-filed P1 fixes land autonomously
-> with a verified train + choices protocol + notification afterwards.
+
+That is the whole ruling comment. The owner's grant of standing authority
+("orchestrator-filed P1 fixes land autonomously with a verified train +
+choices protocol + notification afterwards") was NOT part of it: it was
+given in the owner's order to the orchestrator and recorded in the train's
+choices protocol under Landing, the same day. A brief asks for a ruling on
+its options; a standing policy is granted elsewhere and lands in the
+landing policy file (rule 7).
 
 **What the example proves and what it does not.** The hold path worked:
 the train was held about two hours, the owner ruled from the brief, and
 the train's choices protocol cites the item (its orchestrator entry "lane
 dispatched without a ruling, landing held: the lane is reversible, the
-train is assembled and verified, not pushed"). The standing policy in the
-last line is the owner's grant; it is recorded in
-`../user-level/landing-policy.example.md` § 4 as the right-hand column, and
-the source factory had not yet exercised it when this was written. The
-outcome of option A — the number of plan attempts and full convergence on
-the large case — was still being measured by the rerun; this example does
-not claim it.
+train is assembled and verified, not pushed"). The grant that followed is
+recorded in `../user-level/landing-policy.example.md` § 4 as the
+right-hand column, and the source factory had not yet exercised it when
+this was written. Two things the brief did NOT get right, and did not
+claim to: the suspected mechanism at 03:00 was corrected by the read-only
+investigation that was still running when the brief was filed (the first
+attempt failed because the warmer had started while ingestion was still
+adding sources; the second failed on a different, unrecorded runtime
+error — an observability gap, not identity drift), which is why the
+Problem field says "suspected" and why a brief records the mechanism as
+unknown when it is; and the outcome of option A — the number of plan
+attempts and full convergence on the large case — was still being
+measured by the rerun, so this example does not claim it.

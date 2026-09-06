@@ -47,11 +47,11 @@ on the item; the ruling is copied there verbatim if it arrived elsewhere.
 4. A hold is measured (start, ruling, length) and cited by the train's
    choices ledger. Long repeated holds are the owner's evidence for or
    against granting standing authority; the brief does not ask for it.
-5. What remains true under standing authority: the choices audit (zero
-   unsound before assembly), the green full verify on the assembled tree,
-   and every first-contact STOP (unassigned number, semantics change,
-   governance inconsistency). Authority moves the push decision, not the
-   verification.
+5. Standing authority moves the push decision only. The verification
+   (`../verification/lander-duties.md` steps 1–8) and the non-removable
+   hold floor (`../user-level/landing-policy.example.md` §2 `holds:`, the
+   one home of that list) are untouched by it: a train any floor entry
+   fires on is held with a brief exactly as if no policy existed.
 
 ## Notifications
 
