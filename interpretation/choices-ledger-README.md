@@ -50,9 +50,8 @@ duplicates the rules below.
   guard only when the train touches the project's UI glob
   (../verification/protections.md §1.1) — `kind: <declared>→<derived>`,
   the change kind the brief declared and the kind the lander re-derived
-  from the train's real diff (../planning/execution-contract.md §9; a kind
-  that fell is an orchestrator entry in the same ledger, a kind that rose
-  is announced in the landing summary) — and every logged switch or
+  from the train's real diff (../planning/execution-contract.md §9 owns
+  the rose/fell consequences) — and every logged switch or
   enforcement change as an orchestrator entry
   (../verification/landing-modes.md §1). The ledger lint
   (../verification/protections.md §5) checks presence only, and does not

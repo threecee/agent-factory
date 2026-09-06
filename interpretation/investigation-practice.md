@@ -31,7 +31,7 @@
 
 Why a read-only investigation precedes the fix brief when the cause is
 uncertain; the brief itself is `../planning/investigation-brief-template.md`,
-the trust rules are `../verification/falsification.md` §7–§9.
+the trust rules are `../verification/falsification.md` rules 7–9.
 
 - **Coincidence recruits the wrong fix.** A job that stops after many model
   calls, at the same minute a neighboring job finishes, invites a brief that
@@ -169,7 +169,7 @@ walks it once end to end.
 
 ## Identity and history — evidence follows the consumer
 
-This section owns the principle; `../verification/falsification.md` §10–§12
+This section owns the principle; `../verification/falsification.md` rules 10–12
 own the red/green shape, and
 `../verification/examples/identity-and-history.md` carries the worked
 examples and a runnable model. The bank receipt that reports the counts is

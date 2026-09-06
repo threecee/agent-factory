@@ -24,10 +24,9 @@ a file or a git operation. The rules below have exactly one home each
   never a name typed from memory, never a template default
 - Kind: `<docs-only|mechanical|source|record|boundary>` — every kind that
   applies, comma-separated, from `{{KIND_CLASSIFIER}}` over the planned file
-  set (execution-contract.md §9); the lander re-derives it from the real
-  diff — a kind that rose is applied and announced, a kind that fell is a
-  ledger entry, never silent. `none — classifier unbound` when the repo has
-  bound none
+  set (execution-contract.md §9 — the lander's re-derivation and the
+  rose/fell consequences are there). `none — classifier unbound` when the
+  repo has bound none
 
 ## 2. Standing hard rules
 - Read the architecture/pattern docs first; a new seam duplicating an existing
@@ -84,9 +83,13 @@ states the fix.
 Diff-triggered legs (../verification/verify-portfolio.md, "Legs that bring
 lane-green closer to train-green", leg (c) — the table is the repo's, copied
 here byte-equal from the operations doc): run every row whose glob matches
-`git diff --name-only <pin>..HEAD`; a row whose command would skip for an
-absent build product is not green — build first or report the row as not
-run; the lander re-runs the matching rows among the cheap gates.
+the working tree against the pin — the wrapper commits after this block, so
+HEAD is still `<pin>` here and a new file is untracked:
+`{ git diff --name-only <pin>; git ls-files --others --exclude-standard; } | sort -u`.
+A row whose command would skip for an absent build product is not green —
+build first, or report the row as not run in the result file (a skipped row
+is never a green row; this is the lane's duty, not a runner's). The lander
+re-runs the matching rows on the committed train.
 {{DIFF_TRIGGERED_LEGS}}
 Task-specific: the verification gates from the spec's slices (locate real
 test files with grep before running).

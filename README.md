@@ -4,8 +4,8 @@ An agent-driven software factory covering the full SDLC — from idea to
 production and continuous improvement. Distilled from a production factory
 that ran multi-lane parallel builds, landing trains and owner-governed
 decision loops for months; everything repo-specific has been removed,
-everything deterministic (gates, skills, CI, harness scripts) is included
-verbatim.
+everything deterministic (gates, skills, CI, harness scripts) is included as
+adapted code — every adaptation is recorded in `skills/ATTRIBUTION.md`.
 
 **Installation is agent-driven:** point an LLM agent (Claude Code, a coding
 CLI or similar) at `INSTALL.md` inside your target repo. The agent
@@ -16,9 +16,10 @@ and domain.
 §10 is the index from a question to its home. Everything else is a hub: a
 pointer plus a one-sentence gloss, never a second statement of a rule — each
 rule has one home, cited as `pillar/file.md §N`, and
-`verification/tests/test_hub_pointers.sh` checks that every pointer here and
-in `INSTALL.md` resolves. No mechanism is named without its form tag — gate,
-guard, hook, ruleset or text (§5.2). Counts are pointers, or covered by that
+`verification/tests/test_hub_pointers.sh` checks that every such pointer
+here and in `INSTALL.md` — a `§N` continuation, a pointer wrapped across a
+line and a quoted heading included — resolves. No mechanism is named
+without its form tag — gate, guard, hook, ruleset or text (§5.2). Counts are pointers, or covered by that
 test.
 
 Three non-negotiables inherited from the source factory:
@@ -92,10 +93,12 @@ Each step: artifact → owner → next reader, then its home. Tags: (gate)
 8. The orchestrator: `audit-choices` on the handback → one entry per
    invented decision with a stable ID in `docs/choices/<train>.md`; unsound
    resolved before assembly (`interpretation/choices-ledger-README.md §1`–`§4`).
-9. The lander: train worktree at origin/main, resource contract, `--no-ff`
-   merges of pinned SHAs, the kind re-derived from the real diff (text,
-   documented row), cross-checks, ledger committed with the train
-   (`verification/lander-duties.md §1`, `§2`; `harness/train-plan.md §2`).
+9. The lander: train worktree at origin/main, the resource contract (hard
+   stops before the heavy run), `--no-ff` merges of pinned SHAs, the kind
+   re-derived from the real diff (text — a lander duty today; a `context`
+   guard when M-21 ships, `harness/guards.md §6`), cross-checks, ledger
+   committed with the train (`verification/lander-duties.md §1`, `§2`;
+   `harness/train-plan.md §2`, `§3`).
 10. The lander: build and stamp; cheap gates by exit code (gate);
     import-root probe; resource check; ONE full verify read only from
     `EXIT= HEAD= BASE=` — the `verdict` rule (guard) refuses a pipe
@@ -106,15 +109,16 @@ Each step: artifact → owner → next reader, then its home. Tags: (gate)
     `user-level/landing-policy.example.md §1`, `§2`).
 12. Land: train branch pushed, `local-verify` posted, the pull request
     merged `--merge --match-head-commit <HEAD=>` — or the documented direct
-    push; the ruleset (ruleset), the `landing` rule (guard) and the pre-push
-    hook (hook) run the same check (`verification/landing-modes.md §1`–`§5`;
+    push; the same check runs as the ruleset (ruleset) and the `landing`
+    rule (guard) in pr mode, and as the pre-push hook (hook) in the
+    override mode (`verification/landing-modes.md §1`–`§5`;
     `verification/protections.md §1.1`, `§2`, `§3`).
 13. Registration: origin/main CONTAINS `HEAD=`, never equals;
     `landing-in-progress.json` written (`verification/landing-modes.md §4.6`;
     `verification/protections.md §6`).
 14. Close-out, both modes: NUMBERS flipped, board sweep, one `landed`
     notification per item, primary fast-forwarded, worktrees reaped after
-    the ancestor check; the close-out check (gate) and the Stop rule (guard)
+    the ancestor check; the close-out check (gate) and the stop-event rule (guard)
     hold the session until done (`verification/lander-duties.md §8`;
     `planning/board-protocol.md` "Notifications").
 15. CI re-verifies and deploys; read at the next session start as a signal
@@ -160,11 +164,12 @@ Each step: artifact → owner → next reader, then its home. Tags: (gate)
 ## 5. Verification end to end
 
 - **5.1 Four layers** — lane pregate plus diff-triggered legs; train
-  cross-checks and cheap gates (docs gated by co-change pairing and backlog
-  teeth, never a staleness heuristic); ONE full verify on an idle machine
-  with a run-bound receipt; CI re-verifies and is adjudicated
-  (`verification/verify-portfolio.md`; `harness/train-plan.md §3`, `§4`;
-  `verification/lander-duties.md §1`).
+  cross-checks and cheap gates (docs held by backlog teeth,
+  `planning/backlog-discipline.md`; a paired-artifact check is a method the
+  installer may port from the domain rows of `verification/gates/README.md`);
+  ONE full verify on an idle machine with a run-bound receipt; CI
+  re-verifies and is adjudicated (`verification/verify-portfolio.md`;
+  `harness/train-plan.md §3`, `§4`; `verification/lander-duties.md §1`).
 - **5.2 Form legend, and what runs where.** *Gate*: inside verify or among
   the cheap gates; fails closed; no switch. *Guard*: hook-mounted; one
   signal; fails open on its own crash; one switch per rule that leaves a
@@ -176,13 +181,13 @@ Each step: artifact → owner → next reader, then its home. Tags: (gate)
 
   | Moment | Deterministic (gate / guard / hook / ruleset) | Text |
   |---|---|---|
-  | Lane, before commit | pregate block; matching legs-table rows (gate) | the brief's hard rules; first-contact STOPs |
-  | Wrapper, at handback | result lint (wrapper check; guard on `SubagentStop`); red→green falsification | the choices audit |
+  | Lane, before commit | pregate block; matching legs-table rows (gate rows — selection by the lane's reading of the table, text until a runner ships) | the brief's hard rules; first-contact STOPs |
+  | Wrapper, at handback | result lint (wrapper check; a guard on the harness's subagent-stop event); red→green falsification | the choices audit |
   | Any commit | identity leg, trailer on source commits (hook); `--no-verify` refused in a hooked session (guard) | subject form (WARN) |
-  | Assembly | cross-checks; cheap gates incl. drift leg, never-weaken, ledger lint (gate); `verdict`, `identity` (guard) | kind re-derivation (documented row); the batch rule |
-  | Full verify | the receipt launcher; the resource contract's hard stops | adjudicating a red X |
+  | Assembly | cross-checks; cheap gates incl. drift leg, never-weaken, ledger lint (gate); `verdict`, `identity` (guard) | kind re-derivation (a lander duty today; a `context` guard when M-21 ships); the batch rule (independent lanes share a train) |
+  | Full verify | the receipt launcher; the resource contract's hard stops (before the heavy run) | adjudicating a red X |
   | Landing | `landing` rule (guard); pre-push (hook); ruleset; status poster | landing authority: a ruling or a signed policy |
-  | Close-out | close-out check (gate); Stop rule (guard) | board sweep; notifications |
+  | Close-out | close-out check (gate); stop-event rule (guard) | board sweep; notifications |
   | Session start | CI signal, bindings, hook status (text with a deterministic trigger) | the memory nudge |
   | CI | re-verify workflow; advisory lanes comment | promotion by reviewed diff |
 
@@ -197,27 +202,30 @@ Each step: artifact → owner → next reader, then its home. Tags: (gate)
   trailer on the source prefix (hook), the diff-triggered legs table (gate
   rows — `verification/protections.md §1.2`; `verification/verify-portfolio.md`
   "Legs that bring lane-green closer to train-green"); the change kind,
-  declared from the planned set and re-derived from the real diff — a kind
-  that rose is applied and announced, a kind that fell is a ledger entry
-  (text, documented row — `planning/execution-contract.md §9`); the
+  declared from the planned file set and re-derived from the real diff —
+  a kind that rose is applied and announced, a kind that fell is a ledger
+  entry (text — a lander duty today; a `context` guard when M-21 ships,
+  the legs it selects being the hard ones — `planning/execution-contract.md
+  §9`; `harness/guards.md §6`); the
   trivial-lane exemption (text — `skills/ROUTING.md` rule 2); never-weaken
   over the control plane (gate — `verification/protections.md §7`). Keyed
   by what the diff contains and what a change can undo, never by a path
   tier; each consequence is a receipt, a leg or a STOP, never a reviewer
   count; escalation is a ruling on the item, never a keyword. A path-tier
   table needs one classifier and tends to grow several that disagree, and
-  a rule with two homes diverges; a content-keyed family needs no
-  classifier beyond the diff and the docs-only classifier it already binds.
+  a rule with two homes diverges; a content-keyed family needs one
+  classifier, derived from the parameters the landing guard already binds
+  (`planning/execution-contract.md §9.3`), never a second table.
 - **5.4 Landing** — one procedure, two last steps: the train branch pushed
   and `local-verify` posted on `HEAD=`, then the pull request merged under
   authority (default) or the documented direct push; authority is a ruling
   on the item or an active policy with no hold firing, else HOLD; contains,
-  never equals; the batch rule; the continue contract; the ten close-out
-  duties; a skipped required check rejects (`verification/landing-modes.md
-  §1`–`§6`; `verification/lander-duties.md §2`, `§3`, `§7`, `§8`).
+  never equals; the batch rule (independent lanes share a train); the
+  continue contract (conflict and resume); the ten close-out duties; a
+  skipped required check rejects (`verification/landing-modes.md §1`–`§6`; `verification/lander-duties.md §2`, `§3`, `§7`, `§8`).
 - **5.5 Protections** — the three git hooks (hook), the ruleset (ruleset),
   the status poster, the CI signal (text), the ledger lint (gate), the
-  close-out check (gate) and Stop rule (guard), never-weaken (gate)
+  close-out check (gate) and stop-event rule (guard), never-weaken (gate)
   (`verification/protections.md §1`–`§7`).
 - **5.6 Evaluation readiness and the artifact bank** — three evaluation
   types never conflated; the `proves:` receipt; a skip on a required check
@@ -225,9 +233,9 @@ Each step: artifact → owner → next reader, then its home. Tags: (gate)
   (`verification/evaluation-readiness.md §1`–`§6`; `harness/artifact-bank.md
   §1`–`§9`).
 - **5.7 Falsification** — the three non-negotiables above are read through
-  `verification/falsification.md`, "Known vacuity classes" and each
-  chapter's "What the test proves" (`verification/verify-portfolio.md`;
-  `harness/guards.md §13`; `verification/protections.md §10`); a lens that
+  `verification/falsification.md`, through `verification/verify-portfolio.md`
+  "Known vacuity classes" and through each chapter's "What the test proves"
+  (`harness/guards.md §13`; `verification/protections.md §10`); a lens that
   passes when any file exists, a regex over whole-file legacy content and a
   check ending in `|| true` are the vacuity classes this rule exists for.
 
@@ -269,9 +277,10 @@ Each step: artifact → owner → next reader, then its home. Tags: (gate)
   fail open, switches that leave a trace (`harness/guards.md`); the model
   policy — roles are the factory's, names the operator's
   (`harness/model-policy.md`).
-- **`user-level/`** — what goes into `~/.claude` so the factory works from
-  any checkout; the only two owner-signed files: the model policy and the
-  INACTIVE landing policy, both dated (`user-level/README.md`;
+- **`user-level/`** — what goes into the user-level directory (`~/.claude`
+  under Claude Code) so the factory works from any checkout; the only two
+  owner-signed files: the model policy and the INACTIVE landing policy,
+  both dated (`user-level/README.md`;
   `user-level/model-policy.example.md`; `user-level/landing-policy.example.md`).
 
 ## 8. Adapters and harness neutrality
@@ -347,18 +356,9 @@ no code of their own. `skills/ATTRIBUTION.md` records every adaptation from
 the source factory and the two upstream skill sets.
 
 The change-kind line and the legs placeholder were prompted by reading
-Harness Kit's `development-harness` (version 3.0.0 per its package manifest,
-MIT per that manifest; the copy read on 2026-09-06 carried no LICENSE file
-or copyright line). No text was borrowed. Deliberately NOT adopted from it,
-recorded so a later change does not re-import them: a path-glob risk-tier
-table as a merge-policy axis (required-checks, spec-required,
-human-approval, reviewer-count and auto-merge columns); a phase state
-machine (phase rule files, a phase-scoped write guard, auto-advance on a
-green test run); a tier-gated LLM review agent in CI; a type-lens gate (a
-regex security lens, an any-file spec lens, checks ending in `|| true`); a
-skills registry by stack with auto-install and trigger-matched custom
-workflows; docs-drift watch paths and staleness heuristics; an aggregate CI
-status that counts skipped as passed; rule files as a rule home or a check;
-escalation by keyword. Each either falls on the human side of
-`harness/guards.md §12` or is already carried here in a receipt-bound,
-content-keyed form (§5.3).
+Harness Kit's `development-harness`; the provenance line, the licence facts
+and the one list of what was deliberately NOT adopted from it — kept once,
+so a later change does not re-import any of it — are in
+`skills/ATTRIBUTION.md`. Each rejected mechanism either falls on the human
+side of `harness/guards.md §12` or is already carried here in a
+receipt-bound, content-keyed form (§5.3).

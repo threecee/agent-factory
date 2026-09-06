@@ -214,7 +214,7 @@ The worked gate example that governs acceptance here — history with a valid
 successor passes, a live unavailable under a promised role refuses, a newer
 mtime with the wrong digest is rejected — lives in
 `verification/examples/identity-and-history.md` §1–§2, with the planted
-false red / false green in `verification/falsification.md` §10–§11. The
+false red / false green in `verification/falsification.md` rules 10–11. The
 principle is settled; the source factory's own precise gate was still an
 open fix at the time of writing, so treat its numbers as an illustration of
 the failure (hundreds counted, one live), not as a tested correction factor.
@@ -273,9 +273,9 @@ placeholders a background warmer never superseded. Break the chain:
 
 What the seed must contain — every situation a run needs, extended rather
 than swapped for a large dataset — is an evaluation-practice rule, not a
-bank rule: `interpretation/evaluation-practice.md`, "Small bed, complete
-situations". The bank only requires that whatever seed is chosen has a hash
-and is the thing renewal starts from.
+bank rule: `interpretation/evaluation-practice.md`, "Small beds and what
+they cannot show". The bank only requires that whatever seed is chosen has
+a hash and is the thing renewal starts from.
 
 ## 8. Reaping working copies
 

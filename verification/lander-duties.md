@@ -20,17 +20,20 @@ project's concrete commands and its resource contract live in
    predict a conflict; compute it (`git merge-tree --write-tree A B`,
    git ≥ 2.38 — the one version requirement this file has). Re-derive the
    change kind from `git diff --name-only <BASE>..HEAD` with the repo's
-   classifier (`../planning/execution-contract.md` §9) and write
-   `kind: <declared>→<derived>` into the ledger; a kind that rose selects
-   its legs at step 6 and is announced in the landing summary; a kind that
-   fell is an `O-<n>` entry, never applied silently.
+   classifier and write `kind: <declared>→<derived>` into the ledger
+   (`../planning/execution-contract.md` §9 owns the rose/fell
+   consequences; a kind that rose selects its legs at step 6).
 4. The choices ledger for the train is committed WITH the train.
 5. Build every product the gates or the suite READ, on the assembled tree,
    on every run — whether or not a file under that product's source changed
    (verify-portfolio.md, "Build inputs exist before verify"). Stamp the build
    with its input identity so a stale build is detectable, not assumed.
 6. Cheap gates by direct exit code on the assembled tree, in the order the
-   train plan lists them. Generated-artifact drift checks (docs site, index
+   train plan lists them — including every legs-table row whose glob
+   matches `git diff --name-only <BASE>..HEAD` on the assembled tree
+   (verify-portfolio.md, "Legs that bring lane-green closer to
+   train-green", leg (c)); the kind re-derived at step 3 selects the same
+   rows and adds none. Generated-artifact drift checks (docs site, index
    files, mirrored CSS) belong here: two lanes regenerating the same artifact
    separately is the most common first-round red, and it is cheaper to find
    in a minute than after the suite.

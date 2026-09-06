@@ -182,7 +182,10 @@ has no Python of its own, and pin it in the verify entry (`PY ?= python3`).
     exists, and every path-scoped instruction file (Step 5 item 8) mirrors
     one legs-table row. `verification/tests/test_hub_pointers.sh` is the
     package's own instance and the shape to copy; its `--tree --installed`
-    form over the copied doc tree also refuses `{{…}}` residue.
+    form over the copied doc tree (`--skills .agents/skills`, Step 4's
+    location) also refuses `{{…}}` residue under `planning/`, the
+    directory Step 1.1 resolves (the other pillars keep their parameter
+    names by design).
 
 ## Step 3 — Interpretation pillar
 1. Create `docs/choices/` with `interpretation/choices-ledger-README.md`. The
@@ -322,8 +325,8 @@ register NO hook. Do not add a PreToolUse registration in this step.
    `CLAUDE.md` or `AGENTS.md`) is optional; if used, every file carries the
    path scope of ONE legs-table row and its whole body is the pointer that
    row's `reads first` column names — never a second statement of a rule,
-   never claimed as a check (`harness/guards.md` §9, "Domain guidance
-   delivery").
+   never claimed as a check (`harness/guards.md` §2 is the home of that
+   rule; the channel is `harness/guards.md` §9, "Domain guidance delivery").
 9. Install the tracked git hooks once in the primary —
    `python3 verification/protections/git_hooks.py install` (`core.hooksPath`,
    shared by every worktree; `status` exits 1 until done, and the
@@ -398,8 +401,14 @@ train is held with a decision brief (`verification/lander-duties.md` §7).
    (`verification/evaluation-readiness.md` §6). Run
    `sh verification/tests/test_hub_pointers.sh` once on the package (the
    hub pointers and INSTALL's counts hold) and its `--check --tree
-   --installed <docs root>` form on the copied doc tree (no dead pointer,
-   no `{{…}}` residue). If the repo serves a
+   --installed <docs root> --skills .agents/skills` form on the copied doc
+   tree (`--skills` names where Step 4 put the skill set; the doc root
+   carries none): no dead pointer, and no `{{…}}` residue under
+   `planning/` — the chapters keep their parameter names by design
+   (`harness/bulk-read-contract.md` §4), and the test's case 8 runs this
+   exact form on the package's own chapter tree with `planning/` resolved
+   and the skills kept elsewhere, so a faithful copy is green. If the repo
+   serves a
    surface, run one offline functional trial against a small start state
    with fake AI roles and bank its receipt (§4 shape) as the installation's
    first evaluation artifact. Falsify the admission gate by planting the
@@ -420,12 +429,19 @@ train is held with a decision brief (`verification/lander-duties.md` §7).
    refusal and switch in the ledger; a false positive without a named
    alternative goes to WARN.
 7. Falsify the diff trigger like any gate: plant one legs-table row (a glob
-   and a one-second command) and touch one matching file in a scratch
-   lane — the pregate log must show the row ran; touch a file no row
-   matches — nothing runs. Then declare the scratch lane `source` and plant
-   a file of the `record` kind (a migration, a baseline): the lander's
-   re-derivation must print `record` and the ledger line must read
-   `kind: source→source, record` (`planning/execution-contract.md` §9.3);
-   with no classifier bound the line reads `none — classifier unbound` and
-   the step is recorded as not exercised.
+   and a one-second command) in a scratch lane and run the brief's §4 with
+   the lane-side command — `{ git diff --name-only <pin>; git ls-files
+   --others --exclude-standard; } | sort -u` — three times: with one
+   matching file EDITED, the lane's pregate output (its result file) must
+   show the row ran; with a matching file CREATED and left uncommitted (a
+   new migration file — the canonical trigger, invisible to every `git
+   diff` form), the row must run again; with a file no row matches —
+   nothing runs. Then declare the scratch lane `source` and plant a file
+   of the `record` kind (a migration, a baseline): the lander's
+   re-derivation over `<BASE>..HEAD` on the committed train must print
+   `record` and the ledger line must read `kind: source→source, record`
+   (`planning/execution-contract.md` §9.3 — this is the falsification of
+   the design constraint that the kind and the landing legs never disagree
+   about a path); with no classifier bound the line reads `none —
+   classifier unbound` and the step is recorded as not exercised.
 A factory whose smoke test has not run is not installed — it is copied.
