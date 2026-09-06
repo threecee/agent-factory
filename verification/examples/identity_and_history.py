@@ -68,13 +68,13 @@ def gate_unavailable(
     selected = consumer_selects(rows)
     unavailable_total = sum(1 for r in rows if r.producer == "unavailable")
     live = sorted(s for s, r in selected.items() if r.producer == "unavailable")
-    superseded_in_practice = unavailable_total - len(live)
+    unavailable_superseded = unavailable_total - len(live)
     promised_undelivered = sorted(promised_scopes - set(selected))
     receipt = {
         "role": role,
         "unavailable_total": unavailable_total,
         "unavailable_live": len(live),
-        "superseded_in_practice": superseded_in_practice,
+        "unavailable_superseded": unavailable_superseded,
         "promised_undelivered": len(promised_undelivered),
     }
     if role == "fake":
@@ -87,7 +87,7 @@ def gate_unavailable(
     if live:
         raise AssertionError(
             f"configured role {role!r} left LIVE unavailable artifacts: "
-            f"live={len(live)} scopes={live} (history superseded_in_practice={superseded_in_practice})"
+            f"live={len(live)} scopes={live} (history unavailable_superseded={unavailable_superseded})"
         )
     if promised_undelivered:
         raise AssertionError(
@@ -109,7 +109,7 @@ def example_1(plant: str | None) -> None:
     # (a) historical rows with valid successors: gate must PASS, counts shown
     receipt = gate_unavailable(rows, promised, "model", plant=plant)
     assert receipt["unavailable_total"] == 2 and receipt["unavailable_live"] == 0, receipt
-    assert receipt["superseded_in_practice"] == 2, receipt
+    assert receipt["unavailable_superseded"] == 2, receipt
     print("1a history-with-successor   PASS ", json.dumps(receipt))
 
     # (b) a LIVE unavailable row: gate must FAIL and name the live count

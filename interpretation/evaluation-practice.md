@@ -29,7 +29,7 @@
   from an output's model id, and it is taken on what the consumer's read
   path shows now, not on superseded history — `harness/artifact-bank.md`
   §4–§5; the gate example in `verification/examples/identity-and-history.md`
-  (introduced by PR10) governs the live/history split.
+  §1 governs the live/history split.
 - **Small bed, complete situations.** A small seed is the default bed for
   functional and persona runs because it starts fast and can be renewed
   from scratch; it must contain every situation the run needs (the seed is

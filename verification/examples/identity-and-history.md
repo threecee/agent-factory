@@ -4,8 +4,9 @@ Three gates that went wrong by measuring a proxy (a total count, a file
 mtime, a restart from zero) instead of what the consumer actually reads, and
 the shape that survives. The principle is owned by
 `interpretation/investigation-practice.md` (Identity and history); the
-red/green norms by `verification/falsification.md` §7–§9. This file owns the
-examples. `identity_and_history.py` beside it is a stdlib-only model of all
+red/green norms by `../falsification.md` §10–§12; the acceptance receipt
+that reports the counts by `harness/artifact-bank.md` §4–§5. This file owns
+the examples. `identity_and_history.py` beside it is a stdlib-only model of all
 three — run it once when installing, and run it with `--plant` to see each
 planted defect go red:
 
@@ -39,7 +40,7 @@ verdicts (exactly what the script asserts):
 
 | Rows (scope, rev, status, producer) | Population | Verdict | Receipt |
 |---|---|---|---|
-| `s1 r1 superseded unavailable` + `s1 r2 current model` | history | **pass** | `superseded_in_practice += 1` |
+| `s1 r1 superseded unavailable` + `s1 r2 current model` | history | **pass** | `unavailable_superseded += 1` |
 | `s4 r1 current unavailable` (role = model) | live | **fail** — `left LIVE unavailable artifacts: live=1 scopes=['s4']` | `unavailable_live = 1` |
 | plan owes `s9`, no row at all | promised | **fail** — `promised but never delivered: ['s9']` | `promised_undelivered = 1` |
 | same rows, role = `fake` | deliberate | **pass**, reported | `deliberately_unavailable = 3` |
@@ -50,17 +51,20 @@ Rules the table encodes:
    (`consumer_selects` in the script). If the consumer's rule changes, the
    gate changes with it — they are one contract with two callers.
 2. The receipt always carries `unavailable_total`, `unavailable_live`,
-   `superseded_in_practice` and `promised_undelivered`. Green with a large
-   history count is a green verdict AND an open question (rule 3 below).
+   `unavailable_superseded` and `promised_undelivered` (the first two names
+   are the bank receipt's, `harness/artifact-bank.md` §5). Green with a
+   large history count is a green verdict AND an open question (rule 3
+   below).
 3. A deliberately fake role is a different evaluation type: its unavailable
    rows are reported, never rejected, and its numbers are plumbing-only
-   (`interpretation/evaluation-practice.md`; readiness receipt in
-   `verification/evaluation-readiness.md`, introduced by PR4).
+   (`harness/artifact-bank.md` §4, `interpretation/evaluation-practice.md`;
+   the run-time readiness receipt is `../evaluation-readiness.md`,
+   introduced by PR4).
 4. "Promised" is computed from what the plan or configuration owes (the
    identity set), not from what happens to be stored — a store with zero
    rows is not clean, it is undelivered.
 
-**Falsification** (`falsification.md` §7): plant `count-all` — the gate
+**Falsification** (`../falsification.md` §10): plant `count-all` — the gate
 rejects the history-only fixture with `unavailable artifacts: 2`. That is
 the false red. Remove the `s4` row from the live fixture with the correct
 gate in place and the run must stay green; put it back and it must fail
@@ -80,9 +84,13 @@ residue of a live defect. That is why rule 2 keeps both counts and why
 investigation trigger. Do not cite this section as proof that the source
 factory has landed a consumer-keyed gate; cite it for the verdict table.
 
-**Coordination.** The bank/pristine acceptance receipt defined in
-`harness/artifact-bank.md` (introduced by PR5) carries the four counts
-above; PR5 does not copy the total-count gate.
+**Coordination.** The pristine acceptance receipt in
+`harness/artifact-bank.md` §4–§5 reports `unavailable_live` and
+`unavailable_superseded` per configured role and takes its verdict on the
+live number only; this example's receipt adds `unavailable_total` and
+`promised_undelivered`, and a bank installer is free to add the same two.
+The bank contract does not copy the total-count gate (§5 says so in as many
+words); this table is the acceptance it points to.
 
 ## §2 Newest mtime, wrong key
 
@@ -114,10 +122,10 @@ Rules:
    never a fallback to the newest candidate.
 3. The gate must recompute the key the way the serving path does — same
    inputs, same version stamp. A gate that reads a stored key from the file
-   it is judging is a self-comparison (`verify-portfolio.md`, vacuity
-   classes).
+   it is judging is a self-comparison (`../verify-portfolio.md`, "Known
+   vacuity classes").
 
-**Falsification** (`falsification.md` §8): plant `newest-mtime` — the gate
+**Falsification** (`../falsification.md` §11): plant `newest-mtime` — the gate
 chooses the decoy: `gate chose the newer decoy 3dbf19deadbe over the
 consumer's key … (items 225 vs 226)`. The decoy with a newer mtime is the
 realistic case, not a corner; make it the fixture.
@@ -175,7 +183,7 @@ Rules (each is one assertion in the script):
    deployment-wide barrier lets an unrelated job starve this one, and a
    barrier alone does not converge a plan whose inputs keep moving.
 
-**Falsification** (`falsification.md` §9): plant `restart-at-zero` — the
+**Falsification** (`../falsification.md` §12): plant `restart-at-zero` — the
 receipt guard goes red: `cannot regress progress 3 -> 0`. Plant
 `weak-supersedes` — `weak result superseded a stronger current one:
 ('floor', '?')`. Reverting the identity diff (recompute everything) fails
@@ -196,9 +204,10 @@ and the number of plan attempts on the large case (a 25k-message case) is
 the measurement [#590](https://github.com/threecee/varde/issues/590) was
 re-run to take, with the result not yet read. "Identity diff, not
 all-or-nothing" is therefore a design rule with a partial proof, not a
-claim that the whole pattern is implemented and proven there. The lane's
-choices are in the source train's protocol (w129, O-4) with medium
-confidence on exactly this point.
+claim that the whole pattern is implemented and proven there. The source
+factory's own choices protocol for that lane records *medium* confidence on
+exactly this point (that protocol is internal to the source factory and not
+resolvable from this repository; the issue links above are).
 
 ## What to port, what to leave
 
