@@ -20,3 +20,32 @@
    under the dev environment proves nothing about the documented production
    invocation (CMD paths, missing PYTHONPATH, files not COPY'd into the
    image). Test the invocation your Dockerfile/runbook actually documents.
+7. **A gate over stored evidence is falsified in BOTH directions.** Plant a
+   false red and a false green, and require the gate to survive each:
+   - *False red:* a historical unavailable row whose scope has a valid
+     successor the consumer selects. The gate must stay green and report it
+     as history (`superseded_in_practice`), not as a violation.
+   - *False green:* a live unavailable row — the row the consumer selects —
+     under a role that was configured to deliver. The gate must fail with a
+     message naming the live count, not the total.
+   Both counts appear in the receipt. Message check (rule 2) applies: a
+   gate that fails with `unavailable=666` when the consumer sees 1 has
+   mis-described the failure. The principle lives in
+   `interpretation/investigation-practice.md` (Identity and history); the
+   planted rows and expected verdicts are in
+   `verification/examples/identity-and-history.md` §1.
+8. **Identity gates are planted with a wrong-but-newer candidate.** Where
+   the consumer resolves an artifact by a content key, plant a decoy with a
+   NEWER mtime (or later insertion) and the wrong key. A gate that selects
+   the decoy is red; a gate that resolves by the consumer's key and rejects
+   a missing key is green. Copy operations reorder mtimes — the planted
+   decoy is the realistic case, not a corner. Example §2.
+9. **Incremental work is falsified on three axes.** For any plan that
+   reuses partial results when its inputs move: (a) an unchanged identity
+   is NOT recomputed (assert the exact set sent to the expensive step);
+   (b) a changed identity IS recomputed and the old result is retired only
+   by exact precedence — a weaker result never replaces a stronger current
+   one of the same identity; (c) progress after a retry starts from the
+   stored receipt and never regresses. The falsification for (c) is the old
+   `restart at 0` initialization: with it reverted in, the store's own
+   regression guard must turn red. Example §3.
