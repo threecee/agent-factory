@@ -44,7 +44,7 @@ the trust rules are `../verification/falsification.md` §7–§9.
   the failure to the deadline.
 - **Pin the source and freeze the evidence first.** The investigator reads a
   copied datastore, the run log and the manifest at the commit the run was
-  built from (`../harness/artifact-bank.md`, introduced by PR5). Evidence
+  built from (`../harness/artifact-bank.md`). Evidence
   that keeps moving under the investigation cannot refute anything.
 - **Ask competing questions, not open ones.** "Which of path X and path Y
   wrote row R at time T" is answerable by a query; "why did it fail" is

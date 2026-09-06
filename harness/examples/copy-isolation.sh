@@ -2,11 +2,13 @@
 # Worked example for harness/artifact-bank.md §3: two copies of one banked
 # source are hash-identical yet NOT isolated, because the source records a
 # file reference that points outside the bank. The check refuses the copy
-# (red), the reference is relocated into the copy, the check accepts (green),
-# and the other copy is shown untouched. POSIX sh, no product code.
+# (red), a symlink and a dead path are refused too (red, red), the reference
+# is relocated into the copy, the check accepts (green), and the source is
+# shown untouched. POSIX sh, no product code. Hashes differ per run because
+# the toy state embeds the temporary directory's path; compare the shape.
 #
 # Usage: sh harness/examples/copy-isolation.sh
-# Exit 0 when the red→green sequence behaves as documented, 1 otherwise.
+# Exit 0 when the red→red→red→green sequence behaves as documented, 1 otherwise.
 set -eu
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
@@ -34,16 +36,24 @@ recorded_paths() {  # $1 = copy root
 check_isolation() {  # $1 = copy root; prints one line per reference, then a verdict
   root="$(cd "$1" && pwd -P)"
   recorded_paths "$root" | while IFS= read -r p; do
-    real="$(cd "$p" 2>/dev/null && pwd -P || printf '%s' "$p")"
-    case "$real/" in
-      "$root"/*) printf 'inside   %s\n' "$p" ;;
-      *)         printf 'OUTSIDE  %s\n' "$p" ;;
-    esac
+    # A path that does not resolve is refused BY NAME: it cannot be shown to
+    # be inside, and a lexical prefix test would wrongly accept it.
+    if real="$(cd "$p" 2>/dev/null && pwd -P)"; then
+      case "$real/" in
+        "$root"/*) printf 'inside   %s\n' "$p" ;;
+        *)         printf 'OUTSIDE  %s\n' "$p" ;;
+      esac
+    else
+      printf 'MISSING  %s\n' "$p"
+    fi
   done > "$root.isolation-report"
   cat "$root.isolation-report"
-  n="$(grep -c '^OUTSIDE' "$root.isolation-report" || true)"
-  if [ "$n" -eq 0 ]; then echo "ACCEPT: isolated"; return 0; fi
-  echo "REFUSE: $n reference(s) resolve outside $root"; return 1
+  outside="$(grep -c '^OUTSIDE' "$root.isolation-report" || true)"
+  missing="$(grep -c '^MISSING' "$root.isolation-report" || true)"
+  if [ "$outside" -eq 0 ] && [ "$missing" -eq 0 ]; then
+    echo "ACCEPT: isolated"; return 0
+  fi
+  echo "REFUSE: $outside reference(s) outside $root, $missing unresolvable"; return 1
 }
 
 echo "-- isolation check on copy A (expected: REFUSE)"
@@ -69,6 +79,16 @@ if check_isolation "$work/copy-A"; then
 fi
 rm "$work/copy-A/instance/corpus"
 
+# --- a dead path is NOT a fix either: the pointer was rewritten to sit under
+# the copy's root, but nothing was relocated there. A check that compared
+# strings would accept it; the real check refuses it by name.
+printf '{"db": "instance/data.db", "corpus_dir": "%s"}\n' \
+  "$work/copy-A/instance/corpus-not-relocated" > "$work/copy-A/instance/state.json"
+echo "-- isolation check on copy A with a dead path under its root (expected: REFUSE)"
+if check_isolation "$work/copy-A"; then
+  echo "example broken: unresolvable reference was accepted"; exit 1
+fi
+
 # --- the fix: relocate the reference INTO the copy (copy the data, rewrite
 # the pointer), then re-check.
 mkdir -p "$work/copy-A/instance/corpus"
@@ -82,4 +102,4 @@ check_isolation "$work/copy-A" || { echo "example broken: relocated copy refused
 after_hash="$(shasum -a 256 "$work/bank/source/instance/state.json" | cut -d' ' -f1)"
 [ "$source_hash" = "$after_hash" ] || { echo "example broken: source changed"; exit 1; }
 echo "-- source unchanged: $source_hash"
-echo "OK: red (shared) -> red (symlinked) -> green (relocated), source untouched"
+echo "OK: red (shared) -> red (symlinked) -> red (unresolvable) -> green (relocated), source untouched"

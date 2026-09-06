@@ -266,7 +266,7 @@ still read the original path. A new operator must be able to reconstruct a
 run from the bank alone: the start receipt names worktree, brief hash, pin and
 observed executable; the exit receipt names log, report and verdict.
 
-`harness/artifact-bank.md` (introduced by PR5) owns the bank's own lifecycle
+`harness/artifact-bank.md` owns the bank's own lifecycle
 — pristine copies, isolation, renewal, retention. This section owns only
 which run receipts go there and when.
 

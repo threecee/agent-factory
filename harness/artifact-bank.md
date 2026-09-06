@@ -32,7 +32,7 @@ weekly rhythm. It ships the contract those local pieces must satisfy.
 
 An evidence bundle is frozen before the investigation starts: copy the
 state, hash every file, and cite the hashes from the investigation brief
-(`planning/investigation-brief-template.md`, introduced by PR9) so the
+(`planning/investigation-brief-template.md`) so the
 investigator's claims can be checked against exactly what was read.
 
 A **worktree is not storage** either: generated corpora, score files and
@@ -70,39 +70,53 @@ a wave measured on the second copy is measured on a state nobody can rebuild.
 
 ```
 -- manifest parity: identical bytes in both copies
-3909000b…  copy-A/instance/state.json
-3909000b…  copy-B/instance/state.json
+<sha256>  copy-A/instance/state.json
+<sha256>  copy-B/instance/state.json
 -- isolation check on copy A (expected: REFUSE)
-OUTSIDE  /tmp/…/scratch/corpus
-REFUSE: 1 reference(s) resolve outside /tmp/…/copy-A
+OUTSIDE  <work>/scratch/corpus
+REFUSE: 1 reference(s) outside <work>/copy-A, 0 unresolvable
 -- copy B reads (expected: A's term leaked in):
 term-1
 term-learned-by-A
 -- isolation check on copy A with a symlinked corpus (expected: REFUSE)
-OUTSIDE  /tmp/…/copy-A/instance/corpus
-REFUSE: 1 reference(s) resolve outside /tmp/…/copy-A
+OUTSIDE  <work>/copy-A/instance/corpus
+REFUSE: 1 reference(s) outside <work>/copy-A, 0 unresolvable
+-- isolation check on copy A with a dead path under its root (expected: REFUSE)
+MISSING  <work>/copy-A/instance/corpus-not-relocated
+REFUSE: 0 reference(s) outside <work>/copy-A, 1 unresolvable
 -- isolation check on copy A after relocation (expected: ACCEPT)
-inside   /tmp/…/copy-A/instance/corpus
+inside   <work>/copy-A/instance/corpus
 ACCEPT: isolated
--- source unchanged: 3909000b…
+-- source unchanged: <sha256>
+OK: red (shared) -> red (symlinked) -> red (unresolvable) -> green (relocated), source untouched
 ```
+
+`<work>` is a fresh temporary directory and `<sha256>` differs on every run
+(the toy `state.json` embeds that directory's path), so check the *shape*:
+the two copies' hashes equal each other, the source's before/after hashes
+equal each other, and the verdicts appear in the order shown. The script
+exits 1 with `example broken: …` if any step does not.
 
 The check is one rule: **enumerate every absolute path the copy's state
 records, resolve it physically (`pwd -P`, i.e. through symlinks), and require
 it to sit under the copy's root.** Relocating means copying the data into
 the copy and rewriting the pointer; a symlink resolves to the shared
-directory and is refused by the same rule. The example's extraction line
-(`grep` over one JSON file) is the toy; in a real product the paths live in
-configuration, database rows and manifests — enumerate **all** of them (an
-inventory of every column or key that stores a path is part of the
-installer's parameterization, §10), not the one you happened to notice.
+directory and is refused by the same rule. A recorded path that does not
+resolve at all is refused **by name** (`MISSING`), never accepted because its
+string happens to start with the copy's root: an unresolvable reference is
+one the copy has not relocated, and a lexical prefix test is exactly the
+check that gets it wrong. The example's extraction line (`grep` over one
+JSON file) is the toy; in a real product the paths live in configuration,
+database rows and manifests — enumerate **all** of them (an inventory of
+every column or key that stores a path is part of the installer's
+parameterization, §10), not the one you happened to notice.
 
 Before a source is accepted as pristine, the acceptance gate checks four
 things beyond hash parity, each fail-closed with a named reason:
 
 | Check | Refuses when | Why a hash cannot see it |
 |---|---|---|
-| **File references** | any recorded path resolves outside the artifact | the path string is identical in every copy |
+| **File references** | any recorded path resolves outside the artifact, or does not resolve at all (`MISSING`, named per path) | the path string is identical in every copy, and a dead string hashes the same as a live one |
 | **Job leases** | a non-terminal job row's lease has expired, or any non-terminal work remains after reconciliation | a dead lease is inherited by every copy and blocks the first one that polls for readiness |
 | **Declared roles** | a role the receipt says was configured left outputs marked unavailable at the live read path (§4, §5) | the receipt is copied, not recomputed |
 | **Missing derived results** | a derived result the recipe expects (an index, a warm cache, a count matching the source's snapshot) is absent or drifted without a named reason | absence has no hash |
@@ -131,7 +145,7 @@ the configured value and the outcome. Four outcomes, four verdicts:
 |---|---|---|---|
 | real provider | delivered | accept | `reason: <provider/model> delivered; unavailable_live=0` |
 | real provider | some `unavailable` | **refuse** — promised but failed | `REFUSE: configured role left unavailable artifacts: reason=<n>` |
-| `fake` (deliberate stand-in) | honestly `unavailable` / inactive | accept **and disclose** with counts per type | `reason=fake (deliberately unavailable: gist=214, profile=3)` |
+| `fake` (deliberate stand-in) | honestly `unavailable` / inactive | accept **and disclose** with counts per type | `reason=fake (deliberately unavailable: <type-a>=214, <type-b>=3)` |
 | off / not configured | absent | accept, disclose as not promised | `vision: off (not promised)` |
 
 Minimal receipt shape (JSON; field names are the installer's, the four
@@ -213,9 +227,10 @@ machine. So:
 
 1. **Standup the copy**, not the source. The source is never served,
    recorded on, or written to. If a workflow needs to serve "the pristine",
-   it serves a copy of it under a fresh run id (`harness/run-lifecycle.md`,
-   introduced by PR2).
-2. Run the isolation check (§3) and the readiness smoke (PR4) **on the copy**
+   it serves a copy of it under a fresh run id (`harness/run-lifecycle.md`
+   §2).
+2. Run the isolation check (§3) and the readiness smoke
+   (`verification/evaluation-readiness.md`, introduced by PR4) **on the copy**
    before the expensive step starts, and write the copy's own parity receipt
    (source manifest hash, build SHA, provider pins without keys). Two runs
    are comparable only when those fields match; a mismatch is reported as
@@ -253,10 +268,11 @@ placeholders a background warmer never superseded. Break the chain:
    detector versions, egress declaration) is missing, rather than building a
    source that a later serve will call "not current".
 
-If the small seed cannot express a situation a test needs (two actors with
-the same name, a media item that must be described), the seed is incomplete
-— extend the seed, do not reach for a large dataset. A large variant exists
-for scale and performance only.
+What the seed must contain — every situation a run needs, extended rather
+than swapped for a large dataset — is an evaluation-practice rule, not a
+bank rule: `interpretation/evaluation-practice.md`, "Small bed, complete
+situations". The bank only requires that whatever seed is chosen has a hash
+and is the thing renewal starts from.
 
 ## 8. Reaping working copies
 
@@ -302,7 +318,7 @@ that cites this file; none of them ship with the factory:
 | Renewal cadence | when a new source is built from seed (§7) | each train that changes schema or role config |
 | Role names | which configured roles the receipt reports (§4) | `embed`, `reason`, `vision` |
 | Retention | how long run outputs and evidence bundles stay | run outputs indefinitely; bundles until issue close + 90 days |
-| Readiness contract | what "all background work finished" means for a copy before an expensive run (PR4) | every case reports its terminal notification |
+| Readiness contract | what "all background work finished" means for a copy before an expensive run (`verification/evaluation-readiness.md`, introduced by PR4) | every item reports its terminal status |
 
 A factory that has not written these down has a scratchpad with a longer
 name, not a bank.

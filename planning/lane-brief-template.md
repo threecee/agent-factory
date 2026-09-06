@@ -35,7 +35,8 @@ a file or a git operation. The rules below have exactly one home each
 - Name every sentinel/log after this lane — the scratchpad is shared.
 - Environment symlinks (.venv/.env/node_modules) must be gitignored in the
   target repo; the wrapper's `git add -A` must never commit them.
-- Tear down served instances by PORT, never by process-name grep.
+- Tear down served instances by PORT and by path, never by process-name grep
+  (../harness/artifact-bank.md §8).
 - First-contact STOPs for this repo (execution-contract.md §5):
   {{FIRST_CONTACT_STOPS}}
 
