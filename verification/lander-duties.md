@@ -47,12 +47,17 @@ project's concrete commands and its resource contract live in
 10. Push HEAD:main GATED ON the verify verdict — mechanically
     (`make verify && git push …`), never as two statements in one
     unconditional block. (The smoke test shipped a red train exactly that way
-    once.) Where the project's owner has chosen a landing authorization (a
-    user-level policy; the factory ships none active), it governs WHETHER
-    the lander may push unattended; it never changes this gate.
-11. Flip NUMBERS `claimed → landed`. Board sweep (§5). Fast-forward the
-    primary checkout. Reap lane worktrees and branches only after each
-    boarding SHA is confirmed an ancestor of main
+    once.) — AND gated on landing authority (§7): a live ruling from the
+    owner for THIS train, recorded on the item, or an active standing policy
+    (a user-level file; the factory ships none active) that covers it with
+    no hold category firing. Neither → hold (§7 rule 2), do not push.
+    Authority governs WHETHER the lander may push unattended; it never
+    changes the verify gate.
+11. Flip NUMBERS `claimed → landed`. Board sweep (§5), then ONE `landed`
+    notification per boarded item (planning/board-protocol.md
+    § Notifications — keyed, never re-sent). Fast-forward the primary
+    checkout. Reap lane worktrees and branches only after each boarding SHA
+    is confirmed an ancestor of main
     (`git merge-base --is-ancestor <sha> origin/main`).
 
 ## 2. Batch rule — independent lanes share a train
@@ -161,8 +166,11 @@ project has not implemented and tested.
    that planning/board-protocol.md ("Authority, pagination and derived
    views", item 3) owns, and record its differences in the train protocol.
    If the project keeps no page besides the board, the protocol says
-   "derived view: none" and the step is done. It is a candidate duty
-   (medium confidence, see its home), not a proven routine.
+   "derived view: none" and the step is done. A difference is fixed by
+   regenerating the view — never by hand-editing it to match the board and
+   never by editing the board to match it; if the view cannot be
+   regenerated before the session ends, the landing summary says so. It is
+   a candidate duty (medium confidence, see its home), not a proven routine.
 4. Fast-forward the primary checkout; reap worktrees only after the ancestor
    check in §1 step 11.
 
@@ -178,3 +186,48 @@ project has not implemented and tested.
 - Serialized verification (one full verify at a time) is a rule of THIS
   file's owner, the lander (§4); it is not enforced by any lock the factory
   provides (train-plan §3.6).
+
+## 7. Landing authority
+
+Steps 1–9 produce a verified train. Step 10 asks a different question: who
+said this train may land NOW? The answer lives in one place — the operator's
+landing policy, `../user-level/landing-policy.example.md`, which is
+INACTIVE as shipped. Read it as the owner's grant, never as a template.
+
+1. Run the policy check from the landing policy §1. `NO AUTHORITY` is the
+   default and is not an error.
+2. **No authority → hold.** Keep the train worktree and its verify log
+   intact; do NOT reap. File a decision brief on the blocked item from
+   `../planning/decision-brief-template.md` (options with consequences, one
+   recommendation, what continues meanwhile). Status → Decision needed.
+   Write the key `<item> <train sha> held` on the item, then send ONE
+   notification (`../planning/board-protocol.md` § Notifications; with no
+   policy file the brief comment carrying the key IS the notification).
+   Wait. Do nothing irreversible.
+3. **On the ruling:** the ruling is on the item (copy it there verbatim if it
+   came by chat). Re-run step 9 — origin/main may have moved during the hold;
+   if it did, re-confirm boarding SHAs and re-verify the re-assembled tree
+   (§3, a new attempt) — then step 10. A hold of two hours is normal; a hold
+   that outlives the train's base is a re-assembly, not a force-push.
+4. **Authority → land**, only if ALL hold: the policy covers this train's
+   kind (e.g. a single P1 fix lane against an In-flight, owner-approved
+   item — the owner's definition, not the package's; §2 rule 4); every
+   `requires:` line of the policy is met by steps 1–9; NO `holds:` category
+   fires. The non-removable floor of that list is enumerated ONCE, in the
+   landing policy §2 `holds:` — read it there; this file does not repeat it.
+   Any floor entry firing → rule 2, even under authority.
+5. **After an autonomous landing:** the train's choices ledger names the
+   policy (file, `valid_until`, `signed`) and the item it landed for; the
+   `landed` notification is the owner's first contact with it. The owner
+   may revoke the policy; the landing stands (it was verified) and the next
+   train holds.
+
+Worked reading: a train carrying one lane (a warmer-convergence fix that
+blocked an owner-approved evaluation rerun), verify green on the assembled
+tree, five sound choices, no migration. Policy absent → held with an A/B
+brief; the owner ruled A after about two hours; the train landed (source
+factory, one occurrence). Policy ACTIVE with `covers: P1 fix` → the same
+train lands at step 10 and the owner reads `<item> <sha> landed`. Same train
+with one unsound entry, or with a migration → held in BOTH cases. The
+autonomous column has not been exercised in the source factory at the time
+of writing; it is the owner's stated policy, not a measured routine.
