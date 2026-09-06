@@ -92,7 +92,9 @@ WHO granted WHAT, for HOW LONG, and what still stops.
    fails a bare field has not been falsified.
 4. No authority is not an error. It routes the finished train to the hold
    path in `../verification/lander-duties.md` §7: train kept
-   intact, decision brief filed, one notification, wait.
+   intact, decision brief filed, one notification, wait. In pr mode the
+   pull request stays open and the merge is held; in direct-push mode the
+   push is held (`../verification/landing-modes.md` §4.4, §5).
 
 ## 2. Fields (every one is filled by the owner, none has a default)
 
@@ -114,7 +116,7 @@ covers:
       - the blocked program is an owner-approved item currently In flight
       - the fix lane was filed against the blocker BEFORE the train was built
     then:
-      - push main
+      - land: merge the train pull request (pr mode) / push main (direct-push mode) — verification/landing-modes.md §4/§5
       - board sweep
       - ONE notification per transition (board-protocol § Notifications)
 
@@ -167,8 +169,8 @@ owner-approved evaluation rerun. No migration, no ADR, no baseline change.
 
 | | Policy absent or INACTIVE | Policy ACTIVE, `covers: P1 fix` |
 |---|---|---|
-| Step 10 (push) | **Held.** Train worktree kept; decision brief filed from `../planning/decision-brief-template.md`; item → Decision needed; ONE `held` notification | Push `HEAD:main`; item → Done; ONE `landed` notification |
-| Owner's role | Reads the brief, rules A/B, the ruling is recorded on the item | Reads the notification after the fact; may revoke the policy |
+| Step 10 (merge or push) | **Held.** Pull request left open (pr) / push withheld (direct-push); train worktree kept; decision brief filed from `../planning/decision-brief-template.md` on the item, linked from the pull request; item → Decision needed; ONE `held` notification | Merge with `--match-head-commit` (pr) / push (direct-push); item → Done; ONE `landed` notification |
+| Owner's role | Reads the brief, rules A/B, the ruling is recorded on the item; a pull-request approval is an accepted record of the live ruling and is copied to the item — it is never required by the host's branch policy | Reads the notification after the fact; may revoke the policy |
 | If the audit had ONE unsound entry | Held (unsound stops before assembly anyway) | **Held** — `holds[0]` fires regardless of authority |
 | If the lane had added a migration | Held | **Held** — `holds[1]` |
 | If the owner answers within minutes | Landed after the ruling; ONE `decided` + ONE `landed` notification | Lands at step 10 without waiting; ONE `landed` notification — the policy was not needed for this train |
@@ -192,3 +194,7 @@ stated policy, not a measured routine.
   `../planning/board-protocol.md`, and this file links to it.
 - A grant by installation. If a future installer step offers to activate
   this file, that step is a bug: the owner activates, in person.
+- A place for merge automation. Auto-merge, merge queues and admin merges
+  are forbidden forms in both landing modes
+  (`../verification/landing-modes.md` §4.5); authority is read by the
+  lander, not delegated to the host.

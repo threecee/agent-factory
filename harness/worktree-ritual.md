@@ -13,6 +13,11 @@ ln -sfn <primary>/.venv <wt>/.venv         # and .env; node_modules for frontend
 - Teardown: remove worktree + branch only after the train has landed and the
   boarding SHA is confirmed an ancestor of main — and only after the
   teardown checks below.
+- Install the tracked git hooks once in the primary —
+  `python3 verification/protections/git_hooks.py install` (`core.hooksPath`,
+  shared by every linked worktree; `status` exits 1 until done). They carry
+  the identity, trailer and landing checks into coding-CLI sessions and
+  plain terminals (`../verification/protections.md` §1).
 
 - **The `git add -A` trap:** the wrapper's commit must never swallow the
   symlinked env dirs (.venv/.env/node_modules). Keep them in .gitignore in the

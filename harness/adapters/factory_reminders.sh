@@ -88,14 +88,19 @@ case "${1:-}" in
     printf 'GUARD BINDINGS: cli=%s token=%s dir-flag=%s gates=%s port-range=%s (unbound = the identity refusal prints placeholders, the live-lane legs list nothing, verdict gates only its default table)\n' \
       "${FACTORY_GUARD_CLI:-unbound}" "${FACTORY_GUARD_CLI_TOKEN:-unbound}" "${FACTORY_GUARD_CLI_DIR_FLAG:-unbound}" "${FACTORY_GUARD_GATES:-unbound}" "${FACTORY_GUARD_PORT_RANGE:-unbound}"
     [ "${FACTORY_GUARD_DISABLED:-0}" = "1" ] && printf '%s\n' "WARNING: FACTORY_GUARD_DISABLED=1 — every factory guard is off in this session."
+    PROTECTIONS="${FACTORY_PROTECTIONS_DIR:-$HERE/../../verification/protections}"
+    # The git hooks (verification/protections.md §1, M-10) exist only once core.hooksPath points
+    # at the tracked shims — one command in the primary, every worktree.
+    HOOKS_PATH=$(git -C "${CLAUDE_PROJECT_DIR:-.}" config --get core.hooksPath 2>/dev/null)
+    [ -n "$HOOKS_PATH" ] || printf 'GIT HOOKS: core.hooksPath is not set — run python3 %s/git_hooks.py install once in the primary (verification/protections.md §1; the identity, trailer and landing checks then hold in every session and terminal).\n' "$PROTECTIONS"
     if [ -f "$STATE_DIR/landing-in-progress.json" ]; then
       TRAIN=$(sed -nE 's/.*"train": *"([^"]+)".*/\1/p' "$STATE_DIR/landing-in-progress.json" | head -1)
-      printf 'LANDING IN PROGRESS: train %s is registered on the default branch — lander duties are open (verification/lander-duties.md §1 step 11). Delete %s when they are closed.\n' "${TRAIN:-?}" "$STATE_DIR/landing-in-progress.json"
+      MODE=$(sed -nE 's/.*"mode": *"([^"]+)".*/\1/p' "$STATE_DIR/landing-in-progress.json" | head -1)
+      printf 'LANDING IN PROGRESS: train %s is registered on the default branch (%s mode) — lander duties are open (verification/lander-duties.md §8; python3 -m scripts.check_landing_closeout --state %s prints them). Delete %s when they are closed.\n' "${TRAIN:-?}" "${MODE:-?}" "$STATE_DIR/landing-in-progress.json" "$STATE_DIR/landing-in-progress.json"
     fi
     disk_line
-    # CI signal (guards.md §9, CI row): the protections chapter ships
-    # verification/protections/ci_signal.sh; this script calls it when executable, absent = silent.
-    PROTECTIONS="${FACTORY_PROTECTIONS_DIR:-$HERE/../../verification/protections}"
+    # CI signal (guards.md §9, CI row; verification/protections.md §4): the protections chapter
+    # ships ci_signal.sh; this script calls it when executable, absent = silent.
     [ -x "$PROTECTIONS/ci_signal.sh" ] && "$PROTECTIONS/ci_signal.sh"
     ;;
 

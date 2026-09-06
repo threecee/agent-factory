@@ -1,8 +1,15 @@
 # Gates — deterministic verification scripts
 
-Copied from the source factory with ONE deliberate deviation (below). Each
+Copied from the source factory with three deliberate deviations (below). Each
 script's docstring is its contract; a few carry localized (Norwegian) output
 strings — translate strings during installation, never logic. Highlights:
+
+- `check_landing_closeout.py` — the lander's close-out duties printed as
+  commands, mode-aware (`../lander-duties.md` §8; `../protections.md` §6).
+- `check_choices_protocol.py` — the choices-ledger schema lint, WARN on the
+  first train, HARD after (`../protections.md` §5).
+- `check_gate_weakening.py` — never-weaken over a train range: a grown
+  baseline, an unpaired gate edit, a net assert loss (`../protections.md` §7).
 
 - `check_ruff_ratchet.py` / `check_mypy.py` / `check_bandit.py` — one-way
   baselines with `--update` as the only path to a new baseline.
@@ -21,15 +28,16 @@ strings — translate strings during installation, never logic. Highlights:
 
 ## Which gates port, which are stack-specific, which are domain choices
 
-Measured on 2026-09-06 by copying all 24 scripts into a Node repository with
-no Python project and running each the way its docstring documents
-(`../examples/install-trial-node.md`). Do not copy the set uncritically:
-only the first group runs outside a Python repo, and one script cannot run
-anywhere as shipped.
+Measured on 2026-09-06 by copying the 24 scripts of that day into a Node
+repository with no Python project and running each the way its docstring
+documents (`../examples/install-trial-node.md`); the three protections
+gates were added in 2026-09 after that trial and are stdlib + git only. Of
+the 27 scripts, do not copy the set uncritically: only the first group runs
+outside a Python repo, and one script cannot run anywhere as shipped.
 
 | Group | Scripts | What a non-Python repo does |
 |---|---|---|
-| **Repo-agnostic decision gates** (port as-is) | `build_adr_index.py`, `check_traceability.py`, `check_backlog.py`, `check_migration_heads.py` (registry leg only), `check_gitleaks.py`, `check_number_provenance.py`, `lane_sentinel.py` | Run them with a `python3` interpreter that has **PyYAML** (the only third-party import of this group; `alembic` is imported lazily, see the deviation below) and the `gitleaks` binary. Invoke as `python3 -m scripts.<gate>` from the repo root — the docstrings' form — because they import each other as `scripts.<module>`; `python3 scripts/<gate>.py` raises `ModuleNotFoundError: No module named 'scripts'`. Pin the interpreter in the verify entry (`PY ?= python3`). Or reimplement the contract in the repo's language; the contract is the docstring. |
+| **Repo-agnostic decision gates** (port as-is) | `build_adr_index.py`, `check_traceability.py`, `check_backlog.py`, `check_migration_heads.py` (registry leg only), `check_gitleaks.py`, `check_number_provenance.py`, `lane_sentinel.py`, and the three protections gates `check_landing_closeout.py` (needs `gh` only in pr mode), `check_choices_protocol.py`, `check_gate_weakening.py` (all three stdlib + git) | Run them with a `python3` interpreter that has **PyYAML** (the only third-party import of this group; `alembic` is imported lazily, see the deviation below) and the `gitleaks` binary. Invoke as `python3 -m scripts.<gate>` from the repo root — the docstrings' form — because they import each other as `scripts.<module>`; `python3 scripts/<gate>.py` raises `ModuleNotFoundError: No module named 'scripts'`. Pin the interpreter in the verify entry (`PY ?= python3`). Or reimplement the contract in the repo's language; the contract is the docstring. |
 | **Stack-specific (Python tooling)** | `check_ruff_ratchet.py`, `check_mypy.py`, `check_bandit.py`, `check_semgrep.py` (semgrep is multi-language; the rules and the `src/` layout are the source factory's), `check_sca.py` (`uv.lock`), `check_reachability.py` (Python `ast` over `src/kripos`), `check_test_health.py` | WRITE the equivalent with the same contract: a committed per-rule baseline, exit 1 on any increase or new rule, `--update` as the only path to a new baseline, `--report` exits 0, a **missing baseline is a hard failure**. `../examples/node/check_lint_ratchet.mjs` is that contract in about fifty lines of JavaScript; substitute `eslint`/`tsc`/`npm audit` (or `golangci-lint`, `cargo clippy`, `osv-scanner` over the lockfile) as the finding source. |
 | **Stack-specific (frontend / migrations / vendoring)** | `check_dist_fresh.py` (Vite inputs), `check_migration_heads.py` heads leg (Alembic), `check_vendored_plugin.py` (one vendored CLI plugin under `third_party/`) | Only if the repo has the thing: a built bundle, a migration graph, a vendored plugin. Otherwise do not copy. |
 | **Domain choices of the source factory** | `check_ki_tolket_marking.py` (visible marking of model-derived UI content), `check_vocabulary.py` (rules in a project constitution), `check_consistency.py` (feature map pairing demo/help/seed), `check_entrypoint_docs.py` (model-role table, `src/kripos` packages, README targets), `check_story_coverage.py` (CUJ documents), `check_scoreboard.py` (corpus scoreboard schema) | Read the docstring as a design idea; port the METHOD only if the repo has the same need (a paired-artifact rule, a forbidden-vocabulary lint). Never as a requirement of the factory. |
@@ -43,15 +51,32 @@ factory's files; set the surface for your repo.
 `check_backlog.py` imports `check_traceability.py` AND `check_migration_heads.py`;
 `build_adr_index.py`, `check_module_coverage.py`, `check_contract_touch.py`
 and `check_test_health.py` import `check_traceability.py` (and more). All of
-these need `PyYAML`.
+these need `PyYAML`. `check_landing_closeout.py` imports
+`check_migration_heads.py` (the registry drift leg; as `scripts.` when that
+package exists, else as its sibling by path) and needs no PyYAML.
 
-**The one deviation from verbatim.** `check_migration_heads.py` imported
+**Deviation one from verbatim.** `check_migration_heads.py` imported
 `alembic` at module top, so `check_backlog.py` — which only uses its
 NUMBERS-registry helpers — could not run in a repository without migrations
 unless `alembic` was installed for nothing. The import now happens inside
 `get_heads()` (the single-head leg); the registry leg and everything
 `check_backlog.py` imports are unchanged. Recorded here so a re-copy from
 the source factory does not silently reintroduce the dependency.
+
+**Deviation two (the drift leg, M-8).** `check_migration_heads.py` gained
+`landed_claim_problems`: a `claimed` registry row whose numbered file
+already exists on `origin/<default>` or `<default>` is
+`[HARD] claimed <kind> number NNNN is landed on main; flip the row` — wired
+into `migration_registry_problems` for migrations and into
+`check_backlog.adr_registry_problems` for decision records; silent on a lane
+branch where the file exists only locally, silent outside git
+(`../protections.md` §7). Recorded so a re-copy does not silently drop it.
+
+**Deviation three (the duplicate-id leg, M-17a).** `check_backlog.py` gained
+`duplicate_row_id_problems` — two rows with the same id are
+`[HARD] duplicate backlog row id <id> appears N times (lines a, b)` — wired
+into `main()` before the closing-evidence leg. Recorded so a re-copy does
+not silently drop it.
 
 ## ADR front matter the traceability gate actually requires
 `id: ADR-NNNN` (checked against the filename; `id_mismatch` otherwise),

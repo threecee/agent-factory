@@ -7,6 +7,7 @@
 | `docs/core-model.md` + factory docs | The whole factory map |
 | `docs/OPERATIONS.md` (yours, translated) | Operational law — procedure changes are reviewed diffs to this file |
 | `.claude/templates/lane-brief.md` | The standing lane brief — dispatch from THIS |
+| `docs/train-plan.md` | Landing commands, resource contract, landing mode (`pr` default) and the branch-policy date |
 | GitHub Project «<name>» (#N, `<PROJECT_ID>`) | Forward planning source of truth |
 
 Status field: `<STATUS_FIELD_ID>` · options: Planned=`<id>` In flight=`<id>`
@@ -16,7 +17,7 @@ Deferred=`<id>` Done=`<id>` Decision needed=`<id>` Dropped=`<id>`
 | Event | Action |
 |---|---|
 | Work dispatched | Real issue, Status → In flight |
-| Train lands | Boarded items → Done, then archive |
+| Train lands | Boarded items → Done, then archive (pr mode: on merge) |
 | New deferred item | File with full body, → Deferred |
 | Needs owner ruling | → Decision needed |
 

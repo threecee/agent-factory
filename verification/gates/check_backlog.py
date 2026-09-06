@@ -116,6 +116,7 @@ from scripts.check_migration_heads import (
     _duplicate_problems,
     _missing_claim_message,
     _registry_warnings,
+    landed_claim_problems,
     migration_registry_counts,
     parse_number_registry,
 )
@@ -321,9 +322,13 @@ def adr_registry_problems(repo_root: pathlib.Path | None = None) -> list[str]:
     active = {
         row.number for row in rows if row.kind == "adr" and row.status in _ACTIVE_REGISTRY_STATUSES
     }
-    for number, path in _adr_files(repo_root):
+    tree_files = _adr_files(repo_root)
+    for number, path in tree_files:
         if number not in active:
             problems.append(_missing_claim_message("adr", number, path))
+    # The drift leg (M-8, deviation two in gates/README.md): a claimed ADR number whose file
+    # is already on the default branch must be flipped; silent on a lane branch.
+    problems += landed_claim_problems(repo_root, rows, "adr", tree_files)
     return problems
 
 
@@ -408,6 +413,28 @@ def iter_rows(text: str) -> list[Row]:
 def closing_rows(text: str) -> list[Row]:
     """Every row whose Status column makes a closing claim."""
     return [row for row in iter_rows(text) if is_closing_status(row.status)]
+
+
+def duplicate_row_id_problems(text: str) -> list[str]:
+    """The duplicate-id leg (agent-factory deviation three, 2026-09; verify-portfolio.md
+    "Legs that bring lane-green closer to train-green"; mechanism M-17a): one canonical row
+    per backlog id.
+
+    Two rows with the same id let a status flip land on one copy while the other keeps
+    asserting the opposite; the link-graph legs never saw it. The canonical id form is the
+    parser's own (`_ROW_ID_RE`): a cell that does not match it is not a row and is not
+    counted here — the shape the file declares is the shape this leg enforces.
+    """
+    lines_by_id: dict[str, list[int]] = {}
+    for row in iter_rows(text):
+        lines_by_id.setdefault(row.row_id, []).append(row.line)
+    return [
+        f"duplicate backlog row id `{row_id}` appears {len(lines)} times "
+        f"(lines {', '.join(str(line) for line in lines)}); one row per id — merge the "
+        "copies or retire the stale one"
+        for row_id, lines in lines_by_id.items()
+        if len(lines) > 1
+    ]
 
 
 def is_closing_status(status: str) -> bool:
@@ -818,6 +845,9 @@ def main(argv: list[str] | None = None) -> int:
     repo_root = pathlib.Path.cwd()
 
     problems = dangling_links(repo_root)
+    # The duplicate-id leg (M-17a) runs before the closing-evidence leg: a status flip that
+    # landed on one of two copies is found by the id, not by the evidence.
+    problems += duplicate_row_id_problems(_read(repo_root, BACKLOG_PATH))
     evidence_problems, evidence_notes, closing_rows = closing_evidence(repo_root)
     problems += evidence_problems
     anchor_findings, anchored_rows, anchor_count = anchor_problems(repo_root)

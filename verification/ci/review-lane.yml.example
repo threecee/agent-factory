@@ -1,3 +1,9 @@
+# PR-MODE ADVISORY LANE (verification/landing-modes.md §4.3, verification/ci/README.md §2).
+# Fires on the train pull request only; comments, never gates; in direct-push mode it is
+# idle by design and idleness is never a reason to delete it (owner ruling). Run on demand
+# with workflow_dispatch and a pull-request number. The body below this header is the
+# source factory's file (INSTALL step 2 item 7: TRANSLATE it; the regime is what ports).
+#
 # Vendor-HARNESS comparison lane 1/3 — anthropics/claude-code-action (ADR-0075,
 # amending ADR-0074: the vendor-neutral llm-review.yml lane stays the default;
 # these lanes exist for a side-by-side harness comparison, all advisory).

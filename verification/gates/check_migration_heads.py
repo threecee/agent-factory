@@ -17,6 +17,7 @@ while a claimed number owned by another branch is reported as a warning.
 
 from __future__ import annotations
 
+import os
 import pathlib
 import re
 import subprocess
@@ -83,6 +84,56 @@ def _missing_claim_message(kind: str, number: str, path: pathlib.Path) -> str:
     )
 
 
+def _git_ok(repo_root: pathlib.Path, *args: str) -> bool:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(repo_root), *args], capture_output=True, text=True, check=False
+        )
+    except OSError:
+        return False
+    return result.returncode == 0
+
+
+def _landed_refs(repo_root: pathlib.Path) -> list[str]:
+    """The refs that mean "on the default branch" here: ``origin/<default>`` and/or a local
+    ``<default>`` (``FACTORY_DEFAULT_BRANCH``, default ``main``)."""
+    branch = os.environ.get("FACTORY_DEFAULT_BRANCH") or "main"
+    return [
+        ref
+        for ref in (f"origin/{branch}", branch)
+        if _git_ok(repo_root, "rev-parse", "--verify", "-q", ref)
+    ]
+
+
+def landed_claim_problems(
+    repo_root: pathlib.Path,
+    rows: list[NumberRow],
+    kind: str,
+    tree_files: list[tuple[str, pathlib.Path]],
+) -> list[str]:
+    """The drift leg (agent-factory deviation two, 2026-09; verification/protections.md §7,
+    mechanism M-8): a ``claimed`` row whose numbered file is already on the default branch
+    must be flipped — ``[HARD] claimed <kind> number NNNN is landed on main; flip the row``.
+
+    On a lane branch where the file exists only locally the leg is silent — that is the
+    normal claim state. Outside git (fixture trees) it is silent too. No switch: the fix is
+    the flip, never the row.
+    """
+    refs = _landed_refs(repo_root)
+    if not refs:
+        return []
+    by_number = dict(tree_files)
+    return [
+        f"claimed {kind} number {row.number} is landed on main; flip the row to landed in "
+        f"{NUMBERS_PATH} ({path.as_posix()})"
+        for row in rows
+        if row.kind == kind
+        and row.status == "claimed"
+        and (path := by_number.get(row.number)) is not None
+        and any(_git_ok(repo_root, "cat-file", "-e", f"{ref}:{path.as_posix()}") for ref in refs)
+    ]
+
+
 def migration_registry_problems(repo_root: pathlib.Path | None = None) -> list[str]:
     """Hard migration registry findings. Empty means every tree number is registered."""
     repo_root = (repo_root or pathlib.Path.cwd()).resolve()
@@ -94,9 +145,11 @@ def migration_registry_problems(repo_root: pathlib.Path | None = None) -> list[s
     active = {
         row.number for row in rows if row.kind == "migration" and row.status in _ACTIVE_STATUSES
     }
-    for number, path in _migration_files(repo_root):
+    tree_files = _migration_files(repo_root)
+    for number, path in tree_files:
         if number not in active:
             problems.append(_missing_claim_message("migration", number, path))
+    problems += landed_claim_problems(repo_root, rows, "migration", tree_files)
     return problems
 
 

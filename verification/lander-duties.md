@@ -44,28 +44,44 @@ project's concrete commands and its resource contract live in
    session fixed the same thing (stand down if their fix is complete).
    Re-resolve every boarding branch head in the seconds before the push and
    compare with what was merged; abort on any mismatch.
-10. Push HEAD:main GATED ON the verify verdict — mechanically
-    (`make verify && git push …`), never as two statements in one
-    unconditional block. (The smoke test shipped a red train exactly that way
-    once.) — AND gated on landing authority (§7): a live ruling from the
-    owner for THIS train, recorded on the item, or an active standing policy
-    (a user-level file; the factory ships none active) that covers it with
-    no hold category firing. Neither → hold (§7 rule 2), do not push.
-    Authority governs WHETHER the lander may push unattended; it never
-    changes the verify gate.
-11. Flip NUMBERS `claimed → landed`. Board sweep (§5), then ONE `landed`
-    notification per boarded item (planning/board-protocol.md
-    § Notifications — keyed, never re-sent). Fast-forward the primary
-    checkout. Reap lane worktrees and branches only after each boarding SHA
-    is confirmed an ancestor of main
-    (`git merge-base --is-ancestor <sha> origin/main`).
+10. Land in the project's landing mode (`landing-modes.md`; declared in
+    train-plan §5, default `pr`) — GATED mechanically on the verify verdict
+    (the receipt read as train-plan §4.1 says, never two statements in one
+    unconditional block; the smoke test shipped a red train exactly that way
+    once) AND on landing authority (§7): a live ruling from the owner for
+    THIS train, recorded on the item, or an active standing policy (a
+    user-level file; the factory ships none active) that covers it with no
+    hold category firing. Neither → hold (§7 rule 2); do not merge, do not
+    push. Both modes first push the integration branch and post the
+    `local-verify` status on the receipt's `HEAD=` (landing-modes §2). Then,
+    `pr`: open or update the train pull request with the ledger as body,
+    write the PR URL on the boarded items, read and adjudicate the check
+    rollup, and on authority `gh pr merge <n> --merge --match-head-commit
+    <HEAD=>` — never `--squash`, `--rebase`, `--auto` or `--admin`
+    (landing-modes §4.5); `direct-push` (the override; `override reason:` in
+    the ledger): `<verdict check> && git push origin HEAD:main`. The harness
+    landing guard and the git pre-push hook are the mechanical form of this
+    step (`protections.md` §1). Authority governs WHETHER the lander may
+    land unattended; it never changes the verify gate.
+11. Registration and close-out (§8, one list for both modes): confirm
+    origin/main CONTAINS the receipt HEAD — the ancestor check reads
+    contains, never equals, because in pr mode main's tip is the merge
+    commit and `HEAD=` its second parent; in pr mode confirm the pull
+    request reads merged; delete the remote train branch (`git push origin
+    --delete train/<name>`, both modes). Flip NUMBERS `claimed → landed`.
+    Board sweep (§5), then ONE `landed` notification per boarded item
+    (planning/board-protocol.md § Notifications — keyed on the train HEAD,
+    never re-sent). Fast-forward the primary checkout. Reap lane worktrees
+    and branches only after each boarding SHA is confirmed an ancestor of
+    main (`git merge-base --is-ancestor <sha> origin/main`).
 
 ## 2. Batch rule — independent lanes share a train
 
 1. Assemble every READY, MUTUALLY INDEPENDENT lane in the same train, so one
    combined verification and one choices protocol prove the batch. Four
    trains for four ready lanes repeat the build and the full suite four times
-   and never test the combination until the last one lands.
+   and never test the combination until the last one lands. In pr mode this
+   is one pull request per train, never one per lane (`landing-modes.md` §4).
 2. Independent means: no lane depends on another's branch; no two lanes claim
    the same scarce number (migration, ADR); no two lanes edit the same
    contract region — computed with `git merge-tree --write-tree` (§1 step
@@ -96,6 +112,9 @@ PO-approved evaluation programme cannot start until it lands. It takes train
 definition: blocks approved work), blocks: evaluation programme #NNN,
 declared by: orchestrator, ruling: owner". Landing `t-43` first and rebasing
 `t-42` onto the new main is the normal order; `t-42` re-runs from step 3.
+Both land in the project's declared mode — `pr` unless train-plan §5 says
+otherwise — and each ledger's `## Landing` section records it
+(`landing-modes.md` §1).
 
 ## 3. Conflict and resume — the continue contract
 
@@ -186,6 +205,9 @@ project has not implemented and tested.
 - Serialized verification (one full verify at a time) is a rule of THIS
   file's owner, the lander (§4); it is not enforced by any lock the factory
   provides (train-plan §3.6).
+- No merge automation ships. The merge (pr mode) and the push (direct-push
+  mode) are attended by the lander after the ruling is read; no auto-merge,
+  no merge queue, no bot approval (`landing-modes.md` §4.5, §9).
 
 ## 7. Landing authority
 
@@ -203,12 +225,18 @@ INACTIVE as shipped. Read it as the owner's grant, never as a template.
    Write the key `<item> <train sha> held` on the item, then send ONE
    notification (`../planning/board-protocol.md` § Notifications; with no
    policy file the brief comment carrying the key IS the notification).
-   Wait. Do nothing irreversible.
+   Wait. Do nothing irreversible. The irreversible step held is the MERGE in
+   pr mode — the pull request stays open as the hold artifact, the brief on
+   the item and linked from the pull request; an owner's approval on the
+   pull request is one accepted record of the ruling, copied to the item —
+   and the PUSH in direct-push mode (`landing-modes.md` §4.4, §5).
 3. **On the ruling:** the ruling is on the item (copy it there verbatim if it
    came by chat). Re-run step 9 — origin/main may have moved during the hold;
    if it did, re-confirm boarding SHAs and re-verify the re-assembled tree
    (§3, a new attempt) — then step 10. A hold of two hours is normal; a hold
-   that outlives the train's base is a re-assembly, not a force-push.
+   that outlives the train's base is a re-assembly, not a force-push: the
+   strict branch policy refuses the stale merge and the receipt's `BASE=` is
+   no longer origin/main (`landing-modes.md` §3).
 4. **Authority → land**, only if ALL hold: the policy covers this train's
    kind (e.g. a single P1 fix lane against an In-flight, owner-approved
    item — the owner's definition, not the package's; §2 rule 4); every
@@ -230,4 +258,33 @@ factory, one occurrence). Policy ACTIVE with `covers: P1 fix` → the same
 train lands at step 10 and the owner reads `<item> <sha> landed`. Same train
 with one unsound entry, or with a migration → held in BOTH cases. The
 autonomous column has not been exercised in the source factory at the time
-of writing; it is the owner's stated policy, not a measured routine.
+of writing; it is the owner's stated policy, not a measured routine. In pr
+mode the held train is an open pull request with the ledger as its body; in
+direct-push mode it is a pushed integration branch with the status posted
+and main untouched (`landing-modes.md` §4.4, §5).
+
+## 8. Close-out — identical in both modes
+
+After the landing registered (step 11), the following are the lander's open
+duties, whatever the mode; every check reads CONTAINS, never equals:
+
+1. origin/main contains the receipt `HEAD=`
+   (`git merge-base --is-ancestor <HEAD=> origin/main`).
+2. In pr mode, the pull request reads merged (`gh pr view <n> --json state`).
+3. The remote train branch is gone: `git push origin --delete train/<name>`.
+4. NUMBERS rows flipped `claimed → landed`.
+5. Board sweep (§5) and ONE `landed` notification per boarded item, keyed
+   on the train HEAD — the merge SHA may be named in the comment, never in
+   the key (`../planning/board-protocol.md` § Notifications).
+6. The primary checkout fast-forwarded (`git -C <primary> pull --ff-only
+   origin main`).
+7. Merged worktrees reaped — after the ancestor check and the
+   worktree-ritual teardown checks (`../harness/worktree-ritual.md`).
+8. Served instances torn down by port.
+9. The build product fresh when the train touched its inputs.
+10. Disk above the floor.
+
+`verification/gates/check_landing_closeout.py --state <state file>` prints
+the open ones as commands; a `Stop`-hook adapter may deliver this list and
+performs none of it (`protections.md` §6). A hold and a landing in either
+mode end with the same ten items.

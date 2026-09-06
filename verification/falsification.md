@@ -107,3 +107,12 @@
     green form stayed silent; rule 2 applies (the message is checked, not
     the exit code).** The falsification list, the receipt, the banking
     order and the first-train trial are `../harness/guards.md` §11.
+16. **Host-side protections are falsified once, in a throwaway repository,
+    never on the real default branch.** After the branch policy is applied:
+    a push without the required status is rejected naming the context;
+    posting the status makes the same push accepted; a force-push is
+    rejected; a pull-request merge without the status is refused; a pull
+    request behind main is refused under the strict policy. The outcomes
+    are recorded in the install smoke protocol (`ci/README.md` §5); the
+    tracked git hooks are falsified over a bare local origin by the package
+    test (`protections.md` §10).

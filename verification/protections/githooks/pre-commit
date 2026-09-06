@@ -1,0 +1,12 @@
+#!/bin/sh
+# Factory git hook «pre-commit» (verification/protections.md §1, mechanism M-10). Installed once per
+# repository by `python3 verification/protections/git_hooks.py install` (core.hooksPath; shared
+# by every linked worktree). Runs the same rules, switches and log as the harness hook through
+# ../git_hooks.py: deny = exit 2 + the message on stderr; WARN = text on stderr, exit 0. Switch
+# per rule: FACTORY_GUARD_ALLOW=<id> in the environment or one id per line in the state
+# directory's allow file (logged); FACTORY_GUARD_DISABLED=1 only while the apparatus is down.
+# Never runs the verify portfolio — that is the lander's step.
+here=$(cd "$(dirname "$0")" && pwd -P)
+py="${FACTORY_GUARD_PYTHON:-$here/../../../.venv/bin/python}"
+[ -x "$py" ] || py=$(command -v python3 || echo python3)
+exec "$py" "$here/../git_hooks.py" pre-commit "$@"

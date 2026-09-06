@@ -16,7 +16,7 @@ one train by hand from this plan before scripting it.
 |---|---|---|
 | Primary checkout | `<abs path>` | The checkout whose shared environment lanes link to (worktree-ritual.md) |
 | Worktree root | `<abs path>` | Where train worktrees are created: `<root>/<train>` |
-| Train branch | `train/<name>` | One branch per train, from the current origin/main SHA |
+| Train branch | `train/<name>` | One branch per train, from the current origin/main SHA; pushed to origin in BOTH landing modes (`../verification/landing-modes.md` §2) and deleted at close-out |
 | Artifact directory | `<abs path>` | Receipts (§4) are written here; bank them if they must outlive the session (`run-lifecycle.md` §9 says which receipts and when; `harness/artifact-bank.md` owns the bank's lifecycle) |
 | Run id | `<train>-<attempt>` | Attempt counts from 1; a resumed run is the next attempt (lander-duties §3) |
 | Import root | `<how the package under test is resolved>` | e.g. `PYTHONPATH=<wt>/src`, `NODE_PATH`, a workspace `file:` link — the probe in §2 must be able to print the resolved path |
@@ -36,13 +36,17 @@ reader can tell "not applicable" from "forgotten".
 | 3 cross-checks | `<one migration head>` · `<number registry consistent>` · `<count literals = union>` · `<generated artifacts regenerated once>` | exit code each | List every project-specific cross-check; see lander-duties §1 step 3 |
 | 4 choices ledger | `git add <choices dir>/<train>.md && git commit -m "train(<name>): choices protocol"` | exit code | The protocol names every boarder's full SHA (lander-duties §1 step 2); it is amended and re-committed on every resumed attempt |
 | 5 build | `<build command>` then `<stamp/manifest command>` | exit code | Runs on EVERY train, regardless of which files changed (verify-portfolio.md, "Build inputs exist before verify") |
-| 6 cheap gates | ordered list: `<format check>` · `<lint ratchet>` · `<type ratchet>` · `<complexity/dependency ratchet>` · `<secret scan>` · `<SAST>` · `<planning teeth>` · `<generated-drift check>` | exit code each, first red stops | Same commands as the lane pregate block plus the drift checks; never a lowered baseline |
+| 6 cheap gates | ordered list: `<format check>` · `<lint ratchet>` · `<type ratchet>` · `<complexity/dependency ratchet>` · `<secret scan>` · `<SAST>` · `<planning teeth>` · `<generated-drift check>` · `python3 -m scripts.check_choices_protocol --warn` | exit code each, first red stops | Same commands as the lane pregate block plus the drift checks; never a lowered baseline. The assembler exports `TRAIN_NAME` and `TRAIN_ARTIFACTS` into the gate environment so the ledger lint finds its inputs (`../verification/protections.md` §5) |
 | 7 import-root probe | `<command that prints where the package under test was loaded from>` | printed path must resolve INSIDE `<root>/<name>` | Python: `python -c 'import <pkg>; print(<pkg>.__file__)'`; Node: `node -p "require.resolve('<pkg>')"` |
 | 8a resource check | the §3 contract | refusal stops the train | Run at step 1 as well |
 | 8b full verify | `<receipt launcher> <artifacts> <run-id> -- <make verify or equivalent>` (§4) | `<run-id>.exit` (§4) | Never judged from a pipe or wrapper |
 | 9 re-confirm currency | `git fetch -q origin && git rev-parse origin/main` (compare with the train's base; if it moved, READ what landed before rebasing) · per boarder `git rev-parse --verify <lane-branch>^{commit}` (must equal the SHA merged at step 2) | printed SHAs, compared by the lander; any mismatch aborts | lander-duties §1 step 9 |
-| 10 push | `<verify verdict check> && git push origin HEAD:main` | exit code | One mechanical statement; the owner's landing authorization (user-level, when the owner adopts one) decides whether the lander may push unattended |
-| 11 sweep | `<board sweep commands>` (planning/board-protocol.md) · `<NUMBERS flip>` · `git -C <primary> merge --ff-only origin/main` · `git worktree remove …` | exit code each | Reap only after the ancestor check |
+| 10a push the integration branch | `git push origin HEAD:refs/heads/train/<name>` | exit code | Both modes; a status needs a commit origin holds (`../verification/landing-modes.md` §2) |
+| 10b post the status | `verification/protections/post_local_verify.sh <artifacts>/<run-id>.exit` | exit code (0 posted or already posted) | Both modes; refuses `EXIT≠0` and a mismatched `HEAD=`; idempotent by read-back |
+| 10c-pr open or update the pull request | `gh pr create --base main --head train/<name> --title "train(<name>): <n> lanes" --body-file docs/choices/<train>.md` (or `gh pr edit <n> --body-file …` on a resumed attempt) · `gh pr view <n> --json headRefOid,statusCheckRollup,mergeStateStatus` | printed fields, read by the lander | `headRefOid` must equal `HEAD=`; the rollup is read and adjudicated, never the gate; the PR URL goes on every boarded item as a comment |
+| 10d-pr merge | `<authority check> && gh pr merge <n> --merge --match-head-commit "$(sed -n 's/^HEAD=//p' <receipt>)"` | exit code | One mechanical statement; never `--squash`, `--rebase`, `--auto`, `--admin` or `--delete-branch` from the train worktree (landing-modes §4.5) |
+| 10c-direct push (the override) | `<verify verdict check> && <authority check> && git push origin HEAD:main` | exit code | One mechanical statement; `override reason:` in the ledger when the project default is `pr` (landing-modes §5) |
+| 11 close-out | `git push origin --delete train/<name>` · (pr) `gh pr view <n> --json state` = `MERGED` · `<board sweep commands>` (planning/board-protocol.md) · `<NUMBERS flip>` · `git -C <primary> pull --ff-only origin main` · `git worktree remove …` · `python3 -m scripts.check_landing_closeout --state <state dir>/landing-in-progress.json` | exit code each; the close-out gate prints the open duties | Reap only after the ancestor check (contains, never equals — lander-duties §8) |
 
 ## 3. Resource contract
 
@@ -203,6 +207,8 @@ run id through the same launcher.
 | Load threshold and wait window | see §3.4 |
 | Agent CLI binary and subcommand token | see §3.3 |
 | Derived progress page, if any (lander-duties §5, board-protocol.md) | page URL/path, or `none` |
+| Landing mode (`../verification/landing-modes.md`) | `pr` (the default) or `direct-push` with the standing reason; a per-train override is recorded in the ledger's `## Landing` section (`override reason:`) |
+| Host branch policy (landing-modes §3) | `ruleset applied <date> with verification/protections/bootstrap_ruleset.py`, or `classic protection applied <date>` (ci/README.md §3), or the two properties implemented on `<host>` |
 | Landing authorization for unattended push | `none` until the owner chooses one (a user-level policy; the factory ships none active) |
 
 ## 6. Filled-in example (a TypeScript service with a docs site)
@@ -221,8 +227,12 @@ The repo is not the source factory; every value is a local choice.
 | 8a | contract: range `4300-4399`; binary `codex`, token `exec`; test runners `vitest`, `playwright`; threshold `cores/2`; window `6 × 20 s` |
 | 8b | `python3 ~/src/app/scripts/run_receipted.py ~/trains t-42-1 -- npm run verify &` (the §4.2 launcher; the child waits, the receipt lands when it ends) |
 | 9 | `git fetch -q origin && git rev-parse origin/main` → equals `BASE=` in the receipt, else read what landed; `git rev-parse --verify api-validation^{commit}` ×4 → each equals the SHA merged at step 2 |
-| 10 | `grep -qx 'EXIT=0' ~/trains/t-42-1.exit && grep -qx "HEAD=$(git rev-parse HEAD)" ~/trains/t-42-1.exit && git push origin HEAD:main` |
-| 11 | `gh project item-list 7 --owner acme --limit 200 --format json` → sweep; `git -C ~/src/app merge --ff-only origin/main`; `git worktree remove ~/src/app-trains/t-42` |
+| 10a | `git push origin HEAD:refs/heads/train/t-42` |
+| 10b | `verification/protections/post_local_verify.sh ~/trains/t-42-1.exit` → `posted local-verify on 4d7e2b9c (run t-42-1)` |
+| 10c | `gh pr create --base main --head train/t-42 --title "train(t-42): 4 lanes" --body-file docs/choices/t-42.md` → PR #318; the URL on the four items; `gh pr view 318 --json headRefOid,statusCheckRollup,mergeStateStatus` → head `4d7e2b9c…`, `verify` success, `CLEAN` |
+| 10d | `test "$(~/bin/landing-authority)" = AUTHORITY && gh pr merge 318 --merge --match-head-commit 4d7e2b9c1a0f8e6d5c4b3a2f1e0d9c8b7a6f5e4d` |
+| 10c-direct (the override, when the project declares it) | `grep -qx 'EXIT=0' ~/trains/t-42-1.exit && grep -qx "HEAD=$(git rev-parse HEAD)" ~/trains/t-42-1.exit && test "$(~/bin/landing-authority)" = AUTHORITY && git push origin HEAD:main` |
+| 11 | `git push origin --delete train/t-42`; `gh pr view 318 --json state --jq .state` → `MERGED`; `gh project item-list 7 --owner acme --limit 200 --format json` → sweep; `git -C ~/src/app pull --ff-only origin main`; `git worktree remove ~/src/app-trains/t-42`; `python3 -m scripts.check_landing_closeout --state ~/src/app/.factory-guard/landing-in-progress.json` → `every lander duty closed` |
 
 What `~/trains/t-42-1.exit` looks like when 8b ends green:
 
@@ -236,7 +246,8 @@ LOG=/Users/dev/trains/t-42-1.log
 Resume after a conflict in step 2: resolve, `git commit`, re-commit the
 protocol (step 4), then run from step 3 with run id `t-42-2` through the same
 launcher; `t-42-1.exit` stays on disk with `EXIT=1` and `t-42-2.exit` is the
-receipt step 10 reads.
+receipt step 10 reads — and step 10c becomes `gh pr edit 318 --body-file
+docs/choices/t-42.md` with the new receipt HEAD in the merge form.
 
 ## 7. Falsify the plan before trusting it
 
@@ -255,6 +266,14 @@ smoke test:
 5. Re-run a finished run id; it must refuse to overwrite the receipt.
 6. Plant a fake `df` on PATH reporting 5 GB → the spender is refused naming
    the volume and the floor; restore → silent.
+7. Run the status poster on a receipt with `EXIT=2`, then on a green receipt
+   whose `HEAD=` is not the tree's HEAD; both must refuse naming the cause
+   and post nothing. Then on the green receipt for HEAD: posted; run it
+   again: `already posted`, no second API call (`../verification/protections.md`
+   §3).
+8. The branch-policy falsification of `../verification/falsification.md`
+   rule 16, in a THROWAWAY repository, never on the real main; record the
+   five outcomes in the install smoke protocol.
 
 ## 8. Provenance and what is provisional
 

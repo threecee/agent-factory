@@ -15,13 +15,13 @@ Dropped (rejected or obsolete — record WHY in the body).
 | Event | Board action |
 |---|---|
 | Work dispatched | Real issue (promote drafts), status → In flight |
-| Train lands | Boarded items → Done (closing the issue auto-moves it), then **archive**; then the derived-view check below, if the project has such a view |
+| Train lands | Boarded items → Done (closing the issue auto-moves it), then **archive**; then the derived-view check below, if the project has such a view (pr mode: on merge; when the train pull request opens, its URL is written on every boarded item — a comment, not a status change) |
 | New deferred intention | File it with a full body, status → Deferred |
 | Needs owner ruling | Status → Decision needed, with a decision brief (§ Decision needed) |
 | Scope/product question surfaces mid-lane | File a decision item NOW (evidence, boundary, recommendation), status → Decision needed; the lane continues its reversible part (execution-contract.md §4) |
 | Task parked after its second round | The item stays In flight until the split is filed; file each split as its own item (Planned, own round counter), link the parked report from the original body, then move the original → Deferred (gate: the splits) or → Decision needed when the failure is a spec question |
 | Finished train, no landing authority | Train held intact; decision brief on the blocked item; Status → Decision needed; ONE `held` notification (§ Notifications) |
-| Owner rules on a brief | Ruling recorded on the item verbatim; Status → In flight / Done / Dropped per the ruling; ONE `decided` notification |
+| Owner rules on a brief | Ruling recorded on the item verbatim (a pull-request approval counts once copied to the item verbatim); Status → In flight / Done / Dropped per the ruling; ONE `decided` notification |
 | Train lands under standing authority | Boarded items → Done, archive; ONE `landed` notification; no ruling requested |
 | Item obsoleted by evidence | Close with the evidence cited, → Dropped/Done, archive |
 
@@ -64,6 +64,15 @@ API-created items get no automatic status — set it explicitly.
 4. **A view must not become a second plan.** A view may show more (burn-
    down, grouping, links) but never carries a status the Project lacks; new
    intentions are filed on the Project first.
+5. **Board transactions are verified after the fact, never before a tool
+   runs** (`../harness/guards.md` §6, M-9). After a dispatch, the item named
+   in the brief must read In flight — the exact item-edit command is the fix,
+   and the lane has already started; once per landing, every boarded item
+   must be Done or closed; after any item edit, the item is read back and
+   the status that actually stands there is reported. Offline — no CLI, no
+   auth, a network error — is reported as `board not verified (offline)`,
+   never a refusal: the board is not an air-gap-critical invariant. This
+   verification never edits the board and never runs in verify.
 
 ## Task identity and the round counter
 
@@ -112,7 +121,9 @@ session resume.
 1. Key: `<item id> <train HEAD sha | none> <transition>`; transitions are
    `held`, `decided`, `landed`, `reverted`. The key is written on the item
    (in the brief, the ruling, the landing comment) BEFORE the notification
-   is sent.
+   is sent. The SHA in the key is the verified train HEAD in both landing
+   modes; in pr mode the merge commit is named in the comment body, never
+   in the key, so a merge does not mint a second `landed` key.
 2. Before sending, read the item: if the key is already there, do not send.
    A watcher that wakes twice, a wrapper that retries, a session resumed
    from a transcript — all of them find the key and stay silent.
