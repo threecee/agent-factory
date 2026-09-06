@@ -66,7 +66,12 @@ that runs everything and stops at the first red gate).
 4. Read `verification/falsification.md` and apply it from day one. Rules
    §7–§9 govern root-cause reports: falsify the causal model before the fix
    (or as the fix's first red test), refute only with a source, and keep an
-   unknown cause unknown.
+   unknown cause unknown. Before writing any gate over stored evidence
+   (rows, snapshots, receipts) or any progress meter that survives a retry,
+   read `verification/examples/identity-and-history.md` and run its script
+   once (`python3 verification/examples/identity_and_history.py`, then with
+   `--plant count-all`): a gate must read what the consumer reads, and is
+   falsified in both directions (rules §10–§12).
 5. Add the import-root probe for your stack to the verify entry (before the
    full suite) and a runtime import-boundary test for your production entry
    points (`verification/verify-portfolio.md`, "Runtime import boundary";
@@ -103,11 +108,13 @@ that runs everything and stops at the first red gate).
    default for every debugging lane; "investigate before the fix lane gets
    its mandate" is the default whenever the cause is uncertain (the brief is
    `planning/investigation-brief-template.md`; the trust rules are
-   `verification/falsification.md` §7–§9); and its "Consumer inventory"
+   `verification/falsification.md` §7–§9); its "Consumer inventory"
    section is the mandatory pre-step for every lane that deletes, moves,
    splits or renames: one row per protected element, readers in every
    language and path-keyed tool baselines included, live-versus-historical
-   decided per file by executing readers.
+   decided per file by executing readers; and its "Identity and history"
+   section is the default for any gate, count or plan that reads stored
+   evidence.
 
 ## Step 4 — Skills
 Copy `skills/` → `.agents/skills/` and symlink `.claude/skills` to it. Verify
