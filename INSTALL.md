@@ -72,20 +72,27 @@ that runs everything and stops at the first red gate).
    once (`python3 verification/examples/identity_and_history.py`, then with
    `--plant count-all`): a gate must read what the consumer reads, and is
    falsified in both directions (rules §10–§12).
-5. Add the import-root probe for your stack to the verify entry (before the
+5. Read `verification/evaluation-readiness.md`. TRANSLATE its §2.1 check
+   families into the repo's own pre-flight smoke (stable check ids, a
+   time budget, a receipt in the §4 shape) and write, into the repo's
+   operations doc, which checks each evaluation type REQUIRES. Keep the
+   three types apart from day one: pre-flight smoke, offline functional
+   trial (fakes allowed, a verify leg), AI evaluation (real roles, never a
+   verify leg). A skipped required check rejects.
+6. Add the import-root probe for your stack to the verify entry (before the
    full suite) and a runtime import-boundary test for your production entry
    points (`verification/verify-portfolio.md`, "Runtime import boundary";
    probes per stack in `harness/worktree-ritual.md`). Falsify both: point the
    root at the primary checkout and watch the probe refuse; add one excluded
    import and watch the boundary test go red.
-6. Copy and adapt `verification/ci/*.example` → `.github/workflows/`. The
+7. Copy and adapt `verification/ci/*.example` → `.github/workflows/`. The
    regime is non-negotiable: full commit-SHA pinning of every action (never
    tags), secret-gated green-skip (a missing secret is a green skip with a
    ::notice, never a red), minimal `permissions:`, single-flight concurrency
    where it matters. Local verify is the gate; CI verifies additionally and
    DEPLOYS from main. `verification/ci/review-prompt.md` is the canonical
    review prompt — point the review lane at it.
-7. Bind everything into `make verify`. Build every product the suite reads
+8. Bind everything into `make verify`. Build every product the suite reads
    BEFORE running it (`verification/verify-portfolio.md`, "Build inputs
    exist before verify"), then run it. Green before the next step.
 
@@ -100,7 +107,10 @@ that runs everything and stops at the first red gate).
    (README §2–§3). `interpretation/examples/simplification-review.md` shows
    one train done this way end to end.
 2. Establish the memory conventions (`interpretation/memory-conventions.md`)
-   and the evaluation practice (`interpretation/evaluation-practice.md`).
+   and the evaluation practice (`interpretation/evaluation-practice.md` —
+   how a result is READ: a working judge over a dead product role, a fake
+   prefix over a full journey, a small bed over scale; the admission gate
+   itself is in `verification/evaluation-readiness.md`).
    Evaluation practice presumes an artifact bank: every full evaluation runs
    on an isolated copy of a banked pristine source, never on the source and
    never on leftover state (`harness/artifact-bank.md` §3, §6).
@@ -195,9 +205,17 @@ recommended user-level skills.
    in one recorded reference and confirm the isolation check refuses it
    (`harness/artifact-bank.md` §3); confirm the source's hash is unchanged
    after a run on a copy (§6).
-3. Land with `make verify && git push` — never an unconditional push after a
+3. Run the installed gates THE WAY THEIR RUNBOOK DOCUMENTS THEM (`python
+   scripts/<gate>.py --check`, then `make verify`) and read each gate's own
+   verdict line; an import-only test does not count
+   (`verification/evaluation-readiness.md` §6). If the repo serves a
+   surface, run one offline functional trial against a small start state
+   with fake AI roles and bank its receipt (§4 shape) as the installation's
+   first evaluation artifact. Falsify the admission gate by planting the
+   three rejections of `verification/falsification.md` rule 13.
+4. Land with `make verify && git push` — never an unconditional push after a
    verify you did not read.
-4. Falsify the round counter: re-dispatch the same item under a new lane
+5. Falsify the round counter: re-dispatch the same item under a new lane
    name and confirm the wrapper writes `round: 2`; attempt a third and
    confirm it is refused without a logged restart-from-document.
 A factory whose smoke test has not run is not installed — it is copied.

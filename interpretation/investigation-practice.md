@@ -191,7 +191,8 @@ examples and a runnable model. The bank receipt that reports the counts is
    with its own message. Report all counts in the receipt, always. A
    deliberately fake role is a different evaluation type, not a pass —
    `../harness/artifact-bank.md` §4 (the readiness receipt is
-   `../verification/evaluation-readiness.md`, introduced by PR4).
+   `../verification/evaluation-readiness.md` §4; its §2.2 rule 8 gives the
+   per-role verdict).
 3. **A large history count is a finding, not noise.** Precision is not
    silence. The 666 rows above were later traced to a producer that never
    converged (the successor rows were written by a fallback path, the

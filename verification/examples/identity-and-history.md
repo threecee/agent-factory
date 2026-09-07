@@ -58,8 +58,8 @@ Rules the table encodes:
 3. A deliberately fake role is a different evaluation type: its unavailable
    rows are reported, never rejected, and its numbers are plumbing-only
    (`harness/artifact-bank.md` §4, `interpretation/evaluation-practice.md`;
-   the run-time readiness receipt is `../evaluation-readiness.md`,
-   introduced by PR4).
+   the run-time readiness receipt is `../evaluation-readiness.md` §4, with
+   the per-role verdict in its §2.2 rule 8).
 4. "Promised" is computed from what the plan or configuration owes (the
    identity set), not from what happens to be stored — a store with zero
    rows is not clean, it is undelivered.

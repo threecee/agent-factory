@@ -187,7 +187,8 @@ Rules:
    adds what the *serve process* actually resolved (a configured provider
    whose client was closed at startup is "promised but failed" at run time
    even when the source was accepted — that is the readiness smoke's job,
-   `verification/evaluation-readiness.md`, introduced by PR4).
+   `verification/evaluation-readiness.md` §2.1 "Role liveness" and §2.2
+   rule 8).
 
 ## 5. History versus live: count what the consumer reads
 
@@ -231,9 +232,10 @@ machine. So:
    it serves a copy of it under a fresh run id (`harness/run-lifecycle.md`
    §2).
 2. Run the isolation check (§3) and the readiness smoke
-   (`verification/evaluation-readiness.md`, introduced by PR4) **on the copy**
-   before the expensive step starts, and write the copy's own parity receipt
-   (source manifest hash, build SHA, provider pins without keys). Two runs
+   (`verification/evaluation-readiness.md` §2) **on the copy** before the
+   expensive step starts, and write the copy's own parity receipt (source
+   manifest hash, build SHA, provider pins without keys — the rows of
+   evaluation-readiness §4). Two runs
    are comparable only when those fields match; a mismatch is reported as
    "not comparable", never as a product signal
    (`interpretation/evaluation-practice.md`).
@@ -319,7 +321,7 @@ that cites this file; none of them ship with the factory:
 | Renewal cadence | when a new source is built from seed (§7) | each train that changes schema or role config |
 | Role names | which configured roles the receipt reports (§4) | `embed`, `reason`, `vision` |
 | Retention | how long run outputs and evidence bundles stay | run outputs indefinitely; bundles until issue close + 90 days |
-| Readiness contract | what "all background work finished" means for a copy before an expensive run (`verification/evaluation-readiness.md`, introduced by PR4) | every item reports its terminal status |
+| Readiness contract | what "all background work finished" means for a copy before an expensive run (`verification/evaluation-readiness.md` §2.1, "Background work") | every item reports its terminal status |
 
 A factory that has not written these down has a scratchpad with a longer
 name, not a bank.

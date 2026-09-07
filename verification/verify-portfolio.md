@@ -72,6 +72,32 @@ frontend must run it explicitly at assembly.
   `verdict` subcommand is the mechanical form; a hedge phrase in a report
   ("should pass now") is no proof at all.
 
+## Evaluation legs inside verify
+The admission rules and the receipt are owned by
+`verification/evaluation-readiness.md`; this section says which legs the
+portfolio carries.
+- **The offline functional trial is a verify leg.** A scripted user journey
+  in a real browser against a banked small start state with fake AI roles,
+  writing a partial receipt (actions performed / omitted / cause). It is
+  the cheapest true proof that the product's plumbing survived the train.
+- **The AI-on trial is never a verify leg.** It runs in a provider window
+  against a separately built AI-on copy of the same small seed. The two beds
+  are never one symlink that a verify run could flip.
+- **Absent bed ⇒ loud skip, never a fail, never a silent pass.** The leg
+  skips with a reason naming the missing bank. What a skip may and may not
+  satisfy — and the lander's duty to see the leg's own PASSED line whenever
+  the bank exists — is evaluation-readiness §3 rule 13; this file only
+  carries the leg.
+- **Data preconditions are checked before the driver starts.** Each critical
+  action names the data situation it needs; an unmet precondition fails the
+  leg on data, with the beat id in the message, not on a selector timeout
+  minutes later.
+- **Installation smoke runs the documented entry point** — the rule is
+  evaluation-readiness §6. Which tree that invocation actually imported is
+  the provenance leg above ("Prove the import root before the expensive
+  run"; per-stack probes in `harness/worktree-ritual.md`, "Prove which code
+  the test imported").
+
 ## Known vacuity classes (test for these in review)
 Inherited-field assertions (matching a copied row passes broken code) ·
 write/read parity ungated (written-by-N, read-by-none passes) · helpers
@@ -82,7 +108,13 @@ falsification that passes with the fix reverted · **import-root vacuity** (a
 subprocess in a test that inherits the shared environment and imports the
 primary tree; pin the root from the test file's own location) · **runtime
 import boundary untested** (a production entry point silently loading the
-evaluation/dev-only package family — see below).
+evaluation/dev-only package family — see below) · **admission by exit code**
+(a smoke whose `skip` rows do not reject lets "12/14 ok" admit an AI wave;
+evaluation-readiness §2.3) · **fabricated probes** (a classifier unit-tested
+against invented inputs, never the real inventory — the first live run
+imported a helper that did not exist; falsification.md rule 14) · **green
+suite with a skipped journey leg reported as a green journey**
+(evaluation-readiness §3).
 
 ## Runtime import boundary — the method, not the list
 Production entry points must not load packages that exist only for offline
