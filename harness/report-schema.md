@@ -85,6 +85,31 @@ report: |-                       # at most 8 lines; facts first; every hypothesi
 These are compression rules, not permission to omit a red gate, a failed
 apparatus, an identifier, a decision gap or a rerun owner.
 
+## Machine check at handback (the result lint)
+
+The wrapper runs a form check on the report before it commits for the lane;
+the `SubagentStop` guard runs the same check for a harness subagent
+(`guards.md` §6, M-15). Findings — exit 1, one `[LANE-RESULT] …` line each:
+
+- front matter missing or unparseable;
+- `lane:` or `status:` missing; `status` outside the closed set above;
+- a `gates:` line not of the form `<gate-id> ok|red <summary>` (or the
+  `-k` selection form of rule 2);
+- a hedge phrase standing in for evidence (`should work now`, `looks
+  correct`, `probably passes`, `seems fine` — the list is the operator's,
+  extended in one place, never per lane);
+- a `choices` entry without `sound|unsound|needs-user` and `H|M|L`;
+- `choices` non-empty without the sidecar beside the result;
+- a source-touching lane without `measurements:`;
+- `status: parked` without `park.reason`, `resume_checklist` and `remainder`.
+
+Warnings only, never exit 1: a red gate line under `status: built` (usually
+red→green evidence), the 60-line / 4 KB budget of rule 9, an eight-line
+`report:` (rule 4).
+
+A form lint forces text a reader can reject; it is not the proof
+(`guards.md` §12).
+
 ## Rewrite check (run on any old handback converted to this schema)
 
 An old-style handback can be rewritten under this schema without loss if,

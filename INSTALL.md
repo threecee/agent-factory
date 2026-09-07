@@ -264,6 +264,25 @@ register NO hook. Do not add a PreToolUse registration in this step.
    reads through a cheaper worker. Bind its parameters (§4), run the
    worker-down trial (§5) and the off/on pilot (§7) before registering the
    adapter (§8). Installing the contract activates nothing.
+8. Optional, measurement-gated: `harness/guards.md`. Run
+   `bash harness/tests/test_guards.sh`. Keep `harness/guards/` and
+   `harness/adapters/` where they are (the settings example already points
+   there) or move BOTH together — imports are package-relative and the
+   package directory must keep the name `guards`. Add `.factory-guard/` and
+   `__pycache__/` to the target repo's `.gitignore` before the first hooked
+   lane (the wrapper's `git add -A` must never commit them — the same rule
+   as the env symlinks in item 1). Bind the §8 parameters in the operations
+   doc and put the same values where the hook process reads them (§8 names
+   the path per harness; the session-start reminder prints what is bound).
+   Run `python3 harness/guards/guard_dispatch.py falsify --lane install
+   --out <dir>` and bank the log — the receipt proves the shipped tables
+   under a scrubbed environment, your binding is proved on the first hooked
+   train (§11). Then register the adapter block from
+   `harness/adapters/claude-code-settings.json.example` as a deliberate
+   step — the package registers nothing. Coding CLIs get the
+   `AGENTS.md.example` paragraph. Every rule that applies is written into
+   the operations doc as a reviewed diff naming the guard, the switch and
+   the falsification.
 
 ## Step 6 — User level
 Follow `user-level/README.md`: add the global CLAUDE snippet to the user's
@@ -329,4 +348,7 @@ train is held with a decision brief (`verification/lander-duties.md` §7).
    refuses it and logs restart-from-document. The launcher does not read
    the brief's round (it accepted the round-3 brief in the trial); the
    refusal is the wrapper's check on the template's `Round:` field.
+6. Mount the guards for the smoke train from assembly start; record every
+   refusal and switch in the ledger; a false positive without a named
+   alternative goes to WARN.
 A factory whose smoke test has not run is not installed — it is copied.

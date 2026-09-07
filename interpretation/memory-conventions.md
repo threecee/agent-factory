@@ -28,3 +28,10 @@ where to find it. When a memory cites a measurement, it cites the artifact's
 README (build SHA, seed, role configuration) so a later reader can judge
 whether the number still applies — a number without its provenance is a
 rumour with a date.
+
+**A nudge, never a block.** A harness may nudge at the end of a turn or right
+after a compaction when the session's guard events log shows one or more
+refusals or two red assembly rounds on one train, or when the operations doc
+changed in the working tree (its portability claim must be re-tested): the
+question is whether the lesson was written here. What counts as a lesson
+stays the writer's judgement (`../harness/guards.md` §6, M-14).

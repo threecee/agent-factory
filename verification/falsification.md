@@ -103,3 +103,7 @@
     inventory before counting it as protection; the source factory's first
     live smoke found a helper import that had never existed on main because
     every unit test had supplied its own probes.
+15. **A guard is mounted only after its planted violation went red and its
+    green form stayed silent; rule 2 applies (the message is checked, not
+    the exit code).** The falsification list, the receipt, the banking
+    order and the first-train trial are `../harness/guards.md` §11.

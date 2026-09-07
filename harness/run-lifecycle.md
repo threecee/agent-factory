@@ -215,7 +215,7 @@ truncates `comm` to 15 characters) **and** an exact token in its argv (the
 CLI's headless verb, e.g. `exec`). `launch_lane.sh running <cli-name> <token>`
 implements it.
 
-Never `pgrep -f "<cli> exec"` or any text match over command lines: the shell
+Never `pgrep -f "<cli> exec"` — a forbidden form — or any text match over command lines: the shell
 that is inspecting, a watcher, a `sleep` whose comment mentions the command,
 and the process-table command itself all contain that text. The source
 factory's idle guard once refused an assembly because it matched the
@@ -314,3 +314,57 @@ What the test does **not** prove:
   (identity, stdin, exit, stdout, result path). Whether your CLI can write in
   a linked worktree, which verb it uses, or how it reports a rate limit is
   checked once per CLI, by hand, and written into the brief.
+
+## 11. Preconditions before launch, and what a lane can be forced to
+
+The launcher (§3–§4) validates the run's environment and pin; the **wrapper**
+around it owns the preconditions below and the handback checks. None of this
+is shipped as a second launcher: `launch_lane.sh` is the mechanism and these
+are the wrapper's checks around it (`guards.md` §6, M-15 and M-18, own the
+mechanism rows; this section owns the rules).
+
+1. **The wrapper refuses to launch** (exit 1, one message plus one fix line)
+   when: the brief pins no 40-hex SHA equal to the worktree HEAD (the
+   launcher's `LANE_PIN_SHA` is the mechanical half of this rule); the model
+   is not a row of the operator's dated model policy (`model-policy.md` §4 —
+   a name typed from memory is a refusal); no quota-canary receipt younger
+   than N minutes exists for the provider, or it said hold/retry/stop — this
+   check is deliberately NOT fail-open, because a dispatch without quota is
+   the failure it exists to prevent; the task's round file says ≥ 2 rounds
+   without a logged restart grant (`../planning/board-protocol.md` § Task
+   identity and the round counter); or the previous dispatch was fewer than
+   G seconds ago (stagger, never stampede).
+2. **Liveness probe after P seconds.** A run whose log is ≤ B bytes with
+   CPU ≤ C seconds, or whose log shows the CLI's stdin-closed banner, is
+   killed and reported (a probe receipt beside the run's receipts, sentinel
+   `failed`). This is the only kill the harness ever performs, and only on
+   its own child.
+3. **What a coding-CLI lane can be forced to** is what the wrapper checks at
+   handback (`report-schema.md`, "Machine check at handback") plus the git
+   hooks (`../verification/protections.md`, introduced by PR13). Its hooks
+   are post-hoc; never claim a blocking one (`guards.md` §2).
+4. **A harness-subagent dispatch carries a `justification:` line** — logged,
+   not judged — and a subagent lane cannot end its turn without a result
+   file that passes the machine check, refused at most three times before
+   the guard gives up loudly (`guards.md` §5).
+5. **A raw lane-shaped CLI invocation outside the wrapper is a hard form**
+   (row `raw-dispatch` in `guards.md` §6): the wrapper is what makes a
+   dispatch checkable. A read-only investigation (a read-only sandbox, no
+   auto-approve flag) is not a lane and passes.
+6. **The sentinel watchdog is a recurring task, not a hook.** It reads every
+   `<lane>.sentinel.json` in `LANE_SENTINEL_DIR`, judges freshness with
+   `../verification/gates/lane_sentinel.py` at `--max-age-min`, compares with
+   its previous state and prints one line ONLY on change — `STALE` with the
+   ages, a missing sentinel (never checked in), `DONE` plus "fetch the
+   handback", an exit without a done status, a branch head that moved — and
+   exits 1 when it printed, 0 otherwise, so a loop shows text only on change.
+   It nudges by text; it never kills, re-dispatches or edits a sentinel.
+
+| Parameter | Meaning | Source-factory value (a local choice, not a default) |
+|---|---|---|
+| N | maximum age of the quota-canary receipt, minutes | 30 |
+| G | minimum gap between two dispatches, seconds | 20 |
+| P | delay before the liveness probe, seconds | 60 |
+| B | log size at or below which the run counts as never started, bytes | 39 |
+| C | CPU time at or below which the run counts as never started, seconds | 0.5 |
+| banner | the CLI's own stdin-closed error text | the provider CLI's documented line |

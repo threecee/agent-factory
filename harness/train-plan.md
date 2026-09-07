@@ -57,9 +57,12 @@ step. It is a snapshot; it is not a lock (§3.6).
 | A served instance is listening in the project's port range | `lsof -nP -iTCP:<range> -sTCP:LISTEN` (or the platform equivalent) returns any row | `<range>`: the range the project's serve/standup/eval scripts bind |
 | A test runner is running UNDER a delegated agent lane | a process whose command matches the test runner (`pytest`, `vitest`, …) and whose ancestor chain contains a live agent lane (§3.3) | `<test runner names>` |
 | The detection apparatus itself is unavailable | `ps`/`lsof` missing or erroring | fail CLOSED: refuse and say the apparatus failed, never "idle" |
+| Disk below the floor or the CLI temp dir above its ceiling before a big spender (dispatch, assembly, serve) | `df -k <volume>` free < FLOOR_GB; `du -sk <tmp>` under a time budget (a du that does not finish is a note, never a stop) | `<volume>`, `<floor GB>`, `<tmp dir>` |
 
 A hard stop is re-checked before EVERY load sample in the wait window
-(§3.4). `--force` cannot override or delay it.
+(§3.4). `--force` cannot override or delay it. The disk row's refusal carries
+the reaper commands; nothing is deleted by the check (`guards.md` §6, M-20);
+the session-start line prints free space and listeners in the port range.
 
 ### 3.2 Soft stops — overridable with a logged warning
 
@@ -78,7 +81,7 @@ A hard stop is re-checked before EVERY load sample in the wait window
    `exec`). A substring match is not a match.
 3. **Text mentions are not lanes.** A shell, a watcher, an editor, or the
    process-table command itself whose command TEXT merely contains the words
-   is NOT a lane. `pgrep -f "<binary> <token>"` violates this rule — it once
+   is NOT a lane. `pgrep -f "<binary> <token>"` (a forbidden form) violates this rule — it once
    refused a train on the orchestrator's own inspecting shell, which was gone
    seconds later.
 4. **Descendants count for the hard stop.** A test runner anywhere below a
@@ -250,6 +253,8 @@ smoke test:
 4. Run the resumed form on a tree with an uncommitted file; it must refuse
    with the "commit the conflict resolution" message.
 5. Re-run a finished run id; it must refuse to overwrite the receipt.
+6. Plant a fake `df` on PATH reporting 5 GB → the spender is refused naming
+   the volume and the floor; restore → silent.
 
 ## 8. Provenance and what is provisional
 

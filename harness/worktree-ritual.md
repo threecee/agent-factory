@@ -18,6 +18,18 @@ ln -sfn <primary>/.venv <wt>/.venv         # and .env; node_modules for frontend
   symlinked env dirs (.venv/.env/node_modules). Keep them in .gitignore in the
   TARGET repo before the first lane, or the committed symlink becomes a
   self-loop after merge (breaks every venv-relative command with exit 127).
+- **Ritual check** (`guards.md` §6, M-4): after `git worktree add` and before
+  any lane is dispatched into the tree, a deterministic offline check must
+  pass — shared env dirs are symlinks to the primary, the dependency dir is
+  linked only when the lockfiles are byte-identical, the links are in
+  `.git/info/exclude`, HEAD was cut from the current remote default branch.
+  Findings name the exact `ln -s` command; a clean tree yields the
+  import-root invocation form (the probe table below). The check never
+  creates a link (`--fix` is explicit); installing dependencies inside a
+  linked worktree is refused.
+- The destructive git forms are refused by process identity — `guards.md`
+  §6 rows `stash-live`, `restore-dirty`, `worktree-remove`, `second-writer`
+  own the conditions and the alternatives.
 
 ## The worktree is a launcher parameter
 

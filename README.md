@@ -26,7 +26,9 @@ receipts and its test, the run lifecycle, worktree ritual, board bootstrap,
 report schema with a choices sidecar, the train plan with its resource
 contract, the artifact-bank contract — pristine acceptance, isolated copies,
 receipts that tell a deliberate fake from a promised-but-failed role — the
-measurement-gated bounded bulk-read contract, and the model policy: roles
+measurement-gated bounded bulk-read contract, the harness guards (one
+dispatcher, rules that fail open, switches that leave a trace, adapters as
+short mappings — `harness/guards.md`), and the model policy: roles
 and parameters are the factory's, model names are the operator's, dated,
 probed and revisited — `harness/model-policy.md`),
 **`user-level/`** (what goes into `~/.claude` so the factory works
