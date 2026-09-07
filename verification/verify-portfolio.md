@@ -37,9 +37,13 @@ frontend must run it explicitly at assembly.
   immediately before the suite (a snapshot, not a lock — train-plan §3.6).
   A red suite from a contended machine is adjudicated (below), never
   trusted.
-- **Local verify gates landing.** CI re-verifies and deploys; it is never the
-  gate that lets code onto main. Lanes never run full verify (the lander does,
-  on the ASSEMBLED train — verify the batch, not just its parts).
+- **Local verify gates landing — in both landing modes** (landing-modes.md).
+  The host's branch policy requires the lander's `local-verify` status on
+  the exact commit; CI re-verifies on the train pull request (pr) or on main
+  after the push (direct-push) and is read and adjudicated, never the gate,
+  until a project promotes it by a reviewed diff (ci/README.md §4). Lanes
+  never run full verify and never open pull requests; the lander does both,
+  on the ASSEMBLED train — verify the batch, not just its parts.
 - **Ratchets move one way.** Every baseline gate exposes `--update` as the
   only path to a new baseline; regeneration is audited by diffing the
   semantic delta, and NEW findings of a secret-like nature are never
@@ -133,3 +137,34 @@ what ports is the shape (a subprocess, the worktree's import root pinned from
 the test's own path, an assertion over what was actually loaded) and the
 falsification (add one import of the excluded family to an entry point and
 watch the test go red before trusting it).
+
+## Legs that bring lane-green closer to train-green
+
+Cheap legs that catch on the lane or in the first minute of the train what
+the full suite would find after seventeen. None has a switch: the fix is
+the fix (`protections.md` §7 owns the three shipped ones).
+
+- (a) Duplicate row ids and the canonical id form are HARD in the backlog
+  check (`gates/check_backlog.py`, `duplicate_row_id_problems`).
+- (b) The registry check — including the drift leg that finds a `claimed`
+  row whose file is already on main — runs among the cheap gates, in
+  seconds, before the suite.
+- (c) The lane pregate is the brief's cheap block plus diff-triggered legs
+  (a migration file ⇒ the migration test; a UI string ⇒ the help-copy test;
+  the registry ⇒ the pin tests). The table is the repo's; the import root
+  is pinned to the lane tree; it is never the full suite.
+- (d) The never-weaken check (`gates/check_gate_weakening.py`): a baseline
+  that grew without an `--update` commit, a gate changed without a test
+  naming it, a net loss of `assert` lines — WARN on the first train,
+  `--hard` after, a `Gate-change: ADR-NNNN` trailer as the documented
+  exception.
+- (e) The brief template's pregate block is byte-equal to the operations
+  doc's block and every section the brief cites exists — a test the
+  installer writes.
+- (f) The skills lock is the existing `skills/verify_skills_lock.py`; no
+  second checker.
+- (g) Only for repos whose tests set process-wide environment: every
+  process-wide key the product sets is scrubbed in both halves of the test
+  fixture.
+- (h) Only for repos with a migration graph: seed literals never live in a
+  migration (derivation SELECTs pass).

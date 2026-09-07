@@ -1,7 +1,13 @@
+# PR-MODE ADVISORY LANE (verification/landing-modes.md §4.3, verification/ci/README.md §2).
+# Fires on the train pull request only; comments, never gates; in direct-push mode it is
+# idle by design and idleness is never a reason to delete it (owner ruling). Run on demand
+# with workflow_dispatch and a pull-request number. The body below this header is the
+# source factory's file (INSTALL step 2 item 7: TRANSLATE it; the regime is what ports).
+#
 # Recurring advisory SECURITY-SCAN lane (ADR-0082 + ADR-0098, extending the ADR-0074/0075
 # advisory-lane discipline). Runs OpenAI's codex-security plugin skill
 # `$security-diff-scan` over the PR diff on every push, as a RÅD lane: it only
-# ever posts a comment, never a gate. Carl approved making it recurring; the
+# ever posts a comment, never a gate. the owner approved making it recurring; the
 # plugin audit's original recommendation was manual-only, and the noise that
 # motivated that (9 of 16 findings re-derived known controls) is mitigated here
 # by two levers: diff-scope (scan only what the PR changed, not the whole repo)

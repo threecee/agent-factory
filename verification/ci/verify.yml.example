@@ -1,3 +1,11 @@
+# LANDING MODES (verification/landing-modes.md §4.3, verification/ci/README.md §2).
+# `on: pull_request` is the pr-mode re-verification the lander reads and adjudicates before
+# merging the train pull request; `on: push: branches: [main]` is watch-and-report in both
+# landing modes. NOT a required status by default — the branch policy requires the lander's
+# `local-verify` status on the exact commit, never CI; promote `verify` only by the rule in
+# verification/ci/README.md §4 and add `train/**` to the push branches when you do. The body
+# below this header is the source factory's file (INSTALL step 2 item 7: TRANSLATE it).
+#
 # Deterministic gate CI — the connected dev-tier leg of the software factory
 # (ADR-0074; design note docs/design-notes/2026-07-19_software-factory-cicd-agenter.md).
 #

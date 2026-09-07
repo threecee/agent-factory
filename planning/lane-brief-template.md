@@ -29,9 +29,10 @@ a file or a git operation. The rules below have exactly one home each
 - The SPEC IS THE CONTRACT — deviation requires STOP + report, never silent
   reinterpretation.
 - Never run the full verify (the lander does). Never use `--no-verify`.
-- The lane agent never pushes. The wrapper pushes this lane's branch at every
-  handback (built or parked); only the lander pushes main
-  (execution-contract.md §6).
+- The lane agent never pushes and never opens a pull request. The wrapper
+  pushes this lane's branch at every handback (built or parked); only the
+  lander lands — by merging the train pull request or pushing main
+  (../verification/landing-modes.md; execution-contract.md §6).
 - Never write a literal secret, including in tests — generate with
   `secrets.token_urlsafe(16)` or the stack's equivalent.
 - One lane, one writer. Helpers read and advise only. The wrapper commits

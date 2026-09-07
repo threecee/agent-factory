@@ -33,6 +33,18 @@ factory-specific additions:
     in favour of `guard_dispatch.py falsify` and the shell test, and keeps
     the semantics verbatim: fail-open on a crashing rule, four logged
     switch sources, denial reserved for hard forms.
+  - `verification/protections/` (the git-hook driver and shims, the status
+    poster, the ruleset bootstrap, the CI signal), the rule modules
+    `landing`, `pre_push`, `commit_msg`, `pre_commit` and `closeout` under
+    `harness/guards/rules/`, and the gates `check_landing_closeout`,
+    `check_choices_protocol` and `check_gate_weakening` are adapted from
+    that factory's wave-2 guards; the adaptation moves the ruleset payload
+    into `verification/ci/ruleset-main.json.example`, sets the strict
+    up-to-date policy and admits a pull-request merge beside the direct
+    push, replaces the per-SHA state file with a status read-back, lints the
+    package's ledger schema instead of the reference's section shape, reads
+    every check as contains-not-equals, and removes every repository name,
+    port, identity, issue reference and non-English string.
 
 Factory adaptations to upstream skill text (recorded here so a re-vendoring
 from upstream does not silently drop them):

@@ -44,6 +44,9 @@ So the factory works from ANY checkout on the machine:
    otherwise; the example stays inactive. The package hold floor
    (`landing-policy.example.md` §2 `holds:`, its one home) stops a train
    regardless of the policy.
+   Authority is read by the lander at the merge (pr mode) or the push
+   (direct-push mode); a pull-request approval is a record of a ruling,
+   never a host requirement (`../verification/landing-modes.md` §4.4).
 7. **Model policy (required before the first dispatch):** copy
    `model-policy.example.md` to `~/.claude/model-policy.md` and fill every
    row you will dispatch into: the exact model id from the provider's live

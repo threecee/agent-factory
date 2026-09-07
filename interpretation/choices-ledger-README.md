@@ -42,6 +42,16 @@ duplicates the rules below.
   orchestrator entry (`O-<n>`) with the rule id, the reason and the
   events-log line it corresponds to; a switch without a ledger entry is a
   finding at landing (../harness/guards.md §4).
+- The ledger's `## Landing` section records `landing mode: pr|direct-push`,
+  `override reason:` when direct-push is used against a pr default, the
+  receipt run id(s) (`receipts: <dir>`), `local-verify: posted|skipped
+  <reason>`, the pull-request number (`pr: <n>`, pr mode), `ui-pass: <path>`
+  — the lander's rendered pass on a fresh build, required by the landing
+  guard only when the train touches the project's UI glob
+  (../verification/protections.md §1.1) — and every logged switch or
+  enforcement change as an orchestrator entry
+  (../verification/landing-modes.md §1). The ledger lint
+  (../verification/protections.md §5) checks presence only.
 
 ## 2. One ID per choice, everywhere it is mentioned
 - A choice gets a stable ID when it is first written down and keeps it:
@@ -75,7 +85,8 @@ The walked scenario is the storage format, not presentation polish
    into the protocol. Sidecar sections are keyed by choice ID and headline.
 3. A path into an orchestration scratchpad, a session, or a chat is not a
    reference. "Scenarios in the session sidecars" satisfies nothing: the next
-   operator has no session. If a sidecar was never banked, the scenarios are
+   operator has no session. A pull-request body is a rendering, not a
+   reference — the scenario still lives in the file or the banked sidecar. If a sidecar was never banked, the scenarios are
    copied into the protocol before the train lands — the lander checks this
    as part of `verification/lander-duties.md`.
 4. Proof lives with the verdict. A corrected entry names the proof a stranger
@@ -98,6 +109,10 @@ The walked scenario is the storage format, not presentation polish
    went red.
 5. The protocol is committed with the train; the landing summary presents it
    (rule 1). A protocol that cites a scratchpad is not ready to land (§3).
+   In pr mode the committed file is passed as the pull-request body
+   (`--body-file`) and re-passed on every amendment; the file is the home,
+   the body its rendering; the landing summary the owner reads IS that
+   body (../verification/landing-modes.md §4.2).
 
 ## Worked example
 `examples/simplification-review.md` walks one depersonalized train from the
