@@ -32,6 +32,34 @@ EVENTS = frozenset({"PreToolUse"})
 MATCHER = "Bash"
 
 _HOOKED = frozenset({"commit", "push", "merge", "rebase", "am"})
+_COMMIT_SHORT_WITH_VALUE = frozenset({"F", "m", "c", "C", "t"})
+_COMMIT_SHORT_WITH_OPTIONAL_VALUE = frozenset({"S", "u"})
+
+
+def _commit_short_no_verify(arguments: list[str]) -> bool:
+    """Whether commit's short options include ``-n``, including a grouped form.
+
+    Stop scanning a group when an option consumes the remaining characters as its value;
+    for example, ``-mn`` is message ``n``, while ``-an`` is ``--all --no-verify``.
+    """
+    index = 0
+    while index < len(arguments):
+        token = arguments[index]
+        if token == "--":
+            return False
+        if token.startswith("-") and not token.startswith("--"):
+            group = token[1:]
+            for offset, option in enumerate(group):
+                if option == "n":
+                    return True
+                if option in _COMMIT_SHORT_WITH_VALUE:
+                    if offset == len(group) - 1:
+                        index += 1
+                    break
+                if option in _COMMIT_SHORT_WITH_OPTIONAL_VALUE:
+                    break
+        index += 1
+    return False
 
 
 def skips_hooks(command: str) -> tuple[str, str] | None:
@@ -44,7 +72,7 @@ def skips_hooks(command: str) -> tuple[str, str] | None:
         _, sub, rest = git_statement(tokens)
         if sub not in _HOOKED:
             continue
-        if "--no-verify" in rest or (sub == "commit" and "-n" in rest):
+        if "--no-verify" in rest or (sub == "commit" and _commit_short_no_verify(rest)):
             return sub, "--no-verify"
         override = git_hooks_path_override(tokens)
         if override is not None:
@@ -92,6 +120,13 @@ def falsification_cases(workdir: pathlib.Path) -> list[FalsificationCase]:
             "GUARD no-verify: «git commit --no-verify»",
         ),
         FalsificationCase(
+            "commit-grouped-short-n",
+            "PreToolUse",
+            payload("git commit -an -m 'x'"),
+            "deny",
+            "GUARD no-verify: «git commit --no-verify»",
+        ),
+        FalsificationCase(
             "push-no-verify",
             "PreToolUse",
             payload("git push --no-verify origin lane/x"),
@@ -117,6 +152,18 @@ def falsification_cases(workdir: pathlib.Path) -> list[FalsificationCase]:
             "commit-other-config",
             "PreToolUse",
             payload("git -c user.email=lane@example.invalid commit -m 'x'"),
+            "allow",
+        ),
+        FalsificationCase(
+            "merge-short-n-is-no-stat",
+            "PreToolUse",
+            payload("git merge -qn lane/x"),
+            "allow",
+        ),
+        FalsificationCase(
+            "push-short-n-is-dry-run",
+            "PreToolUse",
+            payload("git push -qn origin lane/x"),
             "allow",
         ),
         FalsificationCase(

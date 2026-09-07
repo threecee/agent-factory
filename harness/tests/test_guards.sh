@@ -136,6 +136,7 @@ deny_case "2a gate | tail is refused naming the stage" "$PLANTED" 'GUARD verdict
 check "2b the refusal carries the rewritten form and the switch" "$( has "$(cat "$ERR")" 'make check-backlog > <lane>-check-backlog.log 2>&1; echo EXIT=$?' && has "$(cat "$ERR")" 'Switch: FACTORY_GUARD_ALLOW=verdict (logged)'; echo $? )" "$(cat "$ERR")"
 deny_case "2c pytest | head" 'pytest tests -q | head -3' '«| head»'
 deny_case "2d make verify | grep without pipefail" "make verify 2>&1 | grep -E 'passed|failed'" '«| grep without set -o pipefail»'
+deny_case "2d2 pipefail enabled after the gate pipeline is too late" "make verify | grep passed; set -o pipefail" '«| grep without set -o pipefail»'
 deny_case "2e python3 -m scripts.check_x | tail" 'python3 -m scripts.check_backlog | tail -2' '«| tail»'
 deny_case "2f gate; git push in one call" 'make check-backlog; git push origin HEAD:main' '«; git push»'
 check "2g the push refusal names the next call" "$( has "$(cat "$ERR")" 'then, in the NEXT call when EXIT=0: git push origin HEAD:main'; echo $? )" "$(cat "$ERR")"
@@ -144,11 +145,16 @@ deny_case "2i two gates && push" 'make check-backlog && make check-numbers && gi
 allow_case "2j grep on a log | tail" 'grep -n FAILED verify-t-42.log | tail -5'
 allow_case "2k ls | tail" 'ls -t artifacts | tail -3'
 allow_case "2l tee with pipefail and PIPESTATUS" 'set -o pipefail; make check-backlog 2>&1 | tee t-42.log; echo EXIT=${PIPESTATUS[0]}'
+allow_case "2l2 grouped set -eo enables pipefail before the pipeline" 'set -eo pipefail; make check-backlog | grep passed'
 allow_case "2m redirect + echo EXIT=\$?" 'make check-backlog > lane-backlog.log 2>&1; echo EXIT=$?'
 allow_case "2n receipt alone" 'cat t-42-1.exit'
 allow_case "2n2 push of a lane branch alone" 'git push origin lane/x'
 allow_case "2n3 two gates chained" 'make check-backlog && make check-numbers'
 deny_case "2n4 receipt then push of ANY branch in one call is still refused" 'cat t-42-1.exit; git push origin lane/x' '«; git push»'
+deny_case "2n5 grep receipt then push is refused" "grep '^EXIT=0$' t-42-1.exit; git push origin lane/x" '«; git push»'
+deny_case "2n6 source receipt then push is refused" 'source t-42-1.exit; git push origin lane/x' '«; git push»'
+deny_case "2n7 dot-source receipt then push is refused" '. t-42-1.exit; git push origin lane/x' '«; git push»'
+allow_case "2n8 deleting a stale receipt before push is not a verdict read" 'rm stale.exit; git push origin lane/x'
 run_hook PreToolUse "$(payload PreToolUse 'npm run verify 2>&1 | tail -3')" FACTORY_GUARD_GATES='verify,npm'
 check "2o FACTORY_GUARD_GATES binds the gate names (npm runner refused)" "$( [ "$RC" -eq 2 ] && has "$(cat "$ERR")" '«| tail»'; echo $? )" "rc=$RC err=$(cat "$ERR")"
 run_hook PreToolUse "$(payload PreToolUse 'make check-backlog | tail -1')" FACTORY_GUARD_GATES='npm'
@@ -190,9 +196,13 @@ STATE="$T/state four"; LOG="$T/logs/4.jsonl"
 deny_case "4a git commit --no-verify" "git commit --no-verify -m 'x'" 'GUARD no-verify: «git commit --no-verify» skips the git hooks'
 check "4b the refusal names the fix and the switch" "$( has "$(cat "$ERR")" 'Fix: run «git commit» without the flag' && has "$(cat "$ERR")" 'Switch: FACTORY_GUARD_ALLOW=no-verify (logged)'; echo $? )" "$(cat "$ERR")"
 deny_case "4c git -C wt commit -n" "git -C wt commit -n -m 'x'" '«git commit --no-verify»'
+deny_case "4c2 git commit -an groups --all with --no-verify" "git commit -an -m 'x'" '«git commit --no-verify»'
+deny_case "4c3 git commit -qn groups --quiet with --no-verify" "git commit -qn -m 'x'" '«git commit --no-verify»'
 deny_case "4d git push --no-verify" 'git push --no-verify origin lane/x' '«git push --no-verify»'
 deny_case "4e git merge --no-verify" 'git merge --no-verify lane/x' '«git merge --no-verify»'
 allow_case "4f plain commit" "git commit -m 'x'"
+allow_case "4f2 git merge -qn keeps merge's non-bypass -n semantics" "git merge -qn lane/x"
+allow_case "4f3 git push -qn keeps push's dry-run -n semantics" "git push -qn origin lane/x"
 allow_case "4g grep for the flag" 'grep -rn -- --no-verify docs'
 deny_case "4h git -c core.hooksPath=… commit is refused as the override" "git -c core.hooksPath=/dev/null commit -m 'x'" 'GUARD no-verify: «git -c core.hooksPath=/dev/null commit» skips the git hooks'
 check "4h2 the override refusal names the fix without the override" "$( has "$(cat "$ERR")" 'Fix: run «git commit» without the override'; echo $? )" "$(cat "$ERR")"
@@ -219,10 +229,12 @@ check "5d env-file export: passes; log source env-file:" "$( [ "$RC" -eq 0 ] && 
 run_hook PreToolUse "$(payload PreToolUse "$PLANTED")" FACTORY_GUARD_DISABLED=1
 rec="$(last_record)"
 check "5e DISABLED=1: passes; log verdicts {\"*\": \"disabled\"}" "$( [ "$RC" -eq 0 ] && has "$rec" '{"*": "disabled"}'; echo $? )" "rc=$RC rec=$rec"
+disabled_event="$(awk -F '\t' 'END {print $4 "|" $5 "|" $6}' "$STATE/factory-events.log")"
+check "5e2 DISABLED=1 appends a global allow-switch event naming its source" "$( [ "$disabled_event" = 'allow-switch|*|env:FACTORY_GUARD_DISABLED=1' ]; echo $? )" "event=$disabled_event"
 run_hook PreToolUse "$(payload PreToolUse "FACTORY_GUARD_ALLOW=landing $PLANTED")"
 check "5f another rule's switch does not silence this one" "$( [ "$RC" -eq 2 ]; echo $? )" "rc=$RC"
 kinds="$(cut -f4 "$STATE/factory-events.log" 2>/dev/null | sort | uniq -c | tr -s ' ' | tr '\n' ';')"
-check "5g events log: one deny line and four allow-switch lines, all for this session" "$( has "$kinds" '4 allow-switch' && has "$kinds" '1 deny' && [ "$(cut -f2 "$STATE/factory-events.log" | sort -u)" = "$SESSION" ]; echo $? )" "kinds=$kinds"
+check "5g events log: one deny line and five allow-switch lines, all for this session" "$( has "$kinds" '5 allow-switch' && has "$kinds" '1 deny' && [ "$(cut -f2 "$STATE/factory-events.log" | sort -u)" = "$SESSION" ]; echo $? )" "kinds=$kinds"
 check "5h the allow-switch line names the source" "$( grep 'allow-switch' "$STATE/factory-events.log" | grep -q 'prefix:FACTORY_GUARD_ALLOW=verdict'; echo $? )"
 printf "export FACTORY_GUARD_ALLOW='identity'\n" > "$T/claude env two"
 run_hook PreToolUse "$(payload PreToolUse "$PLANTED")" FACTORY_GUARD_ALLOW=verdict CLAUDE_ENV_FILE="$T/claude env two"
@@ -375,7 +387,7 @@ check "11i compact lists the live lane" "$( has "$out" 'live lanes: lane-a'; ech
 kill "$lane_pid" "$text_pid" 2>/dev/null; wait "$lane_pid" "$text_pid" 2>/dev/null
 
 # ---------------------------------------------------------------- case 12
-check "12 the settings example parses, names only adapter scripts that exist, carries an env block, no PreCompact, no shunt" \
+check "12a the settings example parses, names only adapter scripts that exist, carries an env block, no PreCompact, no shunt" \
   "$( python3 - "$COPY" <<'EOF'
 import json, pathlib, sys
 copy = pathlib.Path(sys.argv[1])
@@ -397,6 +409,28 @@ for matcher in ("Bash", "Agent|Task", "Edit|Write|MultiEdit|NotebookEdit"):
     assert any(row.get("matcher") == matcher for row in hooks["PreToolUse"]), matcher
 assert any(row.get("matcher") == "compact" for row in hooks["SessionStart"])
 assert any(row.get("matcher") == "compact|resume" for row in hooks["SessionStart"])
+EOF
+echo $? )"
+ln -s "$COPY" "$T/harness"
+check "12b reminder commands execute a mode-0644 adapter through a project path containing spaces" \
+  "$( python3 - "$COPY" "$T" <<'EOF'
+import json, os, pathlib, subprocess, sys
+copy = pathlib.Path(sys.argv[1])
+project = pathlib.Path(sys.argv[2])
+data = json.loads((copy / "adapters" / "claude-code-settings.json.example").read_text(encoding="utf-8"))
+commands = [
+    hook["command"]
+    for rows in data["hooks"].values()
+    for row in rows
+    for hook in row["hooks"]
+    if "factory_reminders.sh" in hook["command"]
+]
+assert len(commands) == 3, commands
+env = {**os.environ, "CLAUDE_PROJECT_DIR": str(project), "FACTORY_GUARD_STATE_DIR": str(project / "state")}
+results = [subprocess.run(command, shell=True, executable="/bin/sh", env=env, capture_output=True, text=True) for command in commands]
+assert all(result.returncode == 0 for result in results), [(result.returncode, result.stderr) for result in results]
+assert "FACTORY GUARDS" in results[0].stdout, results[0].stdout
+assert "AFTER COMPACTION" in results[1].stdout, results[1].stdout
 EOF
 echo $? )"
 

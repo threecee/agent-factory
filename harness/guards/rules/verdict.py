@@ -4,8 +4,9 @@ through a pipe, and a verdict and a push never share one call.
 Fires only on a known gate invocation — the patterns in ``FACTORY_GUARD_GATES`` (the one
 parameter; guards.md §8) — followed in the same command by ``| tail``/``| head`` (always),
 by any other pipe stage without ``set -o pipefail``, or by a ``git push`` statement; and on
-``cat <x>.exit`` followed by ``git push`` (verdict and push in one call). It never rewrites
-the command silently: the exact form stands in the refusal so the operator learns it.
+``cat|grep|source|. <x>.exit`` followed by ``git push`` (verdict and push in one call). It
+never rewrites the command silently: the exact form stands in the refusal so the operator
+learns it.
 """
 
 from __future__ import annotations
@@ -39,6 +40,7 @@ MATCHER = "Bash"
 GATES_VAR = "FACTORY_GUARD_GATES"
 DEFAULT_GATES = "verify,verify-*,check-*,pytest,scripts.check_*,scripts.assemble_*"
 _HIDING_STAGES = frozenset({"tail", "head"})
+_RECEIPT_READERS = frozenset({"cat", "grep", "source"})
 _REDIRECT_TOKEN_RE = re.compile(r"^\d*>>?$|^<$")
 
 
@@ -105,7 +107,30 @@ def _is_git_push(tokens: list[str]) -> bool:
 
 
 def _reads_receipt(tokens: list[str]) -> bool:
-    return bool(tokens) and any(token.endswith(".exit") for token in tokens[1:])
+    if not tokens:
+        return False
+    head = tokens[0]
+    if head != "." and basename(head) not in _RECEIPT_READERS:
+        return False
+    return any(token.endswith(".exit") for token in tokens[1:])
+
+
+def _pipefail_change(tokens: list[str]) -> bool | None:
+    """Return the pipefail state assigned by a ``set`` statement, if any."""
+    if not tokens or basename(tokens[0]) != "set":
+        return None
+    arguments = tokens[1:]
+    for index, token in enumerate(arguments[:-1]):
+        if token in {"-o", "+o"} and arguments[index + 1] == "pipefail":
+            return token == "-o"
+        if (
+            len(token) > 2
+            and token[0] in {"-", "+"}
+            and "o" in token[1:]
+            and arguments[index + 1] == "pipefail"
+        ):
+            return token[0] == "-"
+    return None
 
 
 def _without_redirections(segment: tuple[str, ...]) -> list[str]:
@@ -155,7 +180,7 @@ def _piped_refusal(statement: Statement, gate: str, pipefail: bool) -> Verdict |
 def verdict_for_command(command: str, patterns: list[str] | None = None) -> Verdict:
     patterns = patterns if patterns is not None else gate_patterns({})
     statements = parse_statements(command)
-    pipefail = "pipefail" in command
+    pipefail = False
     gate_statement: tuple[Statement, str] | None = None
     receipt_statement: Statement | None = None
     for statement in statements:
@@ -167,6 +192,10 @@ def verdict_for_command(command: str, patterns: list[str] | None = None) -> Verd
                 if refusal is not None:
                     return refusal
             gate_statement = (statement, gate)
+            continue
+        changed = _pipefail_change(tokens)
+        if changed is not None:
+            pipefail = changed
             continue
         if _is_git_push(tokens):
             if gate_statement is not None:
@@ -196,6 +225,7 @@ _DENIED_FORMS = (
     ("tail-after-pytest", "pytest tests/test_backlog.py -q | tail -1", "| tail"),
     ("head-after-check", "python3 -m scripts.check_backlog | head -20", "| head"),
     ("grep-without-pipefail", "make verify 2>&1 | grep -E 'passed|failed'", "| grep"),
+    ("pipefail-after-pipeline", "make verify | grep passed; set -o pipefail", "| grep"),
     (
         "tail-after-assemble",
         "python3 -m scripts.assemble_train t-42 --run-id t-42-1 | tail",
@@ -203,6 +233,17 @@ _DENIED_FORMS = (
     ),
     ("gate-then-push", "make check-backlog; git push origin HEAD:main", "; git push"),
     ("receipt-then-push", "cat t-42-1.exit; git push origin HEAD:main", "; git push"),
+    (
+        "grep-receipt-then-push",
+        "grep '^EXIT=0$' t-42-1.exit; git push origin lane/x",
+        "; git push",
+    ),
+    (
+        "source-receipt-then-push",
+        "source t-42-1.exit; git push origin lane/x",
+        "; git push",
+    ),
+    ("dot-receipt-then-push", ". t-42-1.exit; git push origin lane/x", "; git push"),
     ("tee-without-pipefail", "pytest tests -q 2>&1 | tee lane-full.log", "| tee"),
     ("verify-target-tail", "make verify-fast | tail -2", "| tail"),
     (
@@ -221,8 +262,10 @@ _ALLOWED_FORMS = (
         "tee-with-pipefail",
         "set -o pipefail; make check-backlog 2>&1 | tee t-42-backlog.log; echo EXIT=${PIPESTATUS[0]}",
     ),
+    ("grouped-set-pipefail", "set -eo pipefail; make check-backlog | grep passed"),
     ("redirect-and-exit", "make check-backlog > lane-backlog.log 2>&1; echo EXIT=$?"),
     ("read-receipt-alone", "cat t-42-1.exit"),
+    ("delete-receipt-then-push", "rm stale.exit; git push origin lane/x"),
     ("push-branch-alone", "git push origin lane/x"),
     ("pytest-alone", "pytest tests/test_backlog.py -q -p no:cacheprovider"),
     ("check-alone", "python3 -m scripts.check_backlog"),
