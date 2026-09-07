@@ -244,9 +244,10 @@ def _landing_findings(text: str, default_mode: str) -> list[str]:
     mode = mode_match.group(1).lower() if mode_match else None
     if mode not in MODES:
         findings.append("«## Landing» lacks a «landing mode: pr|direct-push» line")
-    for key in ("receipts:", "local-verify:"):
-        if not re.search(rf"^\s*{re.escape(key)}\s*\S", landing, re.M | re.I):
-            findings.append(f"«## Landing» lacks a «{key} …» line")
+    if not re.search(r"^\s*receipts:\s*\S", landing, re.M | re.I):
+        findings.append("«## Landing» lacks a «receipts: …» line")
+    if not re.search(r"^\s*local-verify:\s*(?:posted\s*$|skipped\s+\S.*$)", landing, re.M | re.I):
+        findings.append("«## Landing» lacks a valid «local-verify: posted|skipped <reason>» line")
     if mode == "pr" and not re.search(r"^\s*pr:\s*\d+", landing, re.M | re.I):
         findings.append("«## Landing» in pr mode lacks a «pr: <number>» line")
     if mode == "direct-push" and default_mode == "pr" and "override reason:" not in lowered:

@@ -28,6 +28,7 @@ def commit_repo(
     email: str = DECLARED_EMAIL,
     staged_src: bool = True,
     extra_staged: dict[str, str] | None = None,
+    extra_untracked: dict[str, str] | None = None,
     merge: bool = False,
     head_src: bool = False,
     stage: bool = True,
@@ -58,6 +59,9 @@ def commit_repo(
         (root / rel).parent.mkdir(parents=True, exist_ok=True)
         (root / rel).write_text(text, encoding="utf-8")
     _run(root, "git", "add", "-A")
+    for rel, text in (extra_untracked or {}).items():
+        (root / rel).parent.mkdir(parents=True, exist_ok=True)
+        (root / rel).write_text(text, encoding="utf-8")
     if merge:
         head = _run(root, "git", "rev-parse", "HEAD")
         (root / ".git" / "MERGE_HEAD").write_text(head + "\n", encoding="utf-8")

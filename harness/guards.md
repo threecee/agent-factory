@@ -281,9 +281,10 @@ below are this chapter's; the five of the protections chapter — `landing`
   runner name, or `python -m scripts.<module>` / `python scripts/<module>.py`
   matching a module pattern of `FACTORY_GUARD_GATES` — followed in the same
   command by `| tail` or `| head` (always), by any other pipe stage without
-  `set -o pipefail`, or by a `git push` statement (the subcommand, never the
-  word `push` in a commit message); and `cat <x>.exit` followed by `git
-  push` (verdict and push in one call). A subshell, a brace group or a
+  a preceding `set -o pipefail` / `set -eo pipefail` statement, or by a `git
+  push` statement (the subcommand, never the word `push` in a commit message);
+  and a `cat`, `grep`, `source` or `.` read of `<x>.exit` followed by `git push`
+  (verdict and push in one call). A subshell, a brace group or a
   `bash|sh|zsh -c` string around the gate is seen through (§13 names what
   is not). Only invocations are gated, never mentions: `grep` on a log,
   `ls | tail`, `git log | head` pass.
@@ -295,7 +296,7 @@ below are this chapter's; the five of the protections chapter — `landing`
   adds `— then, in the NEXT call when EXIT=0: <push>`. The command is never
   rewritten silently; the exact form stands in the message so the operator
   learns it.
-- **Falsification** (12 denied, 11 allowed):
+- **Falsification** (16 denied, 13 allowed):
 
 | Denied (red) | Allowed (green) |
 |---|---|
@@ -303,9 +304,13 @@ below are this chapter's; the five of the protections chapter — `landing`
 | `pytest tests/test_backlog.py -q \| tail -1` | `ls -t artifacts \| tail -3` |
 | `python3 -m scripts.check_backlog \| head -20` | `set -o pipefail; make check-backlog 2>&1 \| tee t-42-backlog.log; echo EXIT=${PIPESTATUS[0]}` |
 | `make verify 2>&1 \| grep -E 'passed\|failed'` (no pipefail) | `make check-backlog > lane-backlog.log 2>&1; echo EXIT=$?` |
+| `make verify \| grep passed; set -o pipefail` (pipefail too late) | `set -eo pipefail; make check-backlog \| grep passed` |
 | `python3 -m scripts.assemble_train t-42 --run-id t-42-1 \| tail` | `cat t-42-1.exit` |
 | `make check-backlog; git push origin HEAD:main` | `git push origin lane/x` |
 | `cat t-42-1.exit; git push origin HEAD:main` | `pytest tests/test_backlog.py -q -p no:cacheprovider` |
+| `grep '^EXIT=0$' t-42-1.exit; git push origin lane/x` | `rm stale.exit; git push origin lane/x` |
+| `source t-42-1.exit; git push origin lane/x` | |
+| `. t-42-1.exit; git push origin lane/x` | |
 | `pytest tests -q 2>&1 \| tee lane-full.log` (no pipefail) | `python3 -m scripts.check_backlog` |
 | `make verify-fast \| tail -2` | `make check-backlog && make check-numbers` |
 | `make check-backlog && make check-numbers && git push origin HEAD:main` | `git log --oneline \| head -3` |
@@ -346,7 +351,8 @@ below are this chapter's; the five of the protections chapter — `landing`
 ### `no-verify` (M-16 row)
 
 - **Signal.** `git commit|push|merge|rebase|am --no-verify`, `git commit
-  -n`, and any of those under a global `-c core.hooksPath=…` (the second way
+  -n` (including grouped forms such as `-an` and `-qn`), and any of those
+  under a global `-c core.hooksPath=…` (the second way
   to skip the hooks); `git -C <dir>` honoured, a shell `-c` string seen
   through — always, no precondition. Git's own `--no-verify` cannot be
   removed on the git side, so this harness-side row is what gives the git
@@ -357,11 +363,13 @@ below are this chapter's; the five of the protections chapter — `landing`
   «git <sub>» without the flag — a red hook is fixed, never bypassed. Switch:
   FACTORY_GUARD_ALLOW=no-verify (logged).` The override form quotes `«git -c
   core.hooksPath=<x> <sub>»` and says `without the override`.
-- **Falsification** (5 denied, 3 allowed): `git commit --no-verify -m 'x'` ·
-  `git -C /tmp/wt commit -n -m 'x'` · `git push --no-verify origin lane/x` ·
+- **Falsification** (6 denied, 5 allowed): `git commit --no-verify -m 'x'` ·
+  `git -C /tmp/wt commit -n -m 'x'` · `git commit -an -m 'x'` ·
+  `git push --no-verify origin lane/x` ·
   `git -c core.hooksPath=/dev/null commit -m 'x'` · `bash -c "git commit
   --no-verify -m x"` (red) versus `git commit -m 'x'` · `git -c
-  user.email=<x> commit -m 'x'` · `grep -rn -- --no-verify docs` (green).
+  user.email=<x> commit -m 'x'` · `git merge -qn lane/x` · `git push -qn
+  origin lane/x` · `grep -rn -- --no-verify docs` (green).
 
 ## 8. Parameters
 

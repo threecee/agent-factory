@@ -35,6 +35,10 @@ LAUNCHER="$HERE/../launch_lane.sh"
 
 T="$(mktemp -d "${TMPDIR:-/tmp}/launch lane test.XXXXXX")"
 T="$(cd "$T" && pwd -P)"   # canonical: the launcher canonicalizes every path too
+LANE_SENTINEL_DIR="$T/lane sentinel"
+LANE_RESULT_PATH="$LANE_SENTINEL_DIR/default.result.md"
+export LANE_SENTINEL_DIR LANE_RESULT_PATH
+mkdir -p "$LANE_SENTINEL_DIR"
 cleanup() {
   # kill anything still running from this test, then remove the tree
   local p
@@ -102,11 +106,31 @@ EOF
 
 # start one lane; args: lane worktree run-id body [extra env assignments via env]
 start_lane() { # lane wt run_id body
-  LANE="$1" LANE_WORKTREE="$2" LANE_RUN_ID="$3" LANE_RUN_DIR="$RUN" LANE_BRIEF="$BRIEF" \
+  LANE="$1" LANE_WORKTREE="$2" LANE_RUN_ID="$3" LANE_RUN_DIR="$RUN" LANE_SENTINEL_DIR="$RUN" \
+    LANE_RESULT_PATH="$RUN/$1.$3.result.md" LANE_BRIEF="$BRIEF" \
     "$LAUNCHER" start -- "$FAKE" "$T/$4" exec --cd "{worktree}" --lane "{lane}"
 }
-wait_lane() { LANE="$1" LANE_RUN_ID="$2" LANE_RUN_DIR="$RUN" "$LAUNCHER" wait "${3:-30}" > /dev/null; }
-verdict() { LANE="$1" LANE_RUN_ID="$2" LANE_RUN_DIR="$RUN" "$LAUNCHER" verdict; }
+wait_lane() {
+  LANE="$1" LANE_RUN_ID="$2" LANE_RUN_DIR="$RUN" LANE_SENTINEL_DIR="$RUN" \
+    LANE_RESULT_PATH="$RUN/$1.$2.result.md" "$LAUNCHER" wait "${3:-30}" > /dev/null
+}
+verdict() {
+  LANE="$1" LANE_RUN_ID="$2" LANE_RUN_DIR="$RUN" LANE_SENTINEL_DIR="$RUN" \
+    LANE_RESULT_PATH="$RUN/$1.$2.result.md" "$LAUNCHER" verdict
+}
+
+if [ "${1:-}" = "--caller-isolation-probe" ]; then
+  start_lane c "$T/wt c" isolated body-ok.sh >/dev/null || exit $?
+  wait_lane c isolated
+  verdict c isolated >/dev/null
+  exit $?
+fi
+
+# ---------------------------------------------------------------- caller-environment isolation
+CALLER_RESULT="$T/caller result.md"; CALLER_SENTINEL="$T/caller sentinel"
+probe="$(env LANE_RESULT_PATH="$CALLER_RESULT" LANE_SENTINEL_DIR="$CALLER_SENTINEL" /bin/bash "$0" --caller-isolation-probe 2>&1)"; probe_rc=$?
+check "0 caller-set lane artifact paths are never written by this test" \
+  "$( [ "$probe_rc" -eq 0 ] && [ ! -e "$CALLER_RESULT" ] && [ ! -e "$CALLER_SENTINEL" ]; echo $? )" "$probe"
 
 # ---------------------------------------------------------------- case 1
 out="$(LANE=one LANE_WORKTREE="$T/wt a" LANE_RUN_DIR="$RUN" "$LAUNCHER" start -- "$FAKE" "$T/body-ok.sh" exec 2>&1)"; rc=$?
@@ -230,7 +254,7 @@ check "12d read-only exit 0 without markers is no-deliverable (exit 21)" "$( [ "
 # ---------------------------------------------------------------- case 13
 # a "parent harness" in its own session dispatches the lane, then is killed
 # (TERM + HUP to its whole process group) while the lane is still running.
-parent_cmd="LANE=orphan LANE_WORKTREE='$T/wt c' LANE_RUN_ID=o1 LANE_RUN_DIR='$RUN' LANE_BRIEF='$BRIEF' FAKE_SLEEP=3 '$LAUNCHER' start -- '$FAKE' '$T/body-ok.sh' exec > '$T/orphan start.out' 2>&1; sleep 60"
+parent_cmd="LANE=orphan LANE_WORKTREE='$T/wt c' LANE_RUN_ID=o1 LANE_RUN_DIR='$RUN' LANE_SENTINEL_DIR='$RUN' LANE_RESULT_PATH='$RUN/orphan.o1.result.md' LANE_BRIEF='$BRIEF' FAKE_SLEEP=3 '$LAUNCHER' start -- '$FAKE' '$T/body-ok.sh' exec > '$T/orphan start.out' 2>&1; sleep 60"
 parent_pid=""
 if command -v setsid >/dev/null 2>&1; then
   setsid /bin/sh -c "$parent_cmd" & parent_pid=$!

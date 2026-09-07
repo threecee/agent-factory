@@ -169,6 +169,9 @@ check "8 empty listing → create, dry run writes nothing (only the GET was made
 run python3 "$BOOT" --file "$EXAMPLE" --apply
 check "9 --apply → one POST whose body equals the example JSON, then the settings command printed" \
   "$( [ "$RC" -eq 0 ] && [ "$(grep -c -- '-X POST repos/{owner}/{repo}/rulesets --input -' "$GHLOG")" -eq 1 ] && python3 -c 'import json,sys; sys.exit(0 if json.load(open(sys.argv[1]))==json.loads(open(sys.argv[2]).read().strip().splitlines()[-1]) else 1)' "$EXAMPLE" "$GHIN" && has "$(cat "$OUT")" 'gh api -X PATCH repos/{owner}/{repo} -F allow_squash_merge=false'; echo $? )" "rc=$RC out=$(cat "$OUT") calls=$(calls) stdin=$(cat "$GHIN")"
+run python3 "$BOOT" --file "$EXAMPLE" --repo octo/widgets --apply
+check "9b --repo binds the printed repository-settings command to the target repository" \
+  "$( [ "$RC" -eq 0 ] && has "$(cat "$OUT")" 'gh api -X PATCH repos/octo/widgets -F allow_squash_merge=false' && ! has "$(cat "$OUT")" 'repos/{owner}/{repo}'; echo $? )" "rc=$RC out=$(cat "$OUT") calls=$(calls)"
 run env FAKE_GH_RULESETS_LIST="$LISTING" FAKE_GH_RULESET_GET="$T/stored same.json" python3 "$BOOT" --file "$EXAMPLE" --check
 check "10 identical round-tripped ruleset → unchanged, --check exit 0" "$( [ "$RC" -eq 0 ] && has "$(cat "$OUT")" 'unchanged (id 1)' && has "$(cat "$OUT")" 'verified against the host'; echo $? )" "rc=$RC out=$(cat "$OUT") err=$(cat "$ERR")"
 run env FAKE_GH_RULESETS_LIST="$LISTING" FAKE_GH_RULESET_GET="$T/stored evaluate.json" python3 "$BOOT" --file "$EXAMPLE" --check
@@ -363,6 +366,20 @@ gate "$LR" python3 -m scripts.check_choices_protocol t --boarders alpha --at-pus
 check "23g direct-push against the pr default without an override reason → HARD" "$( [ "$RC" -eq 1 ] && has "$(cat "$OUT")" 'override reason'; echo $? )" "rc=$RC out=$(cat "$OUT")"
 gate "$LR" python3 -m scripts.check_choices_protocol t --boarders alpha --at-push --default-mode direct-push
 check "23h the same ledger under a declared direct-push default → OK" "$( [ "$RC" -eq 0 ]; echo $? )" "rc=$RC out=$(cat "$OUT")"
+python3 - "$LR/docs/choices/t.md" <<'EOF'
+import pathlib, re, sys
+path = pathlib.Path(sys.argv[1])
+path.write_text(re.sub(r"^local-verify:.*$", "local-verify: missing", path.read_text(encoding="utf-8"), flags=re.M), encoding="utf-8")
+EOF
+gate "$LR" python3 -m scripts.check_choices_protocol t --boarders alpha --at-push --default-mode direct-push
+check "23h2 --at-push rejects an unknown local-verify disposition" "$( [ "$RC" -eq 1 ] && has "$(cat "$OUT")" 'local-verify: posted|skipped <reason>'; echo $? )" "rc=$RC out=$(cat "$OUT")"
+python3 - "$LR/docs/choices/t.md" <<'EOF'
+import pathlib, re, sys
+path = pathlib.Path(sys.argv[1])
+path.write_text(re.sub(r"^local-verify:.*$", "local-verify: skipped", path.read_text(encoding="utf-8"), flags=re.M), encoding="utf-8")
+EOF
+gate "$LR" python3 -m scripts.check_choices_protocol t --boarders alpha --at-push --default-mode direct-push
+check "23h3 --at-push requires a reason when local verification is skipped" "$( [ "$RC" -eq 1 ] && has "$(cat "$OUT")" 'local-verify: posted|skipped <reason>'; echo $? )" "rc=$RC out=$(cat "$OUT")"
 gate "$LR" python3 -m scripts.check_choices_protocol t --boarders alpha --at-push --warn
 check "23i --warn prints [WARN] and exits 0" "$( [ "$RC" -eq 0 ] && has "$(cat "$OUT")" '[WARN] '; echo $? )" "rc=$RC out=$(cat "$OUT")"
 gate "$LR" TRAIN_NAME=t python3 -m scripts.check_choices_protocol --boarders alpha
