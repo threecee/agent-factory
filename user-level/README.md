@@ -11,3 +11,9 @@ So the factory works from ANY checkout on the machine:
    (recommended minimum: `audit-choices`, `eli5`, `write-spec`,
    `systematic-debugging`, `verification-before-completion`) from `../skills/`
    to `~/.claude/skills/`. Repo-level installs cover the rest.
+4. **Artifact bank root:** choose one durable, out-of-repo directory on the
+   machine (not the scratchpad, not the worktree) and export it as
+   `LANE_ARTIFACT_BANK` in every shell that dispatches lanes, so run
+   receipts are banked as they are produced (`../harness/run-lifecycle.md`
+   §9). The root is operator policy; what is banked is decided by
+   regeneration cost, never by size.

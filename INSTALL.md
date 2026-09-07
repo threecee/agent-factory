@@ -67,14 +67,20 @@ that runs everything and stops at the first red gate).
    §7–§9 govern root-cause reports: falsify the causal model before the fix
    (or as the fix's first red test), refute only with a source, and keep an
    unknown cause unknown.
-5. Copy and adapt `verification/ci/*.example` → `.github/workflows/`. The
+5. Add the import-root probe for your stack to the verify entry (before the
+   full suite) and a runtime import-boundary test for your production entry
+   points (`verification/verify-portfolio.md`, "Runtime import boundary";
+   probes per stack in `harness/worktree-ritual.md`). Falsify both: point the
+   root at the primary checkout and watch the probe refuse; add one excluded
+   import and watch the boundary test go red.
+6. Copy and adapt `verification/ci/*.example` → `.github/workflows/`. The
    regime is non-negotiable: full commit-SHA pinning of every action (never
    tags), secret-gated green-skip (a missing secret is a green skip with a
    ::notice, never a red), minimal `permissions:`, single-flight concurrency
    where it matters. Local verify is the gate; CI verifies additionally and
    DEPLOYS from main. `verification/ci/review-prompt.md` is the canonical
    review prompt — point the review lane at it.
-6. Bind everything into `make verify`. Run it. Green before the next step.
+7. Bind everything into `make verify`. Run it. Green before the next step.
 
 ## Step 3 — Interpretation pillar
 1. Create `docs/choices/` with `interpretation/choices-ledger-README.md`. The
@@ -104,14 +110,32 @@ the hash lock (`skills-lock.json`). Write the skill-routing table into the
 repo's operations doc (the template carries it).
 
 ## Step 5 — Harness
-Copy `harness/launch_lane.sh` to your orchestration scratchpad. Follow
-`harness/worktree-ritual.md` (worktree from a pinned SHA, symlinked
-venv/env/node_modules, one lane one writer, the wrapper commits — coding CLIs
-often cannot commit in linked worktrees) and `harness/report-schema.md` (sentinel + structured report carrying
-`task:`/`round:`, `measurements:`, `revision_table:` with a named proof
-owner, the mandatory `choices:` self-report and its `<lane>-choices.md`
-sidecar). Circuit breakers are not in the schema: they live in
-`planning/execution-contract.md` §3–§6.
+1. Keep `harness/launch_lane.sh` where it is (it is repo-agnostic and takes
+   everything as a parameter — worktree, run id, receipt directory, brief,
+   the CLI argv, detachment, artifact bank). Run its test on the machine that
+   will dispatch: `bash harness/tests/test_launch_lane.sh`. Read the printed
+   `detach method exercised:` line — detachment is proven per host, not
+   assumed (`harness/run-lifecycle.md` §4, §10).
+2. Read `harness/run-lifecycle.md`. It owns dispatch and monitoring: run
+   identity and receipts (§2), the environment contract (§3 — no built-in
+   paths, no key reading; log the CLI in before dispatch), the run-bound exit
+   verdict (§5), process identity by executable name + exact argv token (§6),
+   rate-limit classification by named field (§7), read-only runs whose
+   report the wrapper extracts from stdout (§8), and banking receipts as they
+   are produced (§9). Set `LANE_ARTIFACT_BANK` to the durable root chosen in
+   Step 6.
+3. Follow `harness/worktree-ritual.md` (worktree from a pinned SHA, symlinked
+   env dirs gitignored, one lane one writer under the launcher's writer lock,
+   the wrapper commits — coding CLIs often cannot commit in linked worktrees,
+   and the import-root proof for your stack) and `harness/report-schema.md`
+   (sentinel + structured report carrying `run_id:`, `task:`/`round:`,
+   `measurements:`, `revision_table:` with a named proof owner, the mandatory
+   `choices:` self-report and its `<lane>-choices.md` sidecar). Circuit
+   breakers are not in the schema: they live in
+   `planning/execution-contract.md` §3–§6.
+4. Parameterize the standing brief's paths as the launcher's environment
+   names (`$LANE_RESULT_PATH`, `$LANE_SENTINEL_DIR`, `$LANE_RUN_ID`), never as
+   literal scratch paths.
 
 ## Step 6 — User level
 Follow `user-level/README.md`: add the global CLAUDE snippet to the user's
@@ -120,8 +144,9 @@ recommended user-level skills.
 
 ## Step 7 — Smoke test
 1. Create one trivial board item, write a mini-spec, dispatch one lane from
-   the standing brief, run the choices audit on the handback, assemble a
-   single-lane train, run full verify, land, sweep the board. Fill the
+   the standing brief through `harness/launch_lane.sh` (read its `verdict`
+   before touching the handback — `harness/run-lifecycle.md` §5), run the
+   choices audit on the handback, assemble a single-lane train, run full verify, land, sweep the board. Fill the
    execution-contract fields for real even on the trivial task: `task:` is
    the item ID, `round: 1`, the apparatus is named, and if the lane cannot
    run it the proof owner is a role plus an exact command. Then run the

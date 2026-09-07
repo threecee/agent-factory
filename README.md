@@ -19,8 +19,9 @@ deterministic pieces against your language, build chain and domain.
 | **`interpretation/`** | *Understand how it really works* | The choices ledger (every decision an agent made on your behalf, audited per handback, one stable ID per choice, scenarios stored with the train), memory conventions that outlive sessions, evaluation practice (persona loops, state parity, honest metrics), investigation practice (instrument-first; investigate before the fix mandate; consumer inventory before any move, split or delete), a worked simplification-review example, the continuous-improvement loop |
 
 Shared infrastructure: **`skills/`** (35 vendored, hash-locked agent skills),
-**`harness/`** (lane launcher, worktree ritual, board bootstrap, report
-schema with a choices sidecar), **`user-level/`** (what goes into `~/.claude` so the factory works
+**`harness/`** (parameterized lane launcher with run-bound receipts and its
+test, the run lifecycle, worktree ritual, board bootstrap, report schema
+with a choices sidecar), **`user-level/`** (what goes into `~/.claude` so the factory works
 from any checkout).
 
 ## The core loop (one screen)

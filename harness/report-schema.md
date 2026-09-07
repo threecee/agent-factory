@@ -10,6 +10,7 @@ only an auditor opens lives in sidecars, referenced by path.
 ```yaml
 ---
 lane: <lane-name>
+run_id: <run-id>                 # the launcher's $LANE_RUN_ID — binds this report to ONE run
 task: <board item ID>            # the round counter follows THIS, not the lane name
 round: <1|2>
 status: built | parked | blocked | refused | failed
@@ -171,10 +172,24 @@ dependency changed", "cannot bind"); the proof owner survives on both rows.
 Whole-handback size is 2,139 bytes plus the sidecar the auditor opens for
 the two choices — report that sum, not the main file alone.
 
-## Sentinel
+## Run binding and sentinel
 
-`<lane>.sentinel.json` is updated at every leg boundary so a slow-but-alive
-lane is never read as stalled; watchers must prove liveness AND deliverable
-(a sentinel's presence is not production). Stale exit files from earlier
-rounds are a known trap — a verdict belongs to one run ID and one round; the
-run-bound exit contract is `harness/run-lifecycle.md` (introduced by PR2).
+The terse handback fields (measurements, revision table, proof owner, choice
+verdicts) are defined by `../planning/execution-contract.md`; this section
+owns only the run binding and the two liveness surfaces.
+
+**Run binding.** A report is a deliverable only for the run whose id it
+carries (`run_id:` = the launcher's `$LANE_RUN_ID`), and only when it was
+written after that run started; `status` is the closed set above because the
+launcher parses it. The report lands at `$LANE_RESULT_PATH` (exported by the
+launcher, run-scoped — never a retyped literal path). A read-only run prints
+the same report on stdout between the documented markers and the wrapper
+writes it (`run-lifecycle.md` §8). Validity and the verdict table:
+`run-lifecycle.md` §5. A verdict belongs to one run id and one round.
+
+**Sentinel.** `<lane>.sentinel.json` (in `$LANE_SENTINEL_DIR`) is updated at
+every leg boundary so a slow-but-alive lane is never read as stalled;
+watchers must prove liveness AND deliverable (a sentinel's presence is not
+production). Stale exit files from earlier rounds were a known trap;
+`run-lifecycle.md` §2/§5 closes it — every receipt is named and stamped by
+run id, so an earlier round's exit 0 cannot be read as this round's.
