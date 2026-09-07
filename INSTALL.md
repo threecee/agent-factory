@@ -30,12 +30,19 @@ that runs everything and stops at the first red gate).
    (a board item, or the backlog row your planning gate governs). The
    per-lane fields (task ID, round, apparatus, proof owner, attachments,
    ceiling) are filled at dispatch, never in the template.
-4. Create `docs/decisions/` with `planning/NUMBERS-template.md` as the empty
+4. Copy `planning/investigation-brief-template.md` →
+   `.claude/templates/investigation-brief.md`. It is the read-only lane a
+   bug goes through BEFORE it gets a fix brief when the cause is uncertain:
+   pinned SHA, frozen evidence package (harness/artifact-bank.md), competing
+   hypotheses, verdicts with sources, no code change. Its §8 is the boundary
+   to the fix brief; do not add a mandatory investigation phase for trivial
+   reproduced defects (its §0 says when).
+5. Create `docs/decisions/` with `planning/NUMBERS-template.md` as the empty
    registry. ADR discipline: frontmatter `status:` + `code:` pairing; numbers
    are allocated ONLY by the orchestrator, claimed in NUMBERS, flipped to
    `landed` at landing. Wire `verification/gates/build_adr_index.py --check`
    into verify.
-5. Run `harness/bootstrap_board.sh <owner> "<name>"` and write the project ID,
+6. Run `harness/bootstrap_board.sh <owner> "<name>"` and write the project ID,
    Status field ID and option IDs into the repo's CLAUDE.md anchor
    (`planning/CLAUDE.md.example`).
 
@@ -56,7 +63,10 @@ that runs everything and stops at the first red gate).
    ADR↔code pairing under a one-way cap. Calibrate both against the repo's
    starting point via their `--update` mechanisms — never by deleting
    assertions.
-4. Read `verification/falsification.md` and apply it from day one.
+4. Read `verification/falsification.md` and apply it from day one. Rules
+   §7–§9 govern root-cause reports: falsify the causal model before the fix
+   (or as the fix's first red test), refute only with a source, and keep an
+   unknown cause unknown.
 5. Copy and adapt `verification/ci/*.example` → `.github/workflows/`. The
    regime is non-negotiable: full commit-SHA pinning of every action (never
    tags), secret-gated green-skip (a missing secret is a green skip with a
@@ -74,7 +84,10 @@ that runs everything and stops at the first red gate).
 2. Establish the memory conventions (`interpretation/memory-conventions.md`)
    and the evaluation practice (`interpretation/evaluation-practice.md`).
 3. Read `interpretation/investigation-practice.md` — instrument-first is the
-   default for every debugging lane.
+   default for every debugging lane, and "investigate before the fix lane
+   gets its mandate" is the default whenever the cause is uncertain (the
+   brief is `planning/investigation-brief-template.md`; the trust rules are
+   `verification/falsification.md` §7–§9).
 
 ## Step 4 — Skills
 Copy `skills/` → `.agents/skills/` and symlink `.claude/skills` to it. Verify
