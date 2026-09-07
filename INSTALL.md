@@ -16,11 +16,20 @@ that runs everything and stops at the first red gate).
 
 ## Step 1 — Planning pillar
 1. Copy `planning/*.md` → `docs/` and resolve every {{PLACEHOLDER}}.
+   `planning/execution-contract.md` is the one home of the measurement
+   baseline and the two-round limit; the lane brief only parameterizes it
+   (§8 of that file lists the parameters). Keep its section numbers —
+   briefs cite them.
 2. `planning/core-model.md` + `planning/board-protocol.md` are law, not
    inspiration: the board is the planning source of truth; every dispatch and
    landing has a board transaction (see the table in board-protocol).
 3. Copy `planning/lane-brief-template.md` → `.claude/templates/lane-brief.md`
-   and parameterize the gate block with the repo's pregate commands.
+   and parameterize: the gate block with the repo's pregate commands,
+   `{{FIRST_CONTACT_STOPS}}` with the repo's guarded boundaries and number
+   rules, `{{PARK_DESTINATION}}` with where parked remainders are tracked
+   (a board item, or the backlog row your planning gate governs). The
+   per-lane fields (task ID, round, apparatus, proof owner, attachments,
+   ceiling) are filled at dispatch, never in the template.
 4. Create `docs/decisions/` with `planning/NUMBERS-template.md` as the empty
    registry. ADR discipline: frontmatter `status:` + `code:` pairing; numbers
    are allocated ONLY by the orchestrator, claimed in NUMBERS, flipped to
@@ -76,9 +85,11 @@ repo's operations doc (the template carries it).
 Copy `harness/launch_lane.sh` to your orchestration scratchpad. Follow
 `harness/worktree-ritual.md` (worktree from a pinned SHA, symlinked
 venv/env/node_modules, one lane one writer, the wrapper commits — coding CLIs
-often cannot commit in linked worktrees) and `harness/report-schema.md`
-(sentinel + structured report + mandatory `choices:` self-report + circuit
-breakers).
+often cannot commit in linked worktrees) and `harness/report-schema.md` (sentinel + structured report carrying
+`task:`/`round:`, `measurements:`, `revision_table:` with a named proof
+owner, the mandatory `choices:` self-report and its `<lane>-choices.md`
+sidecar). Circuit breakers are not in the schema: they live in
+`planning/execution-contract.md` §3–§6.
 
 ## Step 6 — User level
 Follow `user-level/README.md`: add the global CLAUDE snippet to the user's
@@ -88,11 +99,18 @@ recommended user-level skills.
 ## Step 7 — Smoke test
 1. Create one trivial board item, write a mini-spec, dispatch one lane from
    the standing brief, run the choices audit on the handback, assemble a
-   single-lane train, run full verify, land, sweep the board.
+   single-lane train, run full verify, land, sweep the board. Fill the
+   execution-contract fields for real even on the trivial task: `task:` is
+   the item ID, `round: 1`, the apparatus is named, and if the lane cannot
+   run it the proof owner is a role plus an exact command. Then run the
+   rewrite check in `harness/report-schema.md` on the handback.
 2. Falsify at least one gate along the way (plant a violation, watch it go
    red, remove it). For the secret gate: random-shaped secrets on a throwaway
    branch (see verification/gates/README.md — documentation keys are
    allowlisted; the working-tree leg is advisory, history is HARD).
 3. Land with `make verify && git push` — never an unconditional push after a
    verify you did not read.
+4. Falsify the round counter: re-dispatch the same item under a new lane
+   name and confirm the wrapper writes `round: 2`; attempt a third and
+   confirm it is refused without a logged restart-from-document.
 A factory whose smoke test has not run is not installed — it is copied.

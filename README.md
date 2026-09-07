@@ -14,13 +14,13 @@ deterministic pieces against your language, build chain and domain.
 
 | Pillar | Question it answers | Contents |
 |---|---|---|
-| **`planning/`** | *Define why, what, how* | Board protocol (GitHub Projects as planning truth), spec discipline, ADR + number registry, backlog discipline with closing evidence, the standing lane brief |
+| **`planning/`** | *Define why, what, how* | Board protocol (GitHub Projects as planning truth), spec discipline, ADR + number registry, backlog discipline with closing evidence, the standing lane brief, and the execution contract (measurement baseline handed over before dispatch, a named proof owner, two complete rounds per task then park-and-split) |
 | **`verification/`** | *Prove that it works* | 24 deterministic gate scripts (one-way ratchets, secret scanning with a working-tree leg, traceability, planning-doc teeth), the verify portfolio, falsification norms, CI in the pinned/secret-gated regime, lander duties for landing trains |
 | **`interpretation/`** | *Understand how it really works* | The choices ledger (every decision an agent made on your behalf, audited per handback), memory conventions that outlive sessions, evaluation practice (persona loops, state parity, honest metrics), investigation practice (instrument-first), the continuous-improvement loop |
 
 Shared infrastructure: **`skills/`** (35 vendored, hash-locked agent skills),
 **`harness/`** (lane launcher, worktree ritual, board bootstrap, report
-schema), **`user-level/`** (what goes into `~/.claude` so the factory works
+schema with a choices sidecar), **`user-level/`** (what goes into `~/.claude` so the factory works
 from any checkout).
 
 ## The core loop (one screen)
@@ -28,7 +28,8 @@ from any checkout).
 ```
 idea → board item (Planned, with a full spec) → PO approval
   → lane brief from the standing template → parallel lane in its own worktree
-    (agent authors; the wrapper commits; red/green falsification)
+    (evidence attached first; agent authors; the wrapper commits and pushes
+     the branch; the named proof owner reruns the apparatus; two rounds max)
   → handback → CHOICES AUDIT (ledger entry per invented decision)
   → landing train: --no-ff pinned SHAs → cross-checks → cheap gates
     → FULL local verify green → push main → CI deploys
