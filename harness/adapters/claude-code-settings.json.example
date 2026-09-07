@@ -9,7 +9,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/harness/adapters/factory_reminders.sh session-start"
+            "command": "bash \"$CLAUDE_PROJECT_DIR/harness/adapters/factory_reminders.sh\" session-start"
           }
         ]
       },
@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/harness/adapters/factory_reminders.sh compact"
+            "command": "bash \"$CLAUDE_PROJECT_DIR/harness/adapters/factory_reminders.sh\" compact"
           }
         ]
       },
@@ -37,7 +37,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/harness/adapters/factory_reminders.sh prompt"
+            "command": "bash \"$CLAUDE_PROJECT_DIR/harness/adapters/factory_reminders.sh\" prompt"
           }
         ]
       }

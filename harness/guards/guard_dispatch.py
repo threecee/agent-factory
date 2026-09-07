@@ -396,6 +396,14 @@ def dispatch(
     if disabled:
         record["verdicts"] = {"*": "disabled"}
         _log(log_path, record)
+        append_event(
+            state_dir,
+            session_of(payload),
+            event,
+            "allow-switch",
+            "*",
+            "; ".join(sources),
+        )
         return 0
     problems: list[str] = []
     if rules is None:
