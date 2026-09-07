@@ -53,9 +53,12 @@
 #     pointers (non-vacuity)
 #   2 a planted dead path is red, naming the path and the hub file
 #   3 a planted wrong §-number is red, naming the section and the hub file;
+#     3c2 a §1 pointer does not resolve to a §1.1 heading;
 #     3d a planted `, `§99`` continuation is red naming §99 and the path it bound
 #     to; 3e a pointer wrapped across a line break is read whole (red on §99);
-#     3f a planted quoted heading that no heading line opens is red naming it
+#     3f a planted quoted heading that no heading line opens is red naming it;
+#     3g quoted heading text must open the heading, not occur within it or end
+#     inside the opening word
 #   4 INSTALL's stated counts equal the tree (gate scripts under
 #     verification/gates, locked skills in skills/skills-lock.json)
 #   5 `--installed` on a scratch tree with a planted {{PLACEHOLDER}} under
@@ -137,7 +140,7 @@ $root/INSTALL.md"
           printf 'COUNT section\n'
           section="${section%.}"
           esc="$(printf '%s' "$section" | sed 's/\./\\./g')"
-          if ! grep -Eq "^#{1,4} (§)?${esc}([. ]|$)" "$target"; then
+          if ! grep -Eq "^#{1,4} (§)?${esc}([ ]|[.]([ ]|$)|$)" "$target"; then
             printf 'NOSECTION %s: %s §%s\n' "$f" "$path" "$section"
           fi
         fi
@@ -145,7 +148,21 @@ $root/INSTALL.md"
           printf '%s\n' "$headings" | while IFS= read -r h; do
             [ -n "$h" ] || continue
             printf 'COUNT section\n'
-            if ! grep -E '^(#{1,4} |[ ]*([-*]|[0-9]+\.)[ ]+\*\*|\*\*|\|[ ]*\*\*)' "$target" | grep -qF -- "$h"; then
+            if ! grep -E '^(#{1,4} |[ ]*([-*]|[0-9]+\.)[ ]+\*\*|\*\*|\|[ ]*\*\*)' "$target" |
+              awk -v heading="$h" '
+                {
+                  line=$0
+                  sub(/^#{1,4} /, "", line)
+                  sub(/^[ ]*([-*]|[0-9]+\.)[ ]+\*\*/, "", line)
+                  sub(/^\*\*/, "", line)
+                  sub(/^\|[ ]*\*\*/, "", line)
+                  if (index(line, heading) == 1) {
+                    boundary=substr(line, length(heading) + 1, 1)
+                    if (boundary == "" || boundary !~ /[[:alnum:]_]/) found=1
+                  }
+                }
+                END { exit !found }
+              '; then
               printf 'NOHEADING %s: %s "%s"\n' "$f" "$path" "$h"
             fi
           done
@@ -210,6 +227,13 @@ check "3b exactly one finding" 1 "$(printf '%s\n' "$out" | count)"
 printf '%s' "$out" | grep -q "NOSECTION .*README.md: planning/execution-contract.md §99" && echo "ok   3c the finding names the section and the hub file" || { echo "FAIL 3c message: $out"; fail=1; }
 cp "$HERE/README.md" "$T/pkg/README.md"
 
+printf '# target\n\n## 1.1 Child only\n' > "$T/pkg/planning/only-subsection.md"
+printf '\nplanted: `planning/only-subsection.md §1`\n' >> "$T/pkg/README.md"
+out="$(run "$T/pkg")"; code=$?
+check "3c2 a §1 pointer does not match a §1.1 heading" 1 "$code"
+printf '%s' "$out" | grep -q "NOSECTION .*README.md: planning/only-subsection.md §1" && echo "ok   3c3 the finding names the exact section boundary" || { echo "FAIL 3c3 message: $out"; fail=1; }
+cp "$HERE/README.md" "$T/pkg/README.md"
+
 printf '\nplanted: `planning/execution-contract.md §1`, `§99`\n' >> "$T/pkg/README.md"
 out="$(run "$T/pkg")"; code=$?
 check "3d a planted \`, \`§99\`\` continuation is red" 1 "$code"
@@ -226,6 +250,20 @@ printf '\nplanted: `planning/board-protocol.md` "No Such Heading"\n' >> "$T/pkg/
 out="$(run "$T/pkg")"; code=$?
 check "3f a planted quoted heading is red" 1 "$code"
 printf '%s' "$out" | grep -q 'NOHEADING .*README.md: planning/board-protocol.md "No Such Heading"' && echo "ok   3f2 the finding names the heading and the file" || { echo "FAIL 3f2 message: $out"; fail=1; }
+cp "$HERE/README.md" "$T/pkg/README.md"
+
+printf '# target\n\n## Prefix Middle suffix\n' > "$T/pkg/planning/heading-substring.md"
+printf '\nplanted: `planning/heading-substring.md` "Middle"\n' >> "$T/pkg/README.md"
+out="$(run "$T/pkg")"; code=$?
+check "3g quoted heading text must match the heading opening" 1 "$code"
+printf '%s' "$out" | grep -q 'NOHEADING .*README.md: planning/heading-substring.md "Middle"' && echo "ok   3g2 the substring finding names the heading and the file" || { echo "FAIL 3g2 message: $out"; fail=1; }
+cp "$HERE/README.md" "$T/pkg/README.md"
+
+printf '# target\n\n## Statuses elsewhere\n' > "$T/pkg/planning/heading-prefix.md"
+printf '\nplanted: `planning/heading-prefix.md` "Status"\n' >> "$T/pkg/README.md"
+out="$(run "$T/pkg")"; code=$?
+check "3g3 a quoted heading cannot end inside the opening word" 1 "$code"
+printf '%s' "$out" | grep -q 'NOHEADING .*README.md: planning/heading-prefix.md "Status"' && echo "ok   3g4 the partial-word finding names the heading and the file" || { echo "FAIL 3g4 message: $out"; fail=1; }
 cp "$HERE/README.md" "$T/pkg/README.md"
 
 stated_gates="$(sed -n 's/.*Of the \([0-9][0-9]*\) scripts.*/\1/p' "$HERE/INSTALL.md" | head -1)"

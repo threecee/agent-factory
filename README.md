@@ -22,6 +22,33 @@ line and a quoted heading included — resolves. No mechanism is named
 without its form tag — gate, guard, hook, ruleset or text (§5.2). Counts are pointers, or covered by that
 test.
 
+## 0. The core loop
+
+At either altitude, every handoff is explainable from its artifact and inspectable with a concrete command; installation fills the target codebase's parameters (`INSTALL.md`).
+
+```mermaid
+flowchart LR
+  B[Board] -->|numbered brief with Kind:| P[Plan · planning/]
+  P -->|numbered brief| A[Lane authors]
+  A -->|lane result and choices| V[Verify · verification/]
+  V -->|EXIT= HEAD= BASE= receipt and landing authority| L[Land]
+  L -->|landing and close-out evidence| I[Interpret · interpretation/]
+  I -->|ledger entry, memory, or board item| B
+```
+
+Planning can define but cannot prove or learn without verification and interpretation; verification can test but cannot choose intent or explain outcomes without planning and interpretation; interpretation can explain but cannot authorize or prove a change without planning and verification (`planning/core-model.md`; `verification/verify-portfolio.md`; `interpretation/continuous-improvement.md`).
+
+### Inspect it
+
+| Hop | Form | Input it reads | Evidence it writes | One command that shows current state |
+|---|---|---|---|---|
+| Board → plan | text | The full board item and approved spec (`planning/board-protocol.md` "Statuses"; `planning/core-model.md`). | A numbered brief with `Kind:` (`planning/lane-brief-template.md §1`, `§4`). | `gh project item-list <number> --owner <owner> --limit 200 --format json` — reads the authoritative board without the default-page blind spot (`planning/board-protocol.md` "Authority, pagination and derived views"). |
+| Plan → lane authors | guard | The brief, pin and model binding (`harness/run-lifecycle.md §3`; `harness/model-policy.md §4`). | The run's start receipt and resolved artifact paths (`harness/run-lifecycle.md §2`, `§4`). | `harness/launch_lane.sh env` — prints the resolved launch contract without secrets (`harness/run-lifecycle.md §3`). |
+| Lane authors → verify | gate | The lane worktree plus the brief's pregate and matching legs (`planning/lane-brief-template.md §4`; `verification/verify-portfolio.md` "Legs that bring lane-green closer to train-green"). | A run-bound lane result with proof and choices (`harness/report-schema.md` "Machine check at handback"). | `harness/launch_lane.sh verdict` — reports the current run's deliverable state from its receipts (`harness/run-lifecycle.md §5`). |
+| Verify → land | guard | The assembled tree, its `EXIT= HEAD= BASE=` receipt, and a live ruling or active policy (`harness/train-plan.md §4.1`; `verification/lander-duties.md §7`). | The receipt-bound `local-verify` status and landing decision (`verification/protections.md §3`; `verification/landing-modes.md §2`). | `sed -n '1,4p' <artifacts>/<run-id>.exit` — exposes the four-line receipt the lander judges (`harness/train-plan.md §4`). |
+| Land → interpret | guard | The registered landing, boarded SHAs and open close-out duties (`verification/lander-duties.md §8`). | Landing registration and close-out evidence for the ledger (`verification/protections.md §6`; `interpretation/choices-ledger-README.md §1`). | `python3 verification/gates/check_landing_closeout.py --state <state-file>` — prints the duties still open (`verification/lander-duties.md §8`). |
+| Interpret → board | text | Lane choices, verify findings and landed evidence (`interpretation/choices-ledger-README.md §1`, `§4`). | A ledger entry, one-fact memory, or new board item (`interpretation/memory-conventions.md`; `interpretation/continuous-improvement.md`). | `git log --grep '<choice-id>'` — follows a stable choice ID into history (`interpretation/choices-ledger-README.md §2`). |
+
 Three non-negotiables inherited from the source factory:
 1. **Falsify the apparatus before the product** — a gate or test that has
    never been seen red proves nothing (`verification/falsification.md`).
@@ -223,16 +250,12 @@ Each step: artifact → owner → next reader, then its home. Tags: (gate)
   never equals; the batch rule (independent lanes share a train); the
   continue contract (conflict and resume); the ten close-out duties; a
   skipped required check rejects (`verification/landing-modes.md §1`–`§6`; `verification/lander-duties.md §2`, `§3`, `§7`, `§8`).
-- **5.5 Protections** — the three git hooks (hook), the ruleset (ruleset),
-  the status poster, the CI signal (text), the ledger lint (gate), the
-  close-out check (gate) and stop-event rule (guard), never-weaken (gate)
-  (`verification/protections.md §1`–`§7`).
-- **5.6 Evaluation readiness and the artifact bank** — three evaluation
+- **5.5 Evaluation readiness and the artifact bank** — three evaluation
   types never conflated; the `proves:` receipt; a skip on a required check
   rejects; pristine acceptance; exercise the copy, never the source
   (`verification/evaluation-readiness.md §1`–`§6`; `harness/artifact-bank.md
   §1`–`§9`).
-- **5.7 Falsification** — the three non-negotiables above are read through
+- **5.6 Falsification** — the three non-negotiables above are read through
   `verification/falsification.md`, through `verification/verify-portfolio.md`
   "Known vacuity classes" and through each chapter's "What the test proves"
   (`harness/guards.md §13`; `verification/protections.md §10`); a lens that
@@ -306,6 +329,7 @@ never judges whether it is right (`harness/guards.md §12`;
 
 | Question | Home |
 |---|---|
+| What is the core loop, and what does each hop hand onward? | §0, “The core loop” |
 | Who may push main, and what happens when the owner is asleep? | `planning/execution-contract.md §6`; `verification/lander-duties.md §7`; `user-level/landing-policy.example.md §1` |
 | How is a number allocated, and flipped? | `planning/adr-and-numbers.md`; `verification/lander-duties.md §8` |
 | What must a receipt contain, and what is a verdict never read from? | `harness/train-plan.md §4.1`; `harness/run-lifecycle.md §2`; `harness/guards.md §7` |
