@@ -199,8 +199,9 @@ def _merge_of(rest: list[str]) -> Landing:
     return Landing("merge", None, pr=pr, match_head=match_head, hard_flags=tuple(hard))
 
 
-def find_landing(command: str) -> Landing | None:
-    """The first landing-shaped statement of the command, else ``None``."""
+def find_landings(command: str) -> list[Landing]:
+    """Every landing-shaped statement in the command, in execution order."""
+    landings: list[Landing] = []
     for statement in parse_statements(command):
         tokens = strip_prefixes(statement.first)
         directory, rest = _git_call(tokens)
@@ -213,13 +214,19 @@ def find_landing(command: str) -> Landing | None:
                 destination = spec.partition(":")[2] if ":" in spec else spec
                 if destination == "HEAD":
                     destination = None
-            return Landing("push", directory, destination=destination)
+            landings.append(Landing("push", directory, destination=destination))
+            continue
         gh = _gh_call(tokens)
         if gh[:2] == ["pr", "merge"]:
-            return _merge_of(gh[2:])
-        if gh[:2] == ["pr", "create"]:
-            return Landing("create", None)
-    return None
+            landings.append(_merge_of(gh[2:]))
+        elif gh[:2] == ["pr", "create"]:
+            landings.append(Landing("create", None))
+    return landings
+
+
+def find_landing(command: str) -> Landing | None:
+    """The first landing-shaped statement of the command, else ``None``."""
+    return next(iter(find_landings(command)), None)
 
 
 def _is_default_destination(context: GuardContext, landing: Landing, cwd: pathlib.Path) -> bool:
@@ -711,17 +718,22 @@ def _post_landing(context: GuardContext, command: str, cwd: pathlib.Path, landin
 
 def check(payload: Mapping[str, object], context: GuardContext) -> Verdict:
     command = command_of(payload)
-    landing = find_landing(command)
-    if landing is None:
-        return ALLOW
-    cwd = _landing_cwd(landing, command, payload_cwd(payload))
-    if landing.kind == "create":
-        return _check_create(context, cwd) if context.event == "PreToolUse" else ALLOW
-    if landing.kind == "push" and not _is_default_destination(context, landing, cwd):
-        return ALLOW
-    if context.event == "PostToolUse":
-        return SWITCHED if context.switched_off(ID) else _post_landing(context, command, cwd, landing)
-    return _pre_landing(context, command, cwd, landing, session_of(payload))
+    first_verdict: Verdict | None = None
+    for landing in find_landings(command):
+        cwd = _landing_cwd(landing, command, payload_cwd(payload))
+        if landing.kind == "create":
+            verdict = _check_create(context, cwd) if context.event == "PreToolUse" else ALLOW
+        elif landing.kind == "push" and not _is_default_destination(context, landing, cwd):
+            continue
+        elif context.event == "PostToolUse":
+            verdict = SWITCHED if context.switched_off(ID) else _post_landing(context, command, cwd, landing)
+        else:
+            verdict = _pre_landing(context, command, cwd, landing, session_of(payload))
+        if verdict.kind == "deny":
+            return verdict
+        if first_verdict is None or (first_verdict == ALLOW and verdict != ALLOW):
+            first_verdict = verdict
+    return first_verdict or ALLOW
 
 
 def falsification_cases(workdir: pathlib.Path) -> list[FalsificationCase]:

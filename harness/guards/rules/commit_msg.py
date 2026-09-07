@@ -7,8 +7,9 @@ to the dispatcher as event ``GitCommitMsg``. Two legs, each with its own switch:
 * ``commit-refs`` (HARD): when the staged diff touches ``FACTORY_GUARD_SOURCE_PREFIX``
   (default ``src/``; comma-separated prefixes) the message must carry the decision-record
   trailer (``FACTORY_GUARD_TRAILER_RE``, default ``^Refs: (ADR-\\d{4})``) and every referenced
-  record must exist under ``FACTORY_GUARD_DECISIONS_DIR`` (default ``docs/decisions``) on disk
-  or in the same commit — a claimed number is a dangling reference until its file exists (the
+  record must exist under ``FACTORY_GUARD_DECISIONS_DIR`` (default ``docs/decisions``) in
+  ``HEAD`` or as staged Markdown in the same commit — an untracked file and a claimed number
+  are dangling references until the record is carried by git (the
   three are §8 parameters of harness/guards.md). Merges
   (``MERGE_HEAD`` present, or an amended merge commit) and subjects starting ``Revert "``,
   ``Merge `` (this covers the host's ``Merge pull request`` commit), ``fixup! `` or
@@ -128,12 +129,19 @@ def record_ids(message: str, pattern: re.Pattern[str]) -> list[str]:
     return ids
 
 
-def record_exists(cwd: pathlib.Path, directory: str, record: str, staged: list[str]) -> bool:
+def _record_path(path: str, directory: str, number: str) -> bool:
+    prefix = f"{directory}/{number}"
+    return path.endswith(".md") and (path == f"{prefix}.md" or path.startswith(f"{prefix}-"))
+
+
+def record_exists(context: GuardContext, cwd: pathlib.Path, directory: str, record: str, staged: list[str]) -> bool:
     digits = _DIGITS_RE.search(record)
     number = digits.group(1) if digits else record
-    if any(path.startswith(f"{directory}/{number}-") or path.startswith(f"{directory}/{number}.") for path in staged):
-        return True
-    return any((cwd / directory).glob(f"{number}-*.md")) or any((cwd / directory).glob(f"{number}.md"))
+    for path in staged:
+        if _record_path(path, directory, number) and git(context, cwd, "cat-file", "-e", f":{path}")[0] == 0:
+            return True
+    code, listing = git(context, cwd, "ls-tree", "-r", "--name-only", "HEAD", "--", directory)
+    return code == 0 and any(_record_path(path, directory, number) for path in listing.splitlines())
 
 
 def _exempt(context: GuardContext, cwd: pathlib.Path, message: str, amend: bool) -> bool:
@@ -172,7 +180,7 @@ def _refs_finding(context: GuardContext, cwd: pathlib.Path, message: str, diff: 
             "or a new -m",
         )
     directory = decisions_dir(context.environ)
-    missing = [record for record in ids if not record_exists(cwd, directory, record, diff.files)]
+    missing = [record for record in ids if not record_exists(context, cwd, directory, record, diff.files)]
     if missing:
         return deny(
             REFS_ID,
@@ -231,6 +239,8 @@ def falsification_cases(workdir: pathlib.Path) -> list[FalsificationCase]:
         case("src-with-trailer-and-record", "allow", "", GREEN_MESSAGE),
         case("src-with-dangling-record", "deny", "names a decision record that does not exist", "feat(x): change src\n\nRefs: ADR-9999\n"),
         case("src-with-record-in-same-commit", "allow", "", "feat(x): change src\n\nRefs: ADR-9999\n", extra_staged={"docs/decisions/9999-new.md": "# new\n"}),
+        case("src-with-untracked-record", "deny", "names a decision record that does not exist", "feat(x): change src\n\nRefs: ADR-9999\n", extra_untracked={"docs/decisions/9999-new.md": "# untracked\n"}),
+        case("src-with-staged-non-markdown-record", "deny", "names a decision record that does not exist", "feat(x): change src\n\nRefs: ADR-9999\n", extra_staged={"docs/decisions/9999-placeholder.txt": "not an ADR\n"}),
         case("docs-only-without-trailer", "allow", "", "docs(x): fix text\n", staged_src=False),
         case("merge-in-progress-exempt", "allow", "", "train(t-1): board alpha\n", merge=True),
         case("merge-pull-request-subject-exempt", "allow", "", "Merge pull request #7 from origin/train/t-1\n"),

@@ -281,6 +281,15 @@ def landing_cases(workdir: pathlib.Path) -> list[FalsificationCase]:
     tree = case_tree(workdir, "green")
     cases.append(_case("green-push", "allow", "", tree))
     cases.append(_case("push-of-lane-branch", "allow", "", tree, "git push origin lane/alpha"))
+    cases.append(
+        _case(
+            "non-default-push-before-forbidden-merge",
+            "deny",
+            "«gh pr merge --squash» rewrites the SHAs",
+            tree,
+            "git push origin HEAD:train/x && gh pr merge 7 --squash",
+        )
+    )
     tree = case_tree(workdir, "registered-merge", mode="pr", pr=7, registered="merge")
     cases.append(
         _case(

@@ -44,11 +44,15 @@ HERE = pathlib.Path(__file__).resolve().parent
 DEFAULT_FILE = HERE.parents[0] / "ci" / "ruleset-main.json.example"
 ENFORCEMENTS = ("active", "evaluate", "disabled")
 _COMPARED_KEYS = ("name", "target", "enforcement", "bypass_actors", "conditions", "rules")
-SETTINGS_COMMAND = (
-    "gh api -X PATCH repos/{owner}/{repo} -F allow_squash_merge=false -F allow_rebase_merge=false "
-    "-F allow_merge_commit=true -F delete_branch_on_merge=true"
-)
 Runner = Callable[[list[str], str | None], "subprocess.CompletedProcess[str]"]
+
+
+def settings_command(repo: str | None) -> str:
+    target = repo or "{owner}/{repo}"
+    return (
+        f"gh api -X PATCH repos/{target} -F allow_squash_merge=false -F allow_rebase_merge=false "
+        "-F allow_merge_commit=true -F delete_branch_on_merge=true"
+    )
 
 
 class Offline(RuntimeError):
@@ -198,7 +202,10 @@ def main(argv: list[str] | None = None, run: Runner = _gh) -> int:
             print("[ruleset] dry-run: nothing written (--apply to write)")
             return 0
         print(f"[ruleset] {apply(run, args.repo, action)}")
-        print(f"[ruleset] now run the repository-settings command yourself (merge commits only, delete branch on merge): {SETTINGS_COMMAND}")
+        print(
+            "[ruleset] now run the repository-settings command yourself "
+            f"(merge commits only, delete branch on merge): {settings_command(args.repo)}"
+        )
     except Offline as error:
         print(f"[ruleset] not verified (offline: {error})")
         return 2 if (args.check and args.strict) else 0
