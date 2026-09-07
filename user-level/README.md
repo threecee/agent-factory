@@ -30,3 +30,13 @@ So the factory works from ANY checkout on the machine:
    showed the worker answering (contract §3 rule 1). Registering the hook is
    a separate decision taken after the off/on pilot has numbers (§7); a
    fresh checkout registers nothing.
+6. **Landing authority (optional, INACTIVE by default):** the factory grants
+   no push authority by installing it. A finished train with no live ruling
+   from the owner is HELD with a decision brief
+   (`../planning/decision-brief-template.md`). If — and only if — the owner
+   wants the lander to land verified P1 trains without a live ruling, the
+   owner copies `landing-policy.example.md` to `~/.claude/landing-policy.md`,
+   fills every field, sets `status: ACTIVE` and signs it. Nothing to install
+   otherwise; the example stays inactive. The package hold floor
+   (`landing-policy.example.md` §2 `holds:`, its one home) stops a train
+   regardless of the policy.

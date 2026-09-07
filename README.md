@@ -14,8 +14,8 @@ deterministic pieces against your language, build chain and domain.
 
 | Pillar | Question it answers | Contents |
 |---|---|---|
-| **`planning/`** | *Define why, what, how* | Board protocol (GitHub Projects as planning truth), spec discipline, ADR + number registry, backlog discipline with closing evidence, the standing lane brief, the read-only investigation brief that precedes a fix brief when the cause is uncertain, and the execution contract (measurement baseline handed over before dispatch, a named proof owner, two complete rounds per task then park-and-split) |
-| **`verification/`** | *Prove that it works* | 24 deterministic gate scripts (one-way ratchets, secret scanning with a working-tree leg, traceability, planning-doc teeth), the verify portfolio, falsification norms (with a runnable identity-and-history example: gates follow the consumer's identity, falsified in both directions), evaluation readiness (pre-flight smoke, offline functional trial and AI evaluation kept apart, one receipt schema), CI in the pinned/secret-gated regime, lander duties for landing trains |
+| **`planning/`** | *Define why, what, how* | Board protocol (GitHub Projects as planning truth; decision briefs, one notification per transition, derived views), spec discipline, ADR + number registry, backlog discipline with closing evidence, the standing lane brief, the read-only investigation brief that precedes a fix brief when the cause is uncertain, and the execution contract (measurement baseline handed over before dispatch, a named proof owner, two complete rounds per task then park-and-split) |
+| **`verification/`** | *Prove that it works* | 24 deterministic gate scripts (one-way ratchets, secret scanning with a working-tree leg, traceability, planning-doc teeth), the verify portfolio, falsification norms (with a runnable identity-and-history example: gates follow the consumer's identity, falsified in both directions), evaluation readiness (pre-flight smoke, offline functional trial and AI evaluation kept apart, one receipt schema), CI in the pinned/secret-gated regime, lander duties for landing trains (push gated on verify AND on landing authority — held with a decision brief by default) |
 | **`interpretation/`** | *Understand how it really works* | The choices ledger (every decision an agent made on your behalf, audited per handback, one stable ID per choice, scenarios stored with the train), memory conventions that outlive sessions, evaluation practice (what each evaluation type proves, intended product mode, state parity, honest metrics), investigation practice (instrument-first; investigate before the fix mandate; consumer inventory before any move, split or delete), a worked simplification-review example, the continuous-improvement loop |
 
 Shared infrastructure: **`skills/`** (35 vendored, hash-locked agent skills),
@@ -26,7 +26,9 @@ artifact-bank contract — pristine acceptance, isolated copies, receipts
 that tell a deliberate fake from a promised-but-failed role — and the
 measurement-gated bounded bulk-read contract),
 **`user-level/`** (what goes into `~/.claude` so the factory works
-from any checkout, including the local bank root).
+from any checkout, including the local bank root, plus the INACTIVE
+landing-policy example — the only place push authority can be granted, and
+only by the owner).
 
 ## The core loop (one screen)
 
@@ -39,7 +41,8 @@ idea → board item (Planned, with a full spec) → PO approval
   → handback → CHOICES AUDIT (ledger entry per invented decision)
   → landing train (independent ready lanes share one): --no-ff pinned SHAs
     → cross-checks → build → cheap gates → resource check
-    → FULL local verify green → push main → CI deploys
+    → FULL local verify green → landing authority? (ruling or active
+      policy; else HOLD with a decision brief) → push main → CI deploys
   → board sweep (Done + archive) → evaluation on an isolated bank copy
     → findings → new board items
   → memory: lessons that survive the session
