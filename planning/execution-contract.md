@@ -179,9 +179,10 @@ does not attempt a workaround: a needed-but-unassigned number (ADR,
 migration — adr-and-numbers.md); a semantics change that cannot be isolated
 from the reversible part; a change to a boundary the target repo has
 declared guarded; a governance inconsistency (e.g. a future-dated approval).
-The target repo lists its guarded boundaries in §8 of its brief; this
-package ships the method of naming and testing a boundary, not any
-particular boundary.
+The target repo lists its guarded boundaries on the first-contact-stops
+line of its brief (`lane-brief-template.md` §2, filled from the
+`first_contact_stops` parameter of §8 below); this package ships the method
+of naming and testing a boundary, not any particular boundary.
 
 ## 6. PARK, STOP and who pushes
 
@@ -223,6 +224,14 @@ deleted, no gate edited to go green. PARK instead.
 - The measurement-first handover was adopted after a browser-blind lane
   discovered one locator per round. The worked examples above are
   anonymized reconstructions of that shape, not transcripts.
+- The change-kind line of §9, with its escalate-automatically /
+  never-demote-silently rule, was prompted by reading Harness Kit's
+  `development-harness`; the provenance line and the one list of what was
+  deliberately not adopted from it are in `../skills/ATTRIBUTION.md`. No
+  text was borrowed: the kind selects legs that already exist and carries
+  no policy column. §9 is a documented row (`../harness/guards.md` §6,
+  M-21) — no code ships for it; the consequence of each kind is proved by
+  the leg it selects.
 
 ## 8. Parameters the standing brief fills
 
@@ -236,3 +245,81 @@ deleted, no gate edited to go green. PARK instead.
 | `ceiling` | orchestrator | `≤ 4 verify passes or 3 h` (never more than two rounds) |
 | `first_contact_stops` | target repo | number allocation, isolated semantics, guarded boundaries |
 | `park_destination` | target repo | board item, or backlog row governed by the planning gate |
+| `kind` | orchestrator, from the repo's kind classifier over the planned file set (§9); the lander re-derives it from the real diff | `source, record` — or `none — classifier unbound` |
+
+## 9. Change kind — declared at dispatch, re-derived at assembly
+
+A lane is dispatched under a stated **kind**: what the planned file set
+contains, classified by the repository's own command over that set, never by
+the task's description. The kind is a classification and nothing more — it
+selects legs that already exist (§9.3) and carries no policy column: no
+approval count, no reviewer count, no spec-required flag. A new consequence
+for a kind is a reviewed diff to the operations doc
+(`../interpretation/continuous-improvement.md`), never a column here.
+
+### 9.1 Vocabulary — a set, not a ladder
+
+Every kind that applies, applies; the header names all of them,
+comma-separated. Each kind has exactly one consequence, owned elsewhere:
+
+| Kind | The set touches | Consequence (the existing leg it selects) |
+|---|---|---|
+| `docs-only` | only what the repo's docs-only classifier accepts — the one home of that judgement is the landing guard's `FACTORY_GUARD_DOCS_ONLY_CMD` (`../verification/protections.md` §1.1) | the docs-only receipt path (`../harness/train-plan.md` §4) |
+| `mechanical` | only a path inside the repo's declared mechanical class — a lockfile, a version field, a rename the tools perform; with no such class declared the kind never prints. A path in no class is `source` (§9.3), never `mechanical` | the trivial exemption: the ordinary gates, one ledger line (`../skills/ROUTING.md` rule 2) |
+| `source` | the repo's source prefix (the trailer rule's `FACTORY_GUARD_SOURCE_PREFIX`, `../verification/protections.md` §1.2), or anything the classifier cannot place — it fails toward this kind | the decision-record trailer on the commit; every matching row of the diff-triggered legs table (`../verification/verify-portfolio.md`, "Legs that bring lane-green closer to train-green", leg (c)) |
+| `record` | a migration, a decision record, the number registry, a baseline, or the source of a gate, guard or hook | the registry pin tests and the never-weaken leg with `--hard` (`../verification/protections.md` §7) — and this kind is the diff-derived detector for three of the five `holds:` floor entries of the landing policy (a new migration head, a new or changed decision record, a baseline change; `../user-level/landing-policy.example.md` §2): the policy check reads only the policy file, so without `record` the floor has no detector on the diff |
+| `boundary` | a boundary the repo has declared guarded (§5) | at dispatch: no lane until the item's ruling is quoted in the brief (§9.2 item 1); at assembly: a boundary the brief did not quote means the lane STOPped on first contact (§5), or is unsound before assembly (`../interpretation/choices-ledger-README.md` §1) |
+
+### 9.2 Declared once, re-derived once
+
+1. **Declared at dispatch.** The **planned file set** is the file list the
+   approved spec's slice names, copied into the brief's §3 — never the
+   orchestrator's guess from the task description. The orchestrator runs
+   the classifier over it and writes the header line
+   (`lane-brief-template.md` §1). The lane never classifies itself, and
+   never changes the line. A `boundary` in the declared set is not
+   dispatched as a lane: the item goes to Decision needed
+   (`board-protocol.md`) and the ruling is quoted in the brief beside the
+   guarded-boundary list, so the STOP is pre-answered; a lane that reaches
+   a boundary the brief did not quote STOPs (§5).
+2. **Re-derived at assembly.** The lander runs the same classifier over
+   `git diff --name-only <BASE>..HEAD` on the assembled tree
+   (`../verification/lander-duties.md` §1 step 3) and writes
+   `kind: <declared>→<derived>` into the ledger's `## Landing` section
+   (`../interpretation/choices-ledger-README.md` §1).
+3. **A kind that rose between dispatch and assembly is applied and
+   announced; a kind that fell is recorded as an orchestrator ledger entry
+   and never applied silently.** Rose: the derived set holds a kind the
+   declared set did not — its leg runs on the train and the landing summary
+   says so. Fell: the declared set holds a kind the diff no longer carries —
+   the declared legs still run (they are cheap), and the drop is an `O-<n>`
+   entry with the reason, so a lane that was briefed as `record` and
+   delivered `source` is read by the owner, not inferred from a green train.
+4. **Unbound is written, not assumed.** A repo that has bound no classifier
+   writes `none — classifier unbound` in the header and the lander skips
+   the re-derivation; the `holds:` floor then relies on the lander's
+   reading alone, and the operations doc says so.
+
+### 9.3 The classifier contract
+
+`<cmd> <path>...` prints the applicable kinds from §9.1, one per line, exit
+0; a path it cannot classify prints `source` — the sole fallback. The
+parameter is `FACTORY_GUARD_KIND_CMD` (`../harness/guards.md` §8), built
+from what the repo already binds and nothing else: the docs-only
+classifier (`FACTORY_GUARD_DOCS_ONLY_CMD`), the source prefix
+(`FACTORY_GUARD_SOURCE_PREFIX`), the decisions directory and registry file
+(`FACTORY_GUARD_DECISIONS_DIR`, `FACTORY_GUARD_REGISTRY_FILE`), the
+baseline and gate globs of the never-weaken check
+(`check_gate_weakening --baseline-glob` / `--gate-glob`,
+`../verification/protections.md` §7 — the bound source of the `record`
+kind's baselines and gate sources), the guard and hook locations
+(`FACTORY_GUARD_DIR`, `FACTORY_PROTECTIONS_DIR`) and the guarded-boundary
+list of §5. That the kind and the landing guard's own legs never disagree
+about what a path is, is the design constraint this derivation exists for,
+not a property anything checks: the smoke test's falsification (INSTALL
+step 7.7) is what catches a classifier built from a second table.
+Falsification of the row, when it ships as code (`../harness/guards.md`
+§11): plant a migration file in a lane declared `source`; the
+re-derivation must print `record` and the ledger must carry
+`kind: source→source, record`; remove it and the line must read
+`kind: source→source`.

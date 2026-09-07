@@ -46,6 +46,32 @@ factory-specific additions:
     every check as contains-not-equals, and removes every repository name,
     port, identity, issue reference and non-English string.
 
+- **Harness Kit** (`development-harness`, version 3.0.0 per its package
+  manifest, MIT per that manifest; the copy read on 2026-09-06 carried no
+  LICENSE file or copyright line) — read, not vendored. The change-kind
+  line with its escalate-automatically / never-demote-silently rule
+  (`../planning/execution-contract.md` §9) and the diff-triggered-legs
+  placeholder (`../planning/lane-brief-template.md` §4) were prompted by
+  reading it. No text was borrowed; every sentence here is a restatement.
+  This entry is the one home of what this package deliberately does NOT
+  adopt from it, recorded so a later change does not re-import any of it:
+  a path-glob risk-tier table as a merge-policy axis (required-checks,
+  spec-required, human-approval, reviewer-count and auto-merge columns); a
+  phase state machine (phase rule files, a phase-scoped write guard,
+  auto-advance on a green test run); a tier-gated LLM review agent in CI; a
+  type-lens gate (a regex security lens, an any-file spec lens, checks
+  ending in `|| true`); a skills registry by stack with auto-install and
+  trigger-matched custom workflows; docs-drift watch paths and staleness
+  heuristics; an aggregate CI status that counts skipped as passed; rule
+  files as a rule home or a check; classification from task-description
+  keywords and escalation by path tier (this package classifies the
+  planned file set and the real diff, and escalates by a ruling on the
+  item). Each either falls on the human side of `../harness/guards.md` §12
+  or is already carried in a receipt-bound, content-keyed form (the
+  README's "Blast radius" section). Should a sentence ever be borrowed,
+  this entry must first carry the upstream notice, reconstructed from the
+  upstream source.
+
 Factory adaptations to upstream skill text (recorded here so a re-vendoring
 from upstream does not silently drop them):
 
