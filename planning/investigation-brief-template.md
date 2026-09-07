@@ -9,7 +9,7 @@ This template is the home of the brief shape and the boundary to the fix
 brief. The reasons live in `../interpretation/investigation-practice.md`;
 what makes a report trustworthy lives in `../verification/falsification.md`
 (§7–§9); the evidence-package convention lives in `../harness/artifact-bank.md`
-(introduced by PR5); the run identity, the stdout-extraction rule and the
+the run identity, the stdout-extraction rule and the
 report path live in `../harness/run-lifecycle.md` (introduced by PR2). Round
 counting (§3) and the measurement contract (§2) follow
 `execution-contract.md`. Nothing here needs tool support: the brief is a

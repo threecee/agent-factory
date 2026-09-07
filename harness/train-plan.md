@@ -17,7 +17,7 @@ one train by hand from this plan before scripting it.
 | Primary checkout | `<abs path>` | The checkout whose shared environment lanes link to (worktree-ritual.md) |
 | Worktree root | `<abs path>` | Where train worktrees are created: `<root>/<train>` |
 | Train branch | `train/<name>` | One branch per train, from the current origin/main SHA |
-| Artifact directory | `<abs path>` | Receipts (§4) are written here; bank them if they must outlive the session (`run-lifecycle.md` §9 says which receipts and when; `harness/artifact-bank.md`, introduced by PR5, owns the bank's lifecycle) |
+| Artifact directory | `<abs path>` | Receipts (§4) are written here; bank them if they must outlive the session (`run-lifecycle.md` §9 says which receipts and when; `harness/artifact-bank.md` owns the bank's lifecycle) |
 | Run id | `<train>-<attempt>` | Attempt counts from 1; a resumed run is the next attempt (lander-duties §3) |
 | Import root | `<how the package under test is resolved>` | e.g. `PYTHONPATH=<wt>/src`, `NODE_PATH`, a workspace `file:` link — the probe in §2 must be able to print the resolved path |
 

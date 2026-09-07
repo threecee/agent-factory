@@ -118,7 +118,7 @@ it. The criteria:
    survive the resumed attempt. The verdict is read as train-plan §4.1 says
    (that section owns the rule); bank receipts that must outlive the
    session (`harness/run-lifecycle.md` §9; the bank's own lifecycle is
-   `harness/artifact-bank.md`, introduced by PR5).
+   `harness/artifact-bank.md`).
 6. **A red step after which the fix is committed on the train tree** resumes
    the same way: commit, new run id, continue. Expect several attempts on a
    large train — the source factory's protocols record three verify rounds

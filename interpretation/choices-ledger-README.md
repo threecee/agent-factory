@@ -67,7 +67,7 @@ The walked scenario is the storage format, not presentation polish
    protocol and keep its scenario in the lane's sidecar `<lane>-choices.md`
    — **only if the sidecar is durable**: committed under
    `docs/choices/<train>/` with the train, or banked in the artifact bank
-   (`harness/artifact-bank.md`, introduced by PR5) with the bank path written
+   (`harness/artifact-bank.md`) with the bank path written
    into the protocol. Sidecar sections are keyed by choice ID and headline.
 3. A path into an orchestration scratchpad, a session, or a chat is not a
    reference. "Scenarios in the session sidecars" satisfies nothing: the next

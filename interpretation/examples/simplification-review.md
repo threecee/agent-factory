@@ -257,7 +257,7 @@ transcript, opens `docs/choices/t42.md` and can:
   `docs/choices/t42/synth-move-choices.md` § `synth-move-3`, committed with
   the train, for its walked scenario;
 - find `t42/O-6`'s falsification log in the artifact bank at the path the
-  entry names (`harness/artifact-bank.md`, introduced by PR5), and re-plant
+  entry names (`harness/artifact-bank.md`), and re-plant
   the direct call to see the guard fire;
 - run `git log --grep 't42/synth-move-6'` and land on the fixing commit.
 

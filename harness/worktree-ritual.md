@@ -11,7 +11,8 @@ ln -sfn <primary>/.venv <wt>/.venv         # and .env; node_modules for frontend
 - pnpm/npm installs in a worktree mutate the shared store — if a real install
   is unavoidable (bundler vs symlink), re-install in the primary afterwards.
 - Teardown: remove worktree + branch only after the train has landed and the
-  boarding SHA is confirmed an ancestor of main.
+  boarding SHA is confirmed an ancestor of main — and only after the
+  teardown checks below.
 
 - **The `git add -A` trap:** the wrapper's commit must never swallow the
   symlinked env dirs (.venv/.env/node_modules). Keep them in .gitignore in the
@@ -76,13 +77,28 @@ train of a wave was exactly this. Two rules, one per side:
    may not work from the documented cwd. Run the entry the runbook documents,
    from the directory it documents, with the import root above.
 
-## Teardown checks (both destructive in ways `git log` does not show)
+## Teardown checks (destructive in ways `git log` does not show)
 
-- Unlink the env symlinks before removing the tree; confirm the primary's
-  copies still exist afterwards.
-- Look for gitignored valuables (generated data, instance databases, run
-  receipts) in the worktree. They die with it. Durable ones go to the artifact
-  bank first (`harness/run-lifecycle.md` §9); a lane that banks as it produces
-  has nothing left to rescue here.
-- Read `git status --porcelain`, not only `git log`: an idle lane with
-  uncommitted work is usually mid-verify, not abandoned.
+Retiring a worktree destroys three things `git log` never lists. Check all
+three first:
+
+1. **Gitignored valuables.** `git -C <wt> status --ignored --porcelain`
+   lists what lives only in this tree (generated corpora, score files,
+   instance databases, run output). Anything durable per
+   `harness/artifact-bank.md` §1 is banked BEFORE removal (run receipts per
+   `harness/run-lifecycle.md` §9); a receipt committed in-tree with its data
+   left in the worktree is the pattern that has lost paid data. A lane that
+   banks as it produces has nothing left to rescue here.
+2. **Uncommitted work.** Read `git status --porcelain`, not only `git log`:
+   an idle lane with uncommitted work is usually mid-verify, not abandoned.
+   If the branch is being purged anyway, preserve the work as a patch file
+   first.
+3. **Symlinks into the primary.** List them
+   (`find <wt> -maxdepth 3 -type l -not -path '*/.git/*'`), unlink, then
+   remove, then confirm the primary's `.venv`/`.env`/`node_modules` still
+   exist. Never `worktree remove --force` a tree holding live symlinks.
+
+Working copies a lane stood up from this tree (served instances, recorder
+output) live outside the worktree and are reaped with it — by port and by
+path, never by process-name grep (`harness/artifact-bank.md` §8 owns that
+rule; `harness/run-lifecycle.md` §2 owns the run id that names them).
