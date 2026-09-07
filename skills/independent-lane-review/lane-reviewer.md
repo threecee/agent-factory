@@ -10,12 +10,12 @@ of the lane.
 
 **Dispatch a FRESH agent on the assigned model, never a fork.** A fork inherits the
 orchestrator's context, which is the very thing this review must not see. The panel
-runs 2–3 panellists, each on a different model per `docs/FACTORY.md`'s
-adversarial-review policy. **Standing PO rule (2026-08-01): panellists run on
-codex/grok models — no opus/sonnet subagents.** Drive each panellist as a
-`codex exec` session (OPERATIONS §14 invocation forms) or `grok -p`, with this
-filled-in template as the prompt; the orchestrator collects the written verdicts.
-Any Claude-model panellist needs stated justification.
+runs 2–3 panellists, each on a different model per the operator's dated model
+policy (`harness/model-policy.md` §2, the review role; live file
+`~/.claude/model-policy.md`). Drive each panellist through the invocation the
+policy row records for its model, with this filled-in template as the prompt;
+the orchestrator collects the written verdicts. A panellist on a model outside
+the policy's review role needs stated justification, recorded in the ledger.
 
 ```
 Subagent (general-purpose, model: [REVIEWER_MODEL]):
@@ -140,9 +140,9 @@ Subagent (general-purpose, model: [REVIEWER_MODEL]):
 ```
 
 **Placeholders:**
-- `[REVIEWER_MODEL]` — this panellist's model (each panel member gets a different one, per
-  `docs/FACTORY.md`'s adversarial-review policy; codex/grok models per the standing
-  PO rule — e.g. the current codex default and a grok pass).
+- `[REVIEWER_MODEL]` — this panellist's model (each panel member gets a different one,
+  from the review role of the operator's dated policy, `~/.claude/model-policy.md`;
+  the row's `invocation` is how it is driven — `harness/model-policy.md` §2, §4).
 - `[DESCRIPTION]` — one or two lines: what the lane was supposed to change.
 - `[REQUIREMENTS]` — the lane's stated requirements + its `ADR-NNNN` / design-note reference.
 - `[BASE_SHA]` — the base the lane branched from (`origin/main` at dispatch).

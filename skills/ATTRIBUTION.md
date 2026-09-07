@@ -6,7 +6,11 @@ factory-specific additions:
 - **dzhng/skills** (MIT) — the factory-loop set (audit-choices, write-spec,
   implement-spec, explore-unknowns, code-review/review/refactor-clean,
   write-docs, write-tests, audit-performance, eli5, screenshot skills,
-  write-skills/eval-skills, and more). Pinned refs in `skills-lock.json`.
+  write-skills/eval-skills, and more). Origin recorded per skill in
+  `skills-lock.json`; upstream commit refs were NOT recorded at vendoring
+  time, so the lock is a content digest (what shipped), not a fetchable pin.
+  Verify with `python3 skills/verify_skills_lock.py --check`; falsified by
+  `skills/tests/test_skills_lock.sh`.
 - **obra/superpowers** (MIT) — the process-discipline set (brainstorming,
   systematic-debugging, test-driven-development,
   verification-before-completion, writing-plans, worktree/parallel-agent
@@ -35,6 +39,12 @@ from upstream does not silently drop them):
   `interpretation/investigation-practice.md`; a moved line is a new finding
   to a path-keyed baseline (fix code, never the baseline); the line count is
   a signal, the consumer surfaces are the verdict.
+- `independent-lane-review/SKILL.md` and `lane-reviewer.md` (factory
+  addition): the panel's models come from the operator's dated policy
+  (`harness/model-policy.md`), not from a source-factory roster table with
+  pinned model names (removed 2026-09-06).
+- `ROUTING.md` (this directory): the skill-routing table by factory step,
+  the home INSTALL step 4 translates from.
 
 Both upstream licenses permit redistribution with attribution; retain this
 file and the lock file when copying the skill set onward.

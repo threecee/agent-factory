@@ -18,6 +18,10 @@ a file or a git operation. The rules below have exactly one home each
 - Assigned migration number: same rule
 - Ceiling: `<N verify passes | H hours>` — reaching it PARKs (never more
   than the two-round limit)
+- Model/effort: `<role> → <model> @ <effort>, policy ~/.claude/model-policy.md
+  (valid_from <date>, review_by <date>), probed <date>` — filled by the
+  wrapper from the operator's dated policy (../harness/model-policy.md §4);
+  never a name typed from memory, never a template default
 
 ## 2. Standing hard rules
 - Read the architecture/pattern docs first; a new seam duplicating an existing

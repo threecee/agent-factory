@@ -1,9 +1,12 @@
 # ADRs and the number registry
 
 ## ADR discipline
-- `docs/decisions/NNNN-slug.md` with frontmatter: `status:` (Proposed /
+- `docs/decisions/NNNN-slug.md` with frontmatter: `id: ADR-NNNN` (the
+  traceability gate checks it against the filename), `status:` (Proposed /
   Accepted / Superseded / Rejected) and `code:` — a list of
-  `path::Symbol` pairs binding the decision to the code that implements it.
+  `path[::Symbol]` anchors binding the decision to the code that implements
+  it (symbol resolution is Python-shaped; other stacks anchor to the file —
+  `../verification/gates/README.md`, "ADR front matter").
   Only Accepted ADRs "gate" a module (see module-coverage in verification).
 - A generated index (`build_adr_index.py`) is checked in verify; regenerate,
   never hand-edit.
