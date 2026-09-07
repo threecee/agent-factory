@@ -21,3 +21,12 @@ So the factory works from ANY checkout on the machine:
    scratchpad or a worktree is never storage. The root is a user-level
    choice because it is a property of the machine, not of the repository;
    what is banked is decided by regeneration cost, never by size.
+5. **Bulk-read worker and threshold (optional pilot):** if the repo has
+   bound `../harness/bulk-read-contract.md`, the worker chain, line threshold,
+   path exemptions and the session disable variable are YOUR settings, set
+   in your shell environment (default names `SHUNT_WORKERS`,
+   `SHUNT_MIN_LINES`, `SHUNT_ALLOW`, `SHUNT_DISABLED`), never committed.
+   Record the reason for each value and the date of the live probe that
+   showed the worker answering (contract §3 rule 1). Registering the hook is
+   a separate decision taken after the off/on pilot has numbers (§7); a
+   fresh checkout registers nothing.
