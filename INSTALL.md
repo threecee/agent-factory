@@ -80,7 +80,9 @@ that runs everything and stops at the first red gate).
    where it matters. Local verify is the gate; CI verifies additionally and
    DEPLOYS from main. `verification/ci/review-prompt.md` is the canonical
    review prompt — point the review lane at it.
-7. Bind everything into `make verify`. Run it. Green before the next step.
+7. Bind everything into `make verify`. Build every product the suite reads
+   BEFORE running it (`verification/verify-portfolio.md`, "Build inputs
+   exist before verify"), then run it. Green before the next step.
 
 ## Step 3 — Interpretation pillar
 1. Create `docs/choices/` with `interpretation/choices-ledger-README.md`. The
@@ -136,6 +138,14 @@ repo's operations doc (the template carries it).
 4. Parameterize the standing brief's paths as the launcher's environment
    names (`$LANE_RESULT_PATH`, `$LANE_SENTINEL_DIR`, `$LANE_RUN_ID`), never as
    literal scratch paths.
+5. Fill in `harness/train-plan.md` and commit it as `docs/train-plan.md`: the
+   exact command per landing step (§2) and the resource contract (§3 — port
+   range, agent-CLI binary and subcommand token, load threshold and wait
+   window, hard stops). Save its §4.2 receipt launcher into the project's
+   scripts directory — the full-verify verdict is read from that receipt and
+   nothing else (§4.1). Run its §7 falsification list once on a throwaway
+   train. No assembler script ships; land from the plan by hand first
+   (`verification/lander-duties.md` §6).
 
 ## Step 6 — User level
 Follow `user-level/README.md`: add the global CLAUDE snippet to the user's
@@ -146,7 +156,11 @@ recommended user-level skills.
 1. Create one trivial board item, write a mini-spec, dispatch one lane from
    the standing brief through `harness/launch_lane.sh` (read its `verdict`
    before touching the handback — `harness/run-lifecycle.md` §5), run the
-   choices audit on the handback, assemble a single-lane train, run full verify, land, sweep the board. Fill the
+   choices audit on the handback, assemble a single-lane train from
+   `docs/train-plan.md` (the install exception — independent ready lanes
+   otherwise share a train, `verification/lander-duties.md` §2), run full
+   verify, land, sweep the FULL board (`planning/board-protocol.md`,
+   "Authority, pagination and derived views"). Fill the
    execution-contract fields for real even on the trivial task: `task:` is
    the item ID, `round: 1`, the apparatus is named, and if the lane cannot
    run it the proof owner is a role plus an exact command. Then run the
