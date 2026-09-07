@@ -212,7 +212,8 @@ Do not copy a coarse "count every unavailable row" gate into a new factory.
 The worked gate example that governs acceptance here — history with a valid
 successor passes, a live unavailable under a promised role refuses, a newer
 mtime with the wrong digest is rejected — lives in
-`verification/examples/identity-and-history.md` (introduced by PR10). The
+`verification/examples/identity-and-history.md` §1–§2, with the planted
+false red / false green in `verification/falsification.md` §10–§11. The
 principle is settled; the source factory's own precise gate was still an
 open fix at the time of writing, so treat its numbers as an illustration of
 the failure (hundreds counted, one live), not as a tested correction factor.
