@@ -111,7 +111,7 @@ def landed_claim_problems(
     kind: str,
     tree_files: list[tuple[str, pathlib.Path]],
 ) -> list[str]:
-    """The drift leg (agent-factory deviation two, 2026-09; verification/protections.md §7,
+    """The drift leg (software-factory-kit deviation two, 2026-09; verification/protections.md §7,
     mechanism M-8): a ``claimed`` row whose numbered file is already on the default branch
     must be flipped — ``[HARD] claimed <kind> number NNNN is landed on main; flip the row``.
 
@@ -214,7 +214,7 @@ def get_heads(repo_root: pathlib.Path | None = None) -> list[str]:
     # Imported here, not at module top: the NUMBERS-registry helpers this module
     # exports to check_backlog.py have no alembic dependency, and a repository
     # without migrations must be able to run those without installing alembic
-    # (agent-factory install trial, 2026-09-06). Logic unchanged.
+    # (software-factory-kit install trial, 2026-09-06). Logic unchanged.
     from alembic.config import Config
     from alembic.script import ScriptDirectory
 

@@ -1,4 +1,4 @@
-# Agent Factory
+# Software Factory Kit
 
 An agent-driven software factory covering the full SDLC — from idea to
 production and continuous improvement. Distilled from a production factory
