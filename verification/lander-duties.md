@@ -43,8 +43,10 @@ project's concrete commands and its resource contract live in
 7. Import-root probe: prove the interpreter/bundler under test resolves the
    package from the ASSEMBLED tree, not the primary checkout (train-plan §2,
    row "import root"). Refuse any path outside the tree.
-8. Resource check immediately before the heavy step (train-plan §3), then
-   FULL verify green on the assembled tree. A verify leg that skipped for an
+8. Flip every boarded NUMBERS claim `claimed → landed` on the train and
+   commit the flip before the final run. Then resource-check immediately
+   before the heavy step (train-plan §3), and run FULL verify on that exact
+   assembled HEAD. A verify leg that skipped for an
    absent bed is not green on a train that touches its journey — read that
    leg's own PASSED line (evaluation-readiness §3 rule 13 owns what a skip
    may satisfy). If a mid-verify edit becomes necessary, STOP the verify
@@ -79,7 +81,8 @@ project's concrete commands and its resource contract live in
     contains, never equals, because in pr mode main's tip is the merge
     commit and `HEAD=` its second parent; in pr mode confirm the pull
     request reads merged; delete the remote train branch (`git push origin
-    --delete train/<name>`, both modes). Flip NUMBERS `claimed → landed`.
+    --delete train/<name>`, both modes). Confirm the verified NUMBERS state
+    from step 8 reached origin/main.
     Board sweep (§5), then ONE `landed` notification per boarded item
     (planning/board-protocol.md § Notifications — keyed on the train HEAD,
     never re-sent). Fast-forward the primary checkout. Reap lane worktrees
@@ -279,11 +282,16 @@ and main untouched (`landing-modes.md` §4.4, §5).
 After the landing registered (step 11), the following are the lander's open
 duties, whatever the mode; every check reads CONTAINS, never equals:
 
+Number close-out began before landing: step 8 flipped every boarded claim
+`claimed → landed` on the train before the final run. The flip is part of the
+verified train `HEAD=`; close-out only confirms that state reached origin/main.
+Provenance: source factory Varde w137, 2026-09-08.
+
 1. origin/main contains the receipt `HEAD=`
    (`git merge-base --is-ancestor <HEAD=> origin/main`).
 2. In pr mode, the pull request reads merged (`gh pr view <n> --json state`).
 3. The remote train branch is gone: `git push origin --delete train/<name>`.
-4. NUMBERS rows flipped `claimed → landed`.
+4. origin/main contains the already-verified NUMBERS flips.
 5. Board sweep (§5) and ONE `landed` notification per boarded item, keyed
    on the train HEAD — the merge SHA may be named in the comment, never in
    the key (`../planning/board-protocol.md` § Notifications).

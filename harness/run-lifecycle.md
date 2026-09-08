@@ -32,7 +32,7 @@ produces is named `<lane>.<run-id>.*` inside `LANE_RUN_DIR`:
 
 | File | Written by | Content |
 |---|---|---|
-| `<lane>.<run-id>.start` | launcher, then runner | key=value lines, appended, last occurrence wins: `run_id`, `worktree`, `brief_sha256`, `cli_name`, `detach`, `state` (`dispatched → delayed → started`, or `refused` + `refused_reason`), `runner_pid`, `runner_pgid`, `cli_pid`, `cli_comm_observed`, `head_at_start`, `started_at`, `started_epoch` |
+| `<lane>.<run-id>.start` | launcher, then runner | key=value lines, appended, last occurrence wins: `run_id`, `worktree`, `brief_sha256`, `cli_name`, `detach`, `quota_receipt`, `quota_max_age_min`, `roster_check`, `state` (`dispatched → delayed → started`, or `refused` + `refused_reason`), `runner_pid`, `runner_pgid`, `cli_pid`, `cli_comm_observed`, `head_at_start`, `started_at`, `started_epoch` |
 | `<lane>.<run-id>.log` | the CLI | stdout + stderr, stdin closed |
 | `<lane>.<run-id>.cost` | runner, atomically after the CLI exits | `tokens_in`, `tokens_out`, `cached_tokens`, `requests`, `model`, `effort`, `wall_s`, `source`; every key is present and unknown values are `unknown`, not zero |
 | `<lane>.<run-id>.result.md` | the CLI (write mode) or the runner (read-only, §8) | the report, per `harness/report-schema.md`, carrying `run_id:` |
@@ -68,6 +68,8 @@ Required for `start`:
 | `LANE_WORKTREE` | the lane's own worktree (`harness/worktree-ritual.md`); the CLI's cwd |
 | `LANE_RUN_DIR` | where receipts go (the orchestration scratchpad, or a per-run directory); created if missing |
 | `LANE_BRIEF` | the brief file; its sha256 is recorded in the start receipt |
+| `LANE_QUOTA_RECEIPT` | quota-canary receipt with `checked_epoch=<epoch>` and `verdict=go`; any other verdict fails closed (§11) |
+| `LANE_ROSTER_CHECK` | executable target-repository checker; receives the brief path followed by the proposed CLI argv and accepts only the bound role/model/effort (§11) |
 | argv after `--` | the CLI invocation, verbatim, with placeholders |
 
 Optional, with defaults:
@@ -85,6 +87,7 @@ Optional, with defaults:
 | `LANE_SENTINEL_DIR` | `LANE_RUN_DIR` | exported to the CLI for its sentinel |
 | `LANE_RESULT_PATH` | `<run-dir>/<lane>.<run-id>.result.md` | exported to the CLI; where the report must land |
 | `LANE_START_TIMEOUT_S` / `LANE_LOCK_TIMEOUT_S` | `30` / `600` | check-in and writer-lock budgets |
+| `LANE_QUOTA_MAX_AGE_MIN` | `30` | maximum age of `LANE_QUOTA_RECEIPT`; the repository may bind another non-negative value |
 | `LANE_USAGE_PARSER` | unset | executable receiving the run-log path as argv; it prints the eight cost `key=value` lines; unset or red means `source=unavailable` |
 | `LANE_LOOP_OWNER` / `LANE_EXPECTED_END` / `LANE_STOP_CMD` | lane / `none` / `kill <runner-pid>` | autonomous-loop registry fields (§12) |
 
@@ -111,6 +114,8 @@ is `<cli> exec --cd <dir> "<prompt>"`:
 export LANE=mech LANE_RUN_ID=w7-1 \
        LANE_WORKTREE="$WT_ROOT/mech" LANE_RUN_DIR="$SCRATCH" \
        LANE_BRIEF="$SCRATCH/mech-brief.md" LANE_PIN_SHA="$PIN" \
+       LANE_QUOTA_RECEIPT="$SCRATCH/quota.canary" \
+       LANE_ROSTER_CHECK="$PRIMARY/scripts/check-roster" \
        LANE_ARTIFACT_BANK="$BANK"
 harness/launch_lane.sh start -- <cli> exec --cd "{worktree}" "{brief}"
 #   → run_id=w7-1 state=started cli_pid=… start_receipt=… log=… exit_receipt=…
@@ -298,6 +303,7 @@ identity `fakecli`), every path containing a space:
 | 11 | a HEAD that does not match `LANE_PIN_SHA` is refused (no CLI log ever produced); a matching pin runs | §4 |
 | 12 | read-only: the report is extracted from stdout, trailing chatter excluded, validated, and banked with the receipts; no markers means `no-deliverable` | §8, §9 |
 | 13 | the dispatcher runs in its own session, is killed with SIGTERM then SIGHUP to its whole process group, and the run still writes its exit receipt with verdict `built`; the detach method used is printed; SKIP (never pass) when no method exists | §4 |
+| 14 | stale-quota and roster-binding refusals occur before a supplied provisioning command; neither candidate worktree nor branch exists afterward | §11 |
 
 Falsification of the test itself (authoring run): three one-line mutations of
 a scratch copy of the launcher — dropping the `run_id` check, widening the
@@ -324,23 +330,24 @@ What the test does **not** prove:
 
 ## 11. Preconditions before launch, and what a lane can be forced to
 
-The launcher (§3–§4) validates the run's environment and pin; the **wrapper**
-around it owns the preconditions below and the handback checks. None of this
-is shipped as a second launcher: `launch_lane.sh` is the mechanism and these
-are the wrapper's checks around it (`guards.md` §6, M-15 and M-18, own the
-mechanism rows; this section owns the rules).
+The launcher (§3–§4) validates the run environment and executes the
+fail-closed preflight below; the **wrapper** supplies its receipts and checker
+and owns the remaining policy and handback checks. There is no second
+launcher: `launch_lane.sh` is the mechanism (`guards.md` §6, M-15 and M-18,
+own the mechanism rows; this section owns the rules).
 
-1. **The wrapper refuses to launch** (exit 1, one message plus one fix line)
-   when: the brief pins no 40-hex SHA equal to the worktree HEAD (the
-   launcher's `LANE_PIN_SHA` is the mechanical half of this rule); the model
-   is not a row of the operator's dated model policy (`model-policy.md` §4 —
-   a name typed from memory is a refusal); no quota-canary receipt younger
-   than N minutes exists for the provider, or it said hold/retry/stop — this
-   check is deliberately NOT fail-open, because a dispatch without quota is
-   the failure it exists to prevent; the task's round file says ≥ 2 rounds
-   without a logged restart grant (`../planning/board-protocol.md` § Task
-   identity and the round counter); or the previous dispatch was fewer than
-   G seconds ago (stagger, never stampede).
+1. **Preflight precedes the proposed command.** The launcher refuses before
+   invoking any supplied argv when the quota-canary receipt is missing, older
+   than N minutes or does not say `verdict=go`; when the repository's roster
+   checker rejects the brief plus argv; when the writer lock cannot be held;
+   or when `LANE_PIN_SHA` differs from the worktree HEAD under that lock. The
+   supplied command may itself create a worktree and branch, so this ordering
+   is the boundary: a preflight refusal leaves neither to clean up. Start and
+   refusal receipts remain as evidence. The wrapper separately refuses when
+   the task's round file says ≥ 2 rounds without a logged restart grant
+   (`../planning/board-protocol.md` § Task identity and the round counter), or
+   the previous dispatch was fewer than G seconds ago (stagger, never
+   stampede). Provenance: source factory Varde w137, 2026-09-08.
 2. **Liveness probe after P seconds.** A run whose log is ≤ B bytes with
    CPU ≤ C seconds, or whose log shows the CLI's stdin-closed banner, is
    killed and reported (a probe receipt beside the run's receipts, sentinel

@@ -625,7 +625,7 @@ LANDER_DUTIES = (
     "  [ ] origin/<default> contains the receipt HEAD (the landing registered)",
     "  [ ] pr mode: the pull request reads MERGED (gh pr view <n> --json state)",
     "  [ ] remote train branch deleted: git push origin --delete train/<name>",
-    "  [ ] registry rows flipped claimed → landed",
+    "  [ ] origin/<default> contains the already-verified registry flips",
     "  [ ] board sweep, then ONE landed notification keyed on the train HEAD (the merge SHA in the comment, never the key)",
     "  [ ] primary fast-forwarded: git -C <primary> pull --ff-only origin <default>",
     "  [ ] merged worktrees reaped after the ancestor check and the worktree-ritual teardown checks",

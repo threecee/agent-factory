@@ -17,8 +17,12 @@ Rules, learned the hard way:
 1. Numbers are allocated ONLY by the orchestrator. A lane that discovers it
    needs one STOPS and reports — always. (A lane that self-allocates creates
    collisions the moment two lanes do it; this happened and was caught.)
-2. Claim the number FIRST: append a `claimed` row to NUMBERS.md and push it
-   to main immediately, before the work exists.
-3. Flip `claimed → landed` in place as part of landing the train.
+2. Claim the number FIRST in a claims-only commit, push it as
+   `lane/numbers-<train>`, and board that branch on the train before dependent
+   work. Registry pin tests that count the allocation move in the same commit.
+3. The lander flips `claimed → landed` on the assembled train before the
+   final verification run, so the receipt covers the landed registry state.
 4. A released number is re-claimed by rewriting its row in place — never by
    appending a duplicate row.
+
+Provenance: source factory Varde w137, 2026-09-08.

@@ -147,6 +147,13 @@ Two switches, four sources, every use logged.
 | `FACTORY_GUARD_DISABLED=1` | every rule off for the session; the log records `{"*": "disabled"}` |
 | `FACTORY_GUARD_ALLOW=<id>[,<id>]` | the named rules off; a rule with `HONORS_ALLOW` still runs and decides itself |
 
+A switch silences only this kit's guard. A coding CLI's auto-mode classifier
+may independently decline the command or decline a bypass switch; no guard
+switch promises execution. Switches are last resorts: every documented
+switch presents the working fix path first and the switch second. Try the fix
+before setting the switch, then record any use as the `O-<n>` entry below.
+Provenance: source factory Varde w137, 2026-09-08.
+
 Sources **add**: the allow sets of all four are unioned, `DISABLED=1` in
 either of the first two disables, and every source that contributed is named
 in the log record's `switches` field (`env:`, `env-file:`, `prefix:`,
@@ -225,14 +232,14 @@ direct push carrying the `local-verify` status
 | Mechanism | Trigger | Signal read | Form | Home | Status |
 |---|---|---|---|---|---|
 | M-1 landing | a landing (pre-tool on the PR merge or the direct push; the git pre-push hook in the override mode) | the verify receipt for exactly this HEAD (`EXIT=`, `HEAD=`, `BASE=`), boarder heads on origin, the choices ledger, a `landing-in-progress.json` written after the landing is registered | hard | `../verification/protections.md` §1.1 + the `landing` rule (§7) | shipped |
-| M-2 verdict | pre-tool shell | a gate invocation followed by a hiding pipe stage or a push in the same call | hard | §7 | shipped |
+| M-2 verdict | pre-tool shell | a gate invocation whose output enters any pipe, or a gate/receipt verdict followed by a push in the same call | hard | §7 | shipped |
 | M-3 identity | pre-tool shell; lint leg over the tree | `pgrep -f`-style text-match selection; the grep form outside lines marked `forbidden form` | hard; lint red | §7 | shipped |
 | M-4 ritual | post-tool after `git worktree add`; pre-tool before a dispatch into the tree | symlinks, lockfile equality, `info/exclude`, HEAD vs the remote default branch | hard (dispatch), context (post-tool) | `worktree-ritual.md` | documented |
 | M-5 idle | pre-tool before verify, assembly, an evaluation driver | the process table and listeners by identity; never load | hard conditions have no switch; soft conditions yield to `idle` | `train-plan.md` §3 | documented |
 | M-6 built-bundle | pre-tool before a serve/standup | the built bundle's entry set and stamp against the tree it will serve | hard | this row — only with a bundle to serve | documented |
 | M-7 ledger lint | landing (M-1) and a cheap gate on a train branch | the choices ledger's form: one section per boarder, verdict + confidence per entry, no `unsound` without a fix note, no hedge | hard on the second train, `WARN` on the first | `../verification/protections.md` §5 (`check_choices_protocol`) | shipped |
 | M-8 drift leg | a gate leg | a `claimed` registry row whose file is already on the remote default branch | gate, no switch | `../verification/protections.md` §7 | shipped |
-| M-9 board | post-tool after a dispatch and after a registered push | the board item's status via the board CLI (network — hence post-tool, never in verify) | context; **fail-open by design** | `../planning/board-protocol.md` item 5 | documented |
+| M-9 board | post-tool after a configured launcher/dispatcher invocation with its dispatch verb, not any `#<issue>` token; and after a registered push | the targeted repository's board-item status via the board CLI (network — hence post-tool, never in verify) | context; **fail-open by design** | §7 for selection; `../planning/board-protocol.md` item 5 for transaction/readback | documented |
 | M-10 git hooks | `pre-commit`, `commit-msg`, `pre-push` | the identity git will write, the staged blobs, the trailer, the landing check when the override mode pushes the default branch directly | hard; git's `--no-verify` cannot be removed on the git side | `../verification/protections.md` §1 | shipped |
 | M-11 ruleset / status | a change to the default branch on the hosting side | the ruleset accepts both paths — a PR merge after the required checks, or a direct push whose SHA carries the `local-verify` status posted from the receipt — and refuses everything else | hosting refuses | `../verification/protections.md` §2 | shipped |
 | M-12 CI signal | `SessionStart` | the last CI conclusion for the default branch, when the CLI is authenticated; offline silent | context | `../verification/protections.md` §4 | shipped |
@@ -243,7 +250,7 @@ direct push carrying the `local-verify` status
 | M-17 gate legs | cheap gates and lane pregate | duplicate registry ids, registry pin tests, the diff-triggered legs table (the brief's `DIFF_TRIGGERED_LEGS` placeholder, byte-equal to the operations doc's; a row runs when its glob matches the lane's working tree against the pin, or the train's committed range), "never weaken" (a baseline that rises without an `--update` commit, a gate changed without a test change, net assertion loss), brief↔operations consistency (the pregate block AND the legs table), skills lock, env scrub, seed-in-migration | gates, no switch; the "never weaken" leg `WARN` on its first train | `../verification/verify-portfolio.md` "Legs that bring lane-green closer to train-green" + `../verification/protections.md` §7 | M-17a (duplicate ids) and M-17d (never weaken) shipped; the rest documented |
 | M-18 watchdog | a recurring task, not a hook | every `<lane>.sentinel.json` at `--max-age-min`, the exit sentinel, log and result mtimes, the branch head on origin; one line only on change | context; nudges, never kills | `run-lifecycle.md` §11 rule 6 (consumer of `../verification/gates/lane_sentinel.py`) | documented |
 | M-19 hygiene | none — a rule about the hook table itself | every registered entry exists and its channel reaches the model | — | §10 | shipped as §10 + the settings example |
-| M-20 disk floor | pre-tool before a big spender (dispatch, assembly, serve) | `df -k <volume>` against the floor, `du -sk <tmp>` under a time budget | hard; a `du` that does not finish is a note | `train-plan.md` §3.1 row + the reminders' session-start line | documented |
+| M-20 disk floor | pre-tool before a big spender (dispatch, assembly, serve); the staging ceiling only before the configured coding-CLI command class that grows it | `df -k <volume>` against the floor, `du -sk <staging-root>` under a time budget | hard; a `du` that does not finish is a note | `train-plan.md` §3.1 row + the reminders' session-start line | documented |
 | M-21 kind | the assembly cross-check (`../verification/lander-duties.md` §1 step 3) and the landing (M-1) | the repo's kind classifier (`FACTORY_GUARD_KIND_CMD`, §8) over `BASE..HEAD` against the ledger's `kind:` line — a classification of what the diff contains, never a policy | text today — the lander's reading at step 3, no code; `context`, never hard, when this row ships — the legs a kind selects are the hard ones (M-1's optional legs, M-17), and a kind that fell without an `O-<n>` entry is then a finding at landing (the rose/fell rule is `../planning/execution-contract.md` §9.2) | `../planning/execution-contract.md` §9 | documented |
 
 **M-16 rows.** Each row has one switch (`FACTORY_GUARD_ALLOW=<row>`) so a false
@@ -270,7 +277,8 @@ honest form as the alternative.
 
 Eight rules ship as code, each with its falsification table (§11). Every gate
 name, CLI name and token in their messages is a parameter (§8). The three
-below are this chapter's; the five of the protections chapter — `landing`
+shipped rules below are this chapter's; its documented board selector follows
+them. The five rules of the protections chapter — `landing`
 (M-1, both landing modes, plus the hard-form rows `gh pr merge
 --squash|--rebase|--auto|--admin` and `gh pr create` from a lane branch),
 `pre-push` (M-10, the same id and switch as `landing`), `commit-msg`
@@ -282,10 +290,10 @@ below are this chapter's; the five of the protections chapter — `landing`
 
 - **Signal.** A gate invocation — `make <target>` matching a make pattern, a
   runner name, or `python -m scripts.<module>` / `python scripts/<module>.py`
-  matching a module pattern of `FACTORY_GUARD_GATES` — followed in the same
-  command by `| tail` or `| head` (always), by any other pipe stage without
-  a preceding `set -o pipefail` / `set -eo pipefail` statement, or by a `git
-  push` statement (the subcommand, never the word `push` in a commit message);
+  matching a module pattern of `FACTORY_GUARD_GATES` — whose output enters
+  ANY pipe, including `--help | head` and regardless of `pipefail`, or followed
+  in the same tool call by a `git push` statement (the subcommand, never the
+  word `push` in a commit message);
   and a `cat`, `grep`, `source` or `.` read of `<x>.exit` followed by `git push`
   (verdict and push in one call). A subshell, a brace group or a
   `bash|sh|zsh -c` string around the gate is seen through (§13 names what
@@ -293,32 +301,38 @@ below are this chapter's; the five of the protections chapter — `landing`
   `ls | tail`, `git log | head` pass.
 - **Parameter.** `FACTORY_GUARD_GATES` (§8).
 - **Refusal.** `GUARD verdict: a verdict cannot be read through «| tail».
-  Run the gate with a redirect to <lane>-<gate>.log and read $? in ONE call;
-  push in the NEXT (harness/train-plan.md §4.1). Fix, exactly: <rewritten
-  command>. Switch: FACTORY_GUARD_ALLOW=verdict (logged).` The push form
+  Run the gate with a redirect to <lane>-<gate>.log and echo EXIT=$? in ONE
+  call; read the log in the NEXT call; push in a later call
+  (harness/train-plan.md §4.1). Fix, exactly: <rewritten command>. Switch:
+  FACTORY_GUARD_ALLOW=verdict (logged).` The push form
   adds `— then, in the NEXT call when EXIT=0: <push>`. The command is never
   rewritten silently; the exact form stands in the message so the operator
   learns it.
-- **Falsification** (16 denied, 13 allowed):
+- **Falsification** (19 denied, 11 allowed):
 
 | Denied (red) | Allowed (green) |
 |---|---|
 | `make check-backlog 2>&1 \| tail -6; echo EXIT=$?` | `grep -n FAILED verify-t-42.log \| tail -5` |
 | `pytest tests/test_backlog.py -q \| tail -1` | `ls -t artifacts \| tail -3` |
-| `python3 -m scripts.check_backlog \| head -20` | `set -o pipefail; make check-backlog 2>&1 \| tee t-42-backlog.log; echo EXIT=${PIPESTATUS[0]}` |
-| `make verify 2>&1 \| grep -E 'passed\|failed'` (no pipefail) | `make check-backlog > lane-backlog.log 2>&1; echo EXIT=$?` |
-| `make verify \| grep passed; set -o pipefail` (pipefail too late) | `set -eo pipefail; make check-backlog \| grep passed` |
-| `python3 -m scripts.assemble_train t-42 --run-id t-42-1 \| tail` | `cat t-42-1.exit` |
-| `make check-backlog; git push origin HEAD:main` | `git push origin lane/x` |
-| `cat t-42-1.exit; git push origin HEAD:main` | `pytest tests/test_backlog.py -q -p no:cacheprovider` |
-| `grep '^EXIT=0$' t-42-1.exit; git push origin lane/x` | `rm stale.exit; git push origin lane/x` |
+| `python3 -m scripts.check_backlog \| head -20` | `make check-backlog > lane-backlog.log 2>&1; echo EXIT=$?` |
+| `make check-backlog --help \| head -20` | `cat t-42-1.exit` |
+| `make verify 2>&1 \| grep -E 'passed\|failed'` | `rm stale.exit; git push origin lane/x` |
+| `make verify \| grep passed; set -o pipefail` | `pytest tests/test_backlog.py -q -p no:cacheprovider` |
+| `set -o pipefail; make check-backlog 2>&1 \| tee t-42-backlog.log` | `python3 -m scripts.check_backlog` |
+| `set -eo pipefail; make check-backlog \| grep passed` | `make check-backlog && make check-numbers` |
+| `python3 -m scripts.assemble_train t-42 --run-id t-42-1 \| tail` | `git push origin lane/x` |
+| `make check-backlog; git push origin HEAD:main` | `make check-backlog; git commit -m push` |
+| `cat t-42-1.exit; git push origin HEAD:main` | `git log --oneline \| head -3` |
+| `grep '^EXIT=0$' t-42-1.exit; git push origin lane/x` | |
 | `source t-42-1.exit; git push origin lane/x` | |
 | `. t-42-1.exit; git push origin lane/x` | |
-| `pytest tests -q 2>&1 \| tee lane-full.log` (no pipefail) | `python3 -m scripts.check_backlog` |
-| `make verify-fast \| tail -2` | `make check-backlog && make check-numbers` |
-| `make check-backlog && make check-numbers && git push origin HEAD:main` | `git log --oneline \| head -3` |
+| `pytest tests -q 2>&1 \| tee lane-full.log` | |
+| `make verify-fast \| tail -2` | |
+| `make check-backlog && make check-numbers && git push origin HEAD:main` | |
 | `bash -c "make check-backlog \| tail -3"` | `make check-backlog; git commit -m push` |
 | `(make check-backlog 2>&1) \| tail -5` | |
+
+Provenance: source factory Varde w137, 2026-09-08.
 
 ### `identity` (M-3b, plus the lint leg M-3a)
 
@@ -374,6 +388,21 @@ below are this chapter's; the five of the protections chapter — `landing`
   user.email=<x> commit -m 'x'` · `git merge -qn lane/x` · `git push -qn
   origin lane/x` · `grep -rn -- --no-verify docs` (green).
 
+### `board` (M-9; documented)
+
+- **Selector.** The board rule runs only after the configured launcher or
+  dispatcher invocation with its dispatch verb. A bare `#<issue>` token is
+  never a dispatch signal.
+- **Repository scope.** Resolve the item in the repository targeted by that
+  dispatch command. Issue references in another repository are out of scope;
+  a source-factory dispatch that mentions a kit issue does not select the kit
+  board.
+- **Measured false-positive classes.** Editing a brief, commenting on an
+  issue, and cross-repository dispatch all triggered the old token selector;
+  the command selector excludes all three. Board status, readback and
+  fail-open semantics remain in `../planning/board-protocol.md` item 5.
+  Provenance: source factory Varde w137, 2026-09-08.
+
 ## 8. Parameters
 
 The package names roles; the operator binds each to a value in the
@@ -403,6 +432,7 @@ placeholders, the live-lane legs list nothing).
 | Per-rule switch | `FACTORY_GUARD_ALLOW` | unset; `<id>[,<id>]`, preferably as a command prefix | operator; every use ledgered |
 | Offline mode | `FACTORY_GUARD_OFFLINE` | unset; `1` makes every network-reading rule (M-9) answer with context instead of calling out — the falsification runner and the tests set it | operator; the apparatus always |
 | Gate names for `verdict` | `FACTORY_GUARD_GATES` | `verify,verify-*,check-*,pytest,scripts.check_*,scripts.assemble_*` — make target patterns and runner names (no dot), module patterns (with a dot) | repo operations doc |
+| Board dispatch form | `FACTORY_GUARD_BOARD_DISPATCH` | unset — M-9 remains documented; `<launcher-or-dispatcher> <dispatch-verb>` identifies a dispatch before the rule reads any issue token | repo operations doc |
 | Lane CLI identity | `FACTORY_GUARD_CLI` / `FACTORY_GUARD_CLI_TOKEN` / `FACTORY_GUARD_CLI_DIR_FLAG` | unset — the identity refusal prints placeholders and the live-lane legs list nothing; e.g. `codex` / `exec` / `--cd` | repo operations doc (`train-plan.md` §3.3 names the same two values) |
 | Port range | `FACTORY_GUARD_PORT_RANGE` | unset; e.g. `4300-4399` (`train-plan.md` §3.1) | repo operations doc |
 | Data volume | `FACTORY_GUARD_DATA_VOLUME` | unset; the volume the repo lives on | repo operations doc |

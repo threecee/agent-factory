@@ -2,8 +2,8 @@
 through a pipe, and a verdict and a push never share one call.
 
 Fires only on a known gate invocation — the patterns in ``FACTORY_GUARD_GATES`` (the one
-parameter; guards.md §8) — followed in the same command by ``| tail``/``| head`` (always),
-by any other pipe stage without ``set -o pipefail``, or by a ``git push`` statement; and on
+parameter; guards.md §8) — followed in the same command by any pipe stage or by a ``git
+push`` statement; and on
 ``cat|grep|source|. <x>.exit`` followed by ``git push`` (verdict and push in one call). It
 never rewrites the command silently: the exact form stands in the refusal so the operator
 learns it.
@@ -39,7 +39,6 @@ MATCHER = "Bash"
 
 GATES_VAR = "FACTORY_GUARD_GATES"
 DEFAULT_GATES = "verify,verify-*,check-*,pytest,scripts.check_*,scripts.assemble_*"
-_HIDING_STAGES = frozenset({"tail", "head"})
 _RECEIPT_READERS = frozenset({"cat", "grep", "source"})
 _REDIRECT_TOKEN_RE = re.compile(r"^\d*>>?$|^<$")
 
@@ -115,24 +114,6 @@ def _reads_receipt(tokens: list[str]) -> bool:
     return any(token.endswith(".exit") for token in tokens[1:])
 
 
-def _pipefail_change(tokens: list[str]) -> bool | None:
-    """Return the pipefail state assigned by a ``set`` statement, if any."""
-    if not tokens or basename(tokens[0]) != "set":
-        return None
-    arguments = tokens[1:]
-    for index, token in enumerate(arguments[:-1]):
-        if token in {"-o", "+o"} and arguments[index + 1] == "pipefail":
-            return token == "-o"
-        if (
-            len(token) > 2
-            and token[0] in {"-", "+"}
-            and "o" in token[1:]
-            and arguments[index + 1] == "pipefail"
-        ):
-            return token[0] == "-"
-    return None
-
-
 def _without_redirections(segment: tuple[str, ...]) -> list[str]:
     kept: list[str] = []
     skip_next = False
@@ -158,29 +139,26 @@ def _refusal(through: str, exact: str) -> Verdict:
     return deny(
         ID,
         f"GUARD verdict: a verdict cannot be read through «{through}». Run the gate with a "
-        "redirect to <lane>-<gate>.log and read $? in ONE call; push in the NEXT "
+        "redirect to <lane>-<gate>.log and echo EXIT=$? in ONE call; read the log in "
+        "the NEXT call; push in a later call "
         f"(harness/train-plan.md §4.1). Fix, exactly: {exact}",
     )
 
 
-def _piped_refusal(statement: Statement, gate: str, pipefail: bool) -> Verdict | None:
+def _piped_refusal(statement: Statement, gate: str) -> Verdict | None:
     stages = [
         basename(stripped[0])
         for segment in statement.pipeline[1:]
         if (stripped := strip_prefixes(segment))
     ]
-    hiding = next((stage for stage in stages if stage in _HIDING_STAGES), None)
-    if hiding is not None:
-        return _refusal(f"| {hiding}", _rewrite(statement, gate))
-    if stages and not pipefail:
-        return _refusal(f"| {stages[0]} without set -o pipefail", _rewrite(statement, gate))
+    if stages:
+        return _refusal(f"| {stages[0]}", _rewrite(statement, gate))
     return None
 
 
 def verdict_for_command(command: str, patterns: list[str] | None = None) -> Verdict:
     patterns = patterns if patterns is not None else gate_patterns({})
     statements = parse_statements(command)
-    pipefail = False
     gate_statement: tuple[Statement, str] | None = None
     receipt_statement: Statement | None = None
     for statement in statements:
@@ -188,14 +166,10 @@ def verdict_for_command(command: str, patterns: list[str] | None = None) -> Verd
         gate = gate_name(statement.first, patterns)
         if gate is not None:
             if len(statement.pipeline) > 1:
-                refusal = _piped_refusal(statement, gate, pipefail)
+                refusal = _piped_refusal(statement, gate)
                 if refusal is not None:
                     return refusal
             gate_statement = (statement, gate)
-            continue
-        changed = _pipefail_change(tokens)
-        if changed is not None:
-            pipefail = changed
             continue
         if _is_git_push(tokens):
             if gate_statement is not None:
@@ -245,6 +219,13 @@ _DENIED_FORMS = (
     ),
     ("dot-receipt-then-push", ". t-42-1.exit; git push origin lane/x", "; git push"),
     ("tee-without-pipefail", "pytest tests -q 2>&1 | tee lane-full.log", "| tee"),
+    (
+        "tee-with-pipefail",
+        "set -o pipefail; make check-backlog 2>&1 | tee t-42-backlog.log; echo EXIT=${PIPESTATUS[0]}",
+        "| tee",
+    ),
+    ("grep-with-pipefail", "set -eo pipefail; make check-backlog | grep passed", "| grep"),
+    ("help-through-head", "make check-backlog --help | head -20", "| head"),
     ("verify-target-tail", "make verify-fast | tail -2", "| tail"),
     (
         "two-gates-then-push",
@@ -258,11 +239,6 @@ _ALLOWED_FORMS = (
     ("grep-on-log", "grep -n FAILED verify-t-42.log | tail -5"),
     ("commit-message-push", "make check-backlog; git commit -m push"),
     ("tail-after-ls", "ls -t artifacts | tail -3"),
-    (
-        "tee-with-pipefail",
-        "set -o pipefail; make check-backlog 2>&1 | tee t-42-backlog.log; echo EXIT=${PIPESTATUS[0]}",
-    ),
-    ("grouped-set-pipefail", "set -eo pipefail; make check-backlog | grep passed"),
     ("redirect-and-exit", "make check-backlog > lane-backlog.log 2>&1; echo EXIT=$?"),
     ("read-receipt-alone", "cat t-42-1.exit"),
     ("delete-receipt-then-push", "rm stale.exit; git push origin lane/x"),

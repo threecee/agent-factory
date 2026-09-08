@@ -19,13 +19,15 @@
 #   {worktree}    $LANE_WORKTREE (absolute)          {lane}        $LANE
 #   {run_id}      $LANE_RUN_ID                       {result_path} $LANE_RESULT_PATH
 #
-# Environment — required for `start`: LANE, LANE_WORKTREE, LANE_RUN_DIR, LANE_BRIEF.
+# Environment — required for `start`: LANE, LANE_WORKTREE, LANE_RUN_DIR, LANE_BRIEF,
+# LANE_QUOTA_RECEIPT, LANE_ROSTER_CHECK.
 # Required for `wait`/`verdict`: LANE, LANE_RUN_DIR, LANE_RUN_ID.
 # Optional (defaults in resolve_contract): LANE_RUN_ID, LANE_DELAY_S, LANE_DETACH,
 # LANE_MODE, LANE_PIN_SHA, LANE_ARTIFACT_BANK, LANE_RATE_LIMIT_REGEX,
 # LANE_RESULT_BEGIN, LANE_RESULT_END, LANE_START_TIMEOUT_S, LANE_LOCK_TIMEOUT_S,
 # LANE_SENTINEL_DIR, LANE_RESULT_PATH, LANE_USAGE_PARSER, LANE_LOOP_OWNER,
-# LANE_EXPECTED_END, LANE_STOP_CMD.
+# LANE_EXPECTED_END, LANE_STOP_CMD, LANE_QUOTA_MAX_AGE_MIN.
+# Required for `start`: LANE_QUOTA_RECEIPT and executable LANE_ROSTER_CHECK.
 #
 # Exit codes — start: 0 dispatched (state started or delayed), 2 contract violation
 # (the message names the variable/file), 3 runner never checked in, 4 refused at
@@ -108,6 +110,12 @@ resolve_contract() { # $1 = start|wait|verdict|lock|env
     require_var LANE_BRIEF
     [ -f "$LANE_BRIEF" ] || die "LANE_BRIEF is not a file: $LANE_BRIEF"
     LANE_BRIEF="$(cd "$(dirname "$LANE_BRIEF")" && pwd -P)/$(basename "$LANE_BRIEF")"
+    require_var LANE_QUOTA_RECEIPT
+    [ -f "$LANE_QUOTA_RECEIPT" ] || die "LANE_QUOTA_RECEIPT is not a file: $LANE_QUOTA_RECEIPT"
+    LANE_QUOTA_RECEIPT="$(cd "$(dirname "$LANE_QUOTA_RECEIPT")" && pwd -P)/$(basename "$LANE_QUOTA_RECEIPT")"
+    require_var LANE_ROSTER_CHECK
+    [ -x "$LANE_ROSTER_CHECK" ] || die "LANE_ROSTER_CHECK is not executable: $LANE_ROSTER_CHECK"
+    LANE_ROSTER_CHECK="$(cd "$(dirname "$LANE_ROSTER_CHECK")" && pwd -P)/$(basename "$LANE_ROSTER_CHECK")"
   fi
 
   if [ "$mode" = start ] || [ "$mode" = env ] || [ "$mode" = lock ]; then
@@ -129,6 +137,8 @@ resolve_contract() { # $1 = start|wait|verdict|lock|env
   : "${LANE_RESULT_END:=LANE-RESULT-END}"
   : "${LANE_START_TIMEOUT_S:=30}"
   : "${LANE_LOCK_TIMEOUT_S:=600}"
+  : "${LANE_QUOTA_MAX_AGE_MIN:=30}"
+  case "$LANE_QUOTA_MAX_AGE_MIN" in ''|*[!0-9]*) die "LANE_QUOTA_MAX_AGE_MIN must be a non-negative integer";; esac
   : "${LANE_SENTINEL_DIR:=$LANE_RUN_DIR}"
   : "${LANE_USAGE_PARSER:=}"
   : "${LANE_LOOP_OWNER:=$LANE}"
@@ -147,6 +157,7 @@ resolve_contract() { # $1 = start|wait|verdict|lock|env
   export LANE_DELAY_S LANE_DETACH LANE_MODE LANE_PIN_SHA LANE_ARTIFACT_BANK
   export LANE_RATE_LIMIT_REGEX LANE_RESULT_BEGIN LANE_RESULT_END
   export LANE_START_TIMEOUT_S LANE_LOCK_TIMEOUT_S
+  export LANE_QUOTA_RECEIPT LANE_QUOTA_MAX_AGE_MIN LANE_ROSTER_CHECK
   export LANE_USAGE_PARSER LANE_LOOP_OWNER LANE_EXPECTED_END LANE_STOP_CMD
   [ "${LANE_WORKTREE:-}" ] && export LANE_WORKTREE
   [ "${LANE_BRIEF:-}" ] && export LANE_BRIEF
@@ -158,7 +169,8 @@ print_env() {
   for k in LANE LANE_RUN_ID LANE_WORKTREE LANE_BRIEF LANE_RUN_DIR LANE_SENTINEL_DIR \
            LANE_RESULT_PATH LANE_DELAY_S LANE_DETACH LANE_MODE LANE_PIN_SHA \
            LANE_ARTIFACT_BANK LANE_RATE_LIMIT_REGEX LANE_RESULT_BEGIN LANE_RESULT_END \
-           LANE_START_TIMEOUT_S LANE_LOCK_TIMEOUT_S LANE_USAGE_PARSER \
+           LANE_START_TIMEOUT_S LANE_LOCK_TIMEOUT_S LANE_QUOTA_RECEIPT \
+           LANE_QUOTA_MAX_AGE_MIN LANE_ROSTER_CHECK LANE_USAGE_PARSER \
            LANE_LOOP_OWNER LANE_EXPECTED_END LANE_STOP_CMD; do
     eval "printf '%s=%s\n' \"$k\" \"\${$k:-}\""
   done
@@ -223,6 +235,22 @@ release_writer_lock() {
   return 0
 }
 
+quota_preflight() {
+  local checked verdict age now
+  checked="$(receipt_get "$LANE_QUOTA_RECEIPT" checked_epoch)"
+  verdict="$(receipt_get "$LANE_QUOTA_RECEIPT" verdict)"
+  case "$checked" in ''|*[!0-9]*) return 1;; esac
+  [ "$verdict" = go ] || return 1
+  now="$(now_epoch)"
+  [ "$checked" -le "$now" ] || return 1
+  age=$((now - checked))
+  [ "$age" -le $((LANE_QUOTA_MAX_AGE_MIN * 60)) ]
+}
+
+roster_preflight() {
+  "$LANE_ROSTER_CHECK" "$LANE_BRIEF" "$@" >/dev/null 2>&1
+}
+
 # ------------------------------------------------------------- deliverable
 
 # validate_report <path> <lane> <run_id> <started_at_epoch>
@@ -263,7 +291,7 @@ bank_receipts() { # -> prints bank path or nothing
 
 # ------------------------------------------------------------- the runner
 
-# `_run` executes in its own session. It owns: delay → writer lock → pin check →
+# `_run` executes in its own session. It owns: delay → quota → roster → writer lock → pin check →
 # CLI start with stdin closed → identity check → wait → validation → banking →
 # exit receipt (written atomically, LAST).
 CLI_PID=""
@@ -362,6 +390,9 @@ cmd_run() {
     sleep "$LANE_DELAY_S"
   fi
 
+  quota_preflight || runner_refuse "quota-canary-stale-or-not-go: $LANE_QUOTA_RECEIPT"
+  roster_preflight "$@" || runner_refuse "roster-binding-rejected: $LANE_ROSTER_CHECK"
+
   # A delayed start must never run beside a commit in the same tree: the
   # wrapper's commit holds this lock (`with-writer-lock`), and so do we.
   acquire_writer_lock || runner_refuse "writer-lock-timeout"
@@ -436,6 +467,9 @@ cmd_start() {
   receipt_set "$START_RECEIPT" delay_s "$LANE_DELAY_S"
   receipt_set "$START_RECEIPT" detach "$method"
   receipt_set "$START_RECEIPT" pin_sha "${LANE_PIN_SHA:-none}"
+  receipt_set "$START_RECEIPT" quota_receipt "$LANE_QUOTA_RECEIPT"
+  receipt_set "$START_RECEIPT" quota_max_age_min "$LANE_QUOTA_MAX_AGE_MIN"
+  receipt_set "$START_RECEIPT" roster_check "$LANE_ROSTER_CHECK"
   receipt_set "$START_RECEIPT" result_path "$LANE_RESULT_PATH"
   receipt_set "$START_RECEIPT" sentinel_dir "$LANE_SENTINEL_DIR"
   receipt_set "$START_RECEIPT" dispatched_at "$(now_iso)"

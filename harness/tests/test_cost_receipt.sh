@@ -10,6 +10,9 @@ trap 'rm -rf "$T"' EXIT
 mkdir -p "$T/run" "$T/wt" "$T/bin"
 ln -s /bin/sh "$T/bin/fakecli"
 printf 'brief\n' > "$T/brief.md"
+printf 'checked_epoch=%s\nverdict=go\n' "$(date +%s)" > "$T/quota.receipt"
+printf '%s\n' '#!/bin/sh' 'exit 0' > "$T/roster-check.sh"
+chmod +x "$T/roster-check.sh"
 
 printf '%s\n' '#!/bin/sh' 'printf "lane: %s\nrun_id: %s\nstatus: built\n" "$LANE" "$LANE_RUN_ID" > "$LANE_RESULT_PATH"' > "$T/body.sh"
 printf '%s\n' '#!/bin/sh' 'printf "%s\n" "tokens_in=120" "tokens_out=30" "cached_tokens=40" "requests=2" "model=test-model" "effort=high" "wall_s=7" "source=test-adapter"' > "$T/usage parser.sh"
@@ -17,10 +20,10 @@ chmod +x "$T/usage parser.sh"
 
 run_lane() {
   if [ -n "$2" ]; then
-    env LANE=cost LANE_RUN_ID="$1" LANE_WORKTREE="$T/wt" LANE_RUN_DIR="$T/run" LANE_BRIEF="$T/brief.md" LANE_DETACH=none LANE_SENTINEL_DIR="$T/run" LANE_RESULT_PATH="$T/run/cost.$1.result.md" LANE_USAGE_PARSER="$2" \
+    env LANE=cost LANE_RUN_ID="$1" LANE_WORKTREE="$T/wt" LANE_RUN_DIR="$T/run" LANE_BRIEF="$T/brief.md" LANE_DETACH=none LANE_SENTINEL_DIR="$T/run" LANE_RESULT_PATH="$T/run/cost.$1.result.md" LANE_QUOTA_RECEIPT="$T/quota.receipt" LANE_ROSTER_CHECK="$T/roster-check.sh" LANE_USAGE_PARSER="$2" \
       "$LAUNCHER" start -- "$T/bin/fakecli" "$T/body.sh" exec >/dev/null
   else
-    env LANE=cost LANE_RUN_ID="$1" LANE_WORKTREE="$T/wt" LANE_RUN_DIR="$T/run" LANE_BRIEF="$T/brief.md" LANE_DETACH=none LANE_SENTINEL_DIR="$T/run" LANE_RESULT_PATH="$T/run/cost.$1.result.md" \
+    env LANE=cost LANE_RUN_ID="$1" LANE_WORKTREE="$T/wt" LANE_RUN_DIR="$T/run" LANE_BRIEF="$T/brief.md" LANE_DETACH=none LANE_SENTINEL_DIR="$T/run" LANE_RESULT_PATH="$T/run/cost.$1.result.md" LANE_QUOTA_RECEIPT="$T/quota.receipt" LANE_ROSTER_CHECK="$T/roster-check.sh" \
       "$LAUNCHER" start -- "$T/bin/fakecli" "$T/body.sh" exec >/dev/null
   fi
   LANE=cost LANE_RUN_ID="$1" LANE_RUN_DIR="$T/run" LANE_SENTINEL_DIR="$T/run" LANE_RESULT_PATH="$T/run/cost.$1.result.md" "$LAUNCHER" wait 10 >/dev/null
