@@ -138,6 +138,7 @@ running <test runner> (pid …)`), never a bare non-zero exit.
 |---|---|---|
 | Run log | `<artifacts>/<run-id>.log` | Every command, its label and its output; the shared env file's CONTENTS never appear in it |
 | Exit receipt | `<artifacts>/<run-id>.exit` | Lines `EXIT=<code>`, `BASE=<full sha>`, `HEAD=<full sha>`, `LOG=<path>`; written atomically (temp file + rename) when the run ends, whatever the outcome |
+| Cost receipt | `<artifacts>/<run-id>.cost` | Eight `key=value` lines: `tokens_in`, `tokens_out`, `cached_tokens`, `requests`, `model`, `effort`, `wall_s`, `source`; the train aggregates the corresponding boarder receipts as §4.1 specifies |
 | Docs-only line (optional) | a fifth line `DOCS_ONLY=1` in the exit receipt | Written ONLY by a run whose launcher classified the diff as documentation-only with the project's classifier and skipped the heavy step on that ground; the landing guard then re-runs the classifier (`FACTORY_GUARD_DOCS_ONLY_CMD <BASE> <HEAD>`, `../verification/protections.md` §1.1) and refuses the receipt when no classifier is bound or it rejects the diff. The §4.2 launcher never writes it |
 | Overwrite policy | never | A run id that already has a log or exit file is refused; the next attempt gets the next run id |
 
@@ -156,6 +157,12 @@ a pipe status, a wrapper's `$?`, a backgrounded job's status, or a log tail.
 the caller is a process-group leader and `$?` is the launcher's exit, recorded
 before `cmd` finishes; and `setsid` is absent on some platforms (macOS ships
 without it).
+
+The train's adjacent cost receipt carries the sum over all boarders for
+`tokens_in`, `tokens_out`, `cached_tokens`, `requests`, and `wall_s`. A sum is
+`unknown`, never zero, if any contributing value is unknown. `model` and
+`effort` list the distinct contributing values, and `source=train-aggregate`;
+the individual boarder cost receipts remain the evidence behind the sum.
 
 ### 4.2 Minimum receipt launcher
 

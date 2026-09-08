@@ -25,6 +25,9 @@ strings — translate strings during installation, never logic. Highlights:
 - `lane_sentinel.py` — the lane heartbeat CLI.
 - `check_dist_fresh.py` — frontend bundle freshness stamp (serve refuses a
   stale bundle; bundle identity is verified before visual review).
+- `ci_triage.py` — managed default-branch CI-red classification and bounded
+  fix-lane delta writer (`verification/ci-triage.md §1`); it only prints rerun commands
+  and never reruns CI or pushes.
 
 ## Which gates port, which are stack-specific, which are domain choices
 
@@ -32,12 +35,12 @@ Measured on 2026-09-06 by copying the 24 scripts of that day into a Node
 repository with no Python project and running each the way its docstring
 documents (`../examples/install-trial-node.md`); the three protections
 gates were added in 2026-09 after that trial and are stdlib + git only. Of
-the 27 scripts, do not copy the set uncritically: only the first group runs
+the 28 scripts, do not copy the set uncritically: only the first group runs
 outside a Python repo, and one script cannot run anywhere as shipped.
 
 | Group | Scripts | What a non-Python repo does |
 |---|---|---|
-| **Repo-agnostic decision gates** (port as-is) | `build_adr_index.py`, `check_traceability.py`, `check_backlog.py`, `check_migration_heads.py` (registry leg only), `check_gitleaks.py`, `check_number_provenance.py`, `lane_sentinel.py`, and the three protections gates `check_landing_closeout.py` (needs `gh` only in pr mode), `check_choices_protocol.py`, `check_gate_weakening.py` (all three stdlib + git) | Run them with a `python3` interpreter that has **PyYAML** (the only third-party import of this group; `alembic` is imported lazily, see the deviation below) and the `gitleaks` binary. Invoke as `python3 -m scripts.<gate>` from the repo root — the docstrings' form — because they import each other as `scripts.<module>`; `python3 scripts/<gate>.py` raises `ModuleNotFoundError: No module named 'scripts'`. Pin the interpreter in the verify entry (`PY ?= python3`). Or reimplement the contract in the repo's language; the contract is the docstring. |
+| **Repo-agnostic decision gates** (port as-is) | `build_adr_index.py`, `check_traceability.py`, `check_backlog.py`, `check_migration_heads.py` (registry leg only), `check_gitleaks.py`, `check_number_provenance.py`, `lane_sentinel.py`, `ci_triage.py`, and the three protections gates `check_landing_closeout.py` (needs `gh` only in pr mode), `check_choices_protocol.py`, `check_gate_weakening.py` (all three stdlib + git) | Run them with a `python3` interpreter that has **PyYAML** (the only third-party import of this group; `alembic` is imported lazily, see the deviation below) and the `gitleaks` binary. Invoke as `python3 -m scripts.<gate>` from the repo root — the docstrings' form — because they import each other as `scripts.<module>`; `python3 scripts/<gate>.py` raises `ModuleNotFoundError: No module named 'scripts'`. Pin the interpreter in the verify entry (`PY ?= python3`). Or reimplement the contract in the repo's language; the contract is the docstring. |
 | **Stack-specific (Python tooling)** | `check_ruff_ratchet.py`, `check_mypy.py`, `check_bandit.py`, `check_semgrep.py` (semgrep is multi-language; the rules and the `src/` layout are the source factory's), `check_sca.py` (`uv.lock`), `check_reachability.py` (Python `ast` over `src/kripos`), `check_test_health.py` | WRITE the equivalent with the same contract: a committed per-rule baseline, exit 1 on any increase or new rule, `--update` as the only path to a new baseline, `--report` exits 0, a **missing baseline is a hard failure**. `../examples/node/check_lint_ratchet.mjs` is that contract in about fifty lines of JavaScript; substitute `eslint`/`tsc`/`npm audit` (or `golangci-lint`, `cargo clippy`, `osv-scanner` over the lockfile) as the finding source. |
 | **Stack-specific (frontend / migrations / vendoring)** | `check_dist_fresh.py` (Vite inputs), `check_migration_heads.py` heads leg (Alembic), `check_vendored_plugin.py` (one vendored CLI plugin under `third_party/`) | Only if the repo has the thing: a built bundle, a migration graph, a vendored plugin. Otherwise do not copy. |
 | **Domain choices of the source factory** | `check_ki_tolket_marking.py` (visible marking of model-derived UI content), `check_vocabulary.py` (rules in a project constitution), `check_consistency.py` (feature map pairing demo/help/seed), `check_entrypoint_docs.py` (model-role table, `src/kripos` packages, README targets), `check_story_coverage.py` (CUJ documents), `check_scoreboard.py` (corpus scoreboard schema) | Read the docstring as a design idea; port the METHOD only if the repo has the same need (a paired-artifact rule, a forbidden-vocabulary lint). Never as a requirement of the factory. |

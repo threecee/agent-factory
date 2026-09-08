@@ -21,6 +21,8 @@ assembled, cross-checked, built, gated, probed, verified on an idle machine
 and re-confirmed against origin. What differs is the last step and nothing
 before it:
 
+CI red at landing ⇒ `verification/ci-triage.md §1`.
+
 | Mode | Step 10 | When |
 |---|---|---|
 | `pr` (the default) | push the integration branch, post the status, open the train pull request with the ledger as body, merge it with `--merge --match-head-commit <HEAD=>` under landing authority (§4) | every project, unless train-plan §5 declares `direct-push` with a standing reason |

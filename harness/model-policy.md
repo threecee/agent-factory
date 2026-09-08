@@ -191,6 +191,8 @@ consumption. A wave of one night is an example, not a control group.
 The source factory did not have a controlled comparison showing that its
 distribution of roles to models was optimal; its roster was an owner
 decision with a review date. Treat any inherited roster the same way.
+Measured consumption and the cost report a choice under this section cites
+are defined in §11; a model choice without that receipt is not evidence.
 
 ## 8. The product/factory namespace boundary
 
@@ -269,3 +271,29 @@ that each answer is a field, not an inference.
   had not been performed when this file was written; the bulk-read worker
   probe proved an answer, not a served role. This file ships the method
   for keeping those questions apart, not a verdict on any model.
+
+## 11. Measured cost
+
+The cost of factory work decomposes as:
+
+`users × sessions/user × runs/session × requests/run × tokens/request × price/token`
+
+The operator's three middle levers are sessions per user, runs per session,
+and requests per run. They are changed by tighter task boundaries, fewer
+restarts, and shorter worker chains; they must be read from cost receipts,
+not inferred from log size. Tokens per request and price per token still
+matter, but are consequences of context and model policy rather than proof
+that a workflow is efficient.
+
+The default model assigned to subagents is usually the single biggest cost
+choice because it multiplies across every delegated request. A decision under
+§7 therefore cites a cost report with the eight fields from
+`harness/report-schema.md`, a period, and the approved-task denominator. "It felt
+faster" or a model name is not evidence. Unknown consumption is written as
+`unknown`; it is never reported as zero.
+
+Provenance and what is still provisional: this decomposition and the focus on
+operator-controlled middle factors come from the 2026 Uber software-factory
+efficiency account named in issue 23. The relative size of the subagent model
+lever is a hypothesis until this factory has comparable per-approved-task
+cost reports across model policies.
