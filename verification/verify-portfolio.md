@@ -219,11 +219,11 @@ the fix (`protections.md` §7 owns the three shipped ones).
   continuation (`, §99` after a valid pointer), a planted wrapped pointer
   and a planted wrong heading (all red, naming the path). Its `--tree` mode
   scans every document under a root except the locked `skills/` set and is
-  asserted green on the package; its `--installed` flag refuses `{{…}}`
-  residue under `planning/` — the directory the installer resolves — and is
-  asserted green over the package's chapter tree with `planning/` resolved
-  and `--skills` pointing at the skill set kept elsewhere, the installer's
-  own form over the copied doc tree.
+  asserted green on the package; its `--installed` flag refuses unresolved
+  installation placeholders in every Markdown file and is asserted green
+  over the package's chapter tree with all placeholders resolved and
+  `--skills` pointing at the skill set kept elsewhere, the installer's own
+  form over the copied doc tree.
 - (f) The skills lock is the existing `skills/verify_skills_lock.py`; no
   second checker.
 - (g) Only for repos whose tests set process-wide environment: every

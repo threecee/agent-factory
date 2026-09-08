@@ -81,6 +81,9 @@ no match means the lander runs the command, and multiple matches are a
 conflicting archive state. The measured directory shape remains
 `YYYY-MM-DD-<id>` (§8).
 
+
+**New capability from an ADDED-only delta.** `openspec archive` creates the canonical file with a placeholder Purpose (`TBD - created by archiving change <id>`), and strict validation treats that placeholder as a fatal warning. The lander writes the real Purpose (at least 50 characters, linking the governing document) in the same landing commit, before the post-archive validation; a lane may pre-write it in its report so the lander only pastes it. Measured 2026-09-08.
+
 ## 5. Validation and pairing gates
 
 The strict validation leg runs with all four non-interactive controls set:
