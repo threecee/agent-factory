@@ -13,6 +13,9 @@ project's concrete commands and its resource contract live in
 2. `--no-ff` merge each lane's PINNED handback SHA (never branch names).
    Resolve every boarder to a full commit SHA and record it in the train's
    choices protocol before the first merge.
+   - Archive every boarder's delta; commit the merged specs and archived
+     changes with the train. Run this in stable order after the last merge and
+     before step 3 (`../planning/capability-specs.md §4`).
 3. Assembly cross-checks: one migration head; number registry consistent
    (regenerated indexes from multiple lanes merge-conflict here — resolve by
    regenerating once on the assembled tree); counter-like edits from parallel

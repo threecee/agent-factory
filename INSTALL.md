@@ -86,6 +86,23 @@ has no Python of its own, and pin it in the verify entry (`PY ?= python3`).
    a GitHub owner. A scratch trial without a GitHub remote can stand in a
    file for the smoke test (mark it "NOT an installed board"), but a repo
    whose board is a file has not completed this step.
+7. Pin the capability-spec CLI with
+   `npm install --save-dev --save-exact @fission-ai/openspec@1.12.0`. Verify
+   that both the manifest and lock file record 1.12.0 exactly. Create
+   `openspec/specs/` and `openspec/changes/archive/.gitkeep`. Set `CI=1`,
+   `OPENSPEC_TELEMETRY=0`, `DO_NOT_TRACK=1`, and
+   `OPENSPEC_NO_UPDATE_CHECK=1` for every validation and archive invocation.
+   Write the project's `check_openspec` adapter with the advisory-to-HARD
+   exit contract in `planning/capability-specs.md §5`, then use that adapter
+   in verification instead of invoking raw validation as a gate.
+   Resolve `{{SPEC_DELTA}}` in the lane template to the project's dispatch
+   field for either the lane delta path or its no-delta trailer
+   (`planning/capability-specs.md §3`). If the project ports a pairing gate,
+   add the pattern-capable `spec:` leg and advisory-to-HARD transition from
+   `verification/gates/README.md`.
+   With the pinned binary on `PATH`, run
+   `bash harness/tests/test_capability_spec_flow.sh`; an absent binary is a
+   loud skip, never proof.
 
 ## Step 2 — Verification pillar
 1. Read `verification/gates/README.md` §"Which gates port" BEFORE copying

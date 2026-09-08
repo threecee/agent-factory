@@ -114,3 +114,6 @@ test files with grep before running).
   wrapper pushes the branch.
 - Never weaken a criterion to pass — no baseline lowered, no assertion
   deleted. PARK instead.
+
+## 7. Spec delta
+{{SPEC_DELTA}}
