@@ -361,6 +361,7 @@ never judges whether it is right (`harness/guards.md §12`;
 | When does a lane STOP, when does it PARK, and how many rounds does it get? | `planning/execution-contract.md §3`–`§6` |
 | What is the change kind, and who re-derives it? | `planning/execution-contract.md §9` |
 | Which legs run on a lane before commit, how are rows selected, and where do domain checklists live? | `planning/lane-brief-template.md §4`; `verification/verify-portfolio.md` "Legs that bring lane-green closer to train-green"; `verification/select_diff_triggered_legs.sh`; `harness/guards.md §9` |
+| How do path-scoped open improvement items enter a lane brief? | `harness/lookup_open_improvements.sh`; `interpretation/continuous-improvement.md §1`; `planning/lane-brief-template.md §1` |
 | What may CI decide? | `verification/landing-modes.md §4.3`; `verification/ci/README.md §4` |
 | How does a docs-only train land, and what does `ui-pass:` mean? | `harness/train-plan.md §4`; `verification/protections.md §1.1`; `interpretation/choices-ledger-README.md §1` |
 | What does the branch policy contain, and deliberately not? | `verification/landing-modes.md §3`; `verification/protections.md §2` |

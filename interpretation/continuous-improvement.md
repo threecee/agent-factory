@@ -22,3 +22,27 @@ pair records total cost (orchestrator and worker), latency and fact
 preservation (§7 there); until then it stays a voluntary tool. A machinery
 change that skips the measurement is a choice for the ledger, not a
 saving.
+
+## 1. Path-scoped open improvement items
+
+This marked table is the one registry of improvement items that are still
+open and need to reach a lane before it starts. Each item occupies one row:
+`Status` is exactly `open` or `closed`, `Path glob` is one repository-relative
+shell glob with no `|` character, and `Improvement item` is the text or
+resolving pointer the lane must read. Closing an item changes its status in
+place; it does not delete the evidence trail.
+
+<!-- open-improvements:start -->
+| Status | Path glob | Improvement item |
+|---|---|---|
+<!-- open-improvements:end -->
+
+At brief preparation, run
+`bash harness/lookup_open_improvements.sh interpretation/continuous-improvement.md
+<planned-path>...` separately for the planned paths covered by each selected
+diff-triggered leg. Add every returned line to that leg's `reads first` cell,
+and leave the cell's existing pointers unchanged when the lookup prints
+nothing. An open item appears only where its glob matches, a closed item never
+appears, and duplicate matches emit the item once. The shell test and its
+`harness/**` falsification are
+`harness/tests/test_lookup_open_improvements.sh`.

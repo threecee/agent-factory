@@ -70,8 +70,10 @@ has no Python of its own, and pin it in the verify entry (`PY ?= python3`).
    ceiling, the `Kind:` line from that classifier over the planned file
    set, and the `Model/effort:` line filled from the operator's dated
    policy — `harness/model-policy.md` §4) are filled at dispatch, never in
-   the template. No template, skill or doc carries a model name as a
-   default.
+   the template. Install the planning-time lookup and registry described at
+   `interpretation/continuous-improvement.md §1`, and populate the template's
+   open-improvement field and affected `reads first` cells from it. No
+   template, skill or doc carries a model name as a default.
 4. Copy `planning/investigation-brief-template.md` →
    `.claude/templates/investigation-brief.md`. It is the read-only lane a
    bug goes through BEFORE it gets a fix brief when the cause is uncertain:
