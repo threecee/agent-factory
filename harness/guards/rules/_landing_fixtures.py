@@ -136,6 +136,7 @@ def case_tree(
     lane_checkout: bool = False,
     push_train: bool = True,
     receipt_extra: str = "",  # optional receipt lines after LOG= (train-plan §4: DOCS_ONLY=1)
+    registry_change: bool = False,  # NUMBERS.md changes since BASE → the registry leg runs
 ) -> Tree:
     """A copy of the template varied for one case; ``ledger`` is ``"green"``, ``None`` (no
     ledger committed) or the ledger text to commit (``{artifacts}``/``{boarder}`` filled)."""
@@ -162,6 +163,12 @@ def case_tree(
         text = text.replace("{artifacts}", str(artifacts)).replace("{boarder}", base.boarder_sha)
         (train / "docs" / "choices").mkdir(parents=True, exist_ok=True)
         (train / "docs" / "choices" / "wtest.md").write_text(text, encoding="utf-8")
+        if registry_change:
+            (train / "docs" / "decisions").mkdir(parents=True, exist_ok=True)
+            (train / "docs" / "decisions" / "NUMBERS.md").write_text(
+                "| kind | number | owner | date | status | note |\n| migration | 0001 | lane/alpha | 2026-01-01 | claimed | |\n",
+                encoding="utf-8",
+            )
         git(train, "add", "-A")
         git(train, "commit", "-q", "-m", "train(wtest): choices ledger")
     head = git(train, "rev-parse", "HEAD")
@@ -278,6 +285,30 @@ def landing_cases(workdir: pathlib.Path) -> list[FalsificationCase]:
     cases.append(_case("green-merge", "allow", "", tree, f"gh pr merge 7 --merge --match-head-commit {tree.head}"))
     lane = case_tree(workdir, "lane-create", lane_checkout=True)
     cases.append(_case("pr-create-from-lane-branch", "deny", "push the branch, the lander boards it", lane, "gh pr create --base main --head lane/alpha --title x --body y"))
+    # The registry leg spawns a child from the pre-push hook. git exports GIT_DIR (and its
+    # siblings) to hooks; a child that inherited them would act on the shared repository —
+    # a Varde landing (2026-09-08) had pin-test fixtures move local main to a fixture commit
+    # that way. The child must not see the planted GIT_DIR; the red form still refuses.
+    tree = case_tree(workdir, "registry-child-env", registry_change=True)
+    hook_env = {"GIT_DIR": str(tree.origin), "GIT_WORK_TREE": str(tree.root), "GIT_INDEX_FILE": str(tree.root / "index")}
+    cases.append(
+        _case(
+            "registry-child-does-not-inherit-git-dir",
+            "allow",
+            "",
+            tree,
+            env={**hook_env, "FACTORY_GUARD_REGISTRY_CMD": '[ -z "${GIT_DIR:-}" ] && [ -z "${GIT_WORK_TREE:-}" ]'},
+        )
+    )
+    cases.append(
+        _case(
+            "registry-red-still-refuses-under-hook-env",
+            "deny",
+            "the registry check is red",
+            tree,
+            env={**hook_env, "FACTORY_GUARD_REGISTRY_CMD": "false"},
+        )
+    )
     tree = case_tree(workdir, "green")
     cases.append(_case("green-push", "allow", "", tree))
     cases.append(_case("push-of-lane-branch", "allow", "", tree, "git push origin lane/alpha"))

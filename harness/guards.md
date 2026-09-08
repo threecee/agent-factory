@@ -488,6 +488,12 @@ worktree ritual from the ritual guard (M-4); the reminders script owns only
 the two plain-stdout legs and says so in its header. A reminder with two
 owners is stated twice and maintained by neither.
 
+**Hook children.** A rule that spawns a child (`landing._run`, `_common.git`)
+passes `child_environ()` — the caller's environment without git's hook
+repository pins — so a check running inside `pre-push` cannot act on the
+pushed repository through `GIT_DIR`. `../verification/protections.md` §1.1
+states the rule and the incident that set it.
+
 ## 11. Falsification and mounting
 
 Every rule ships its falsification list: planted violations with the needle
