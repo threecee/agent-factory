@@ -1,6 +1,6 @@
 # INSTALL — agent runbook
 
-The kit ships its own eight capabilities under `openspec/specs/` as the worked
+The kit ships its own capabilities under `openspec/specs/` as the worked
 example of the four-document model. Read those current promises beside the
 numbered records in `decisions/`, `ARCHITECTURE.md`, `PATTERNS.md`, and the
 choices protocol before adapting their shapes to the target repository.
@@ -30,7 +30,8 @@ has no Python of its own, and pin it in the verify entry (`PY ?= python3`).
 ## Step 1 — Planning pillar
 1. Copy the package's doc tree under ONE root that keeps its directory
    layout — `docs/factory/{planning,verification,interpretation,harness,user-level}/`
-   — and resolve every {{PLACEHOLDER}} in `planning/`. The trial found that
+   — and resolve every installation placeholder in every copied Markdown
+   file. The trial found that
    flattening `planning/*.md` into `docs/` leaves about thirty `../harness/…`,
    `../interpretation/…`, `../verification/…` and `../user-level/…` links
    dangling; the pillars cite each other by relative path. Do NOT copy
@@ -213,9 +214,8 @@ has no Python of its own, and pin it in the verify entry (`PY ?= python3`).
     one legs-table row. `verification/tests/test_hub_pointers.sh` is the
     package's own instance and the shape to copy; its `--tree --installed`
     form over the copied doc tree (`--skills .agents/skills`, Step 4's
-    location) also refuses `{{…}}` residue under `planning/`, the
-    directory Step 1.1 resolves (the other pillars keep their parameter
-    names by design).
+    location) also refuses installation-placeholder residue in every
+    Markdown file in that tree.
 
 ## Step 3 — Interpretation pillar
 1. Create `docs/choices/` with `interpretation/choices-ledger-README.md`. The
@@ -436,11 +436,10 @@ train is held with a decision brief (`verification/lander-duties.md` §7).
    hub pointers and INSTALL's counts hold) and its `--check --tree
    --installed <docs root> --skills .agents/skills` form on the copied doc
    tree (`--skills` names where Step 4 put the skill set; the doc root
-   carries none): no dead pointer, and no `{{…}}` residue under
-   `planning/` — the chapters keep their parameter names by design
-   (`harness/bulk-read-contract.md` §4), and the test's case 8 runs this
-   exact form on the package's own chapter tree with `planning/` resolved
-   and the skills kept elsewhere, so a faithful copy is green. If the repo
+   carries none): no dead pointer and no installation-placeholder residue
+   in any Markdown file. The test's case 8 runs this exact form on the
+   package's own chapter tree with every placeholder resolved and the skills
+   kept elsewhere, so a faithful copy is green. If the repo
    serves a
    surface, run one offline functional trial against a small start state
    with fake AI roles and bank its receipt (§4 shape) as the installation's
@@ -478,3 +477,29 @@ train is held with a decision brief (`verification/lander-duties.md` §7).
    about a path); with no classifier bound the line reads `none —
    classifier unbound` and the step is recorded as not exercised.
 A factory whose smoke test has not run is not installed — it is copied.
+
+## Step 8 — Record installation identity
+
+After Step 7 is green, write `.factory-kit.yml` at the target repository root.
+The file is an append-only installation stamp with this shape, using actual
+values rather than the metavariables shown here:
+
+```yaml
+schema: 1
+installs:
+  - kit_version: "<exact release identifier or source commit>"
+    installed_at: "<UTC ISO-8601 date and time>"
+    parameters:
+      "<parameter name>": "<resolved value>"
+```
+
+The `parameters` mapping records every named placeholder resolved in the
+copied Markdown tree and every target-specific path or command selected by
+this runbook. Record the name or location of a secret-bearing binding, never
+the secret value itself.
+
+**Update note.** Before updating an installed kit, read the last `installs`
+entry and retain every existing entry. Apply the newer runbook, rerun Step
+7.3 and the target's full verify, then append one entry for the new kit
+version, update date, and complete resolved-parameter mapping; a failed update
+leaves the stamp unchanged.

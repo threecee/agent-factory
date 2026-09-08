@@ -39,14 +39,10 @@
 #   --skills <dir>  where the `skills` pillar resolves (default `<root>/skills`);
 #                   an installed repo passes the directory INSTALL step 4 filled
 #                   (`.agents/skills`), since the doc root carries no skills/
-#   --installed     adds the placeholder leg over `<root>/planning/` — the one
-#                   directory the installer resolves (INSTALL step 1.1): any
-#                   `{{…}}` residue there is a finding. The other pillars keep
-#                   their parameter names by design (`harness/bulk-read-contract.md`
-#                   §4 and the bulk-read skills name `{{PARAM}}` rows), so a
-#                   faithful copy of the chapters is green under this flag; case 8
-#                   asserts exactly that on the package's own tree with
-#                   `planning/` resolved.
+#   --installed     adds the placeholder leg over every Markdown file in the
+#                   installed tree: any `{{…}}` residue is a finding. Case 8
+#                   asserts that a faithful copy of the chapters is green after
+#                   every installation parameter has been resolved.
 #
 # Cases (exit 0 = all hold):
 #   1 the package hub is green (0 findings); 1b it read at least the floor of
@@ -61,16 +57,15 @@
 #     inside the opening word
 #   4 INSTALL's stated counts equal the tree (gate scripts under
 #     verification/gates, locked skills in skills/skills-lock.json)
-#   5 `--installed` on a scratch tree with a planted {{PLACEHOLDER}} under
-#     planning/ is red naming it; the same tree without the flag is green; a
-#     placeholder outside planning/ is not a finding (the documented scope)
+#   5 `--installed` on a scratch tree with planted {{PLACEHOLDER}} values in
+#     two pillars is red naming both; the same tree without the flag is green
 #   6 `--tree` on a scratch tree resolves a `../pillar/file.md §N` pointer from the
 #     citing file's directory (green), and a dead one is red
 #   7 `--tree` on the package itself is green (every chapter pointer resolves;
 #     skills/ excluded by the mode)
-#   8 `--tree --installed` over a copy of the package's chapter tree with the
-#     planning/ placeholders resolved, `--skills` pointing at the skill set kept
-#     elsewhere, is green — the INSTALL step 7.3 run
+#   8 `--tree --installed` over a copy of the package's chapter tree with every
+#     placeholder resolved, `--skills` pointing at the skill set kept elsewhere,
+#     is green — the INSTALL step 7.3 run
 #
 # Run:  sh verification/tests/test_hub_pointers.sh
 #       sh verification/tests/test_hub_pointers.sh --check [--tree] [--installed] [--skills <dir>] [<root>]
@@ -170,9 +165,7 @@ $root/INSTALL.md"
       done
     done
     if [ "$installed" = 1 ]; then
-      case "$f" in "$root/planning/"*)
-        grep -n '{{[A-Za-z_][A-Za-z0-9_]*}}' "$f" | sed "s|^|PLACEHOLDER $f:|";;
-      esac
+      grep -n '{{[A-Za-z_][A-Za-z0-9_]*}}' "$f" | sed "s|^|PLACEHOLDER $f:|"
     fi
   done
 }
@@ -291,7 +284,8 @@ check "5 a {{PLACEHOLDER}} is green without --installed" 0 "$code"
 out="$(run --tree --installed "$T/inst")"; code=$?
 check "5b --installed makes the planted placeholder under planning/ red" 1 "$code"
 printf '%s' "$out" | grep -q "PLACEHOLDER .*planning/a.md:.*{{ZZ_PLANTED}}" && echo "ok   5c the finding names the placeholder and the file" || { echo "FAIL 5c message: $out"; fail=1; }
-check "5d a placeholder outside planning/ is not a finding (the documented scope)" 1 "$(printf '%s\n' "$out" | count)"
+printf '%s' "$out" | grep -q "PLACEHOLDER .*harness/b.md:.*{{ZZ_OUTSIDE}}" && echo "ok   5d --installed names the placeholder outside planning/" || { echo "FAIL 5d message: $out"; fail=1; }
+check "5e --installed reports both planted placeholders" 2 "$(printf '%s\n' "$out" | count)"
 
 out="$(run --tree "$HERE")"; code=$?
 check "7 --tree on the package itself is green (skills/ excluded by the mode)" 0 "$code"
@@ -299,11 +293,11 @@ check "7 --tree on the package itself is green (skills/ excluded by the mode)" 0
 
 mkdir -p "$T/copy"
 for d in planning verification interpretation harness user-level; do cp -R "$HERE/$d" "$T/copy/$d"; done
-for f in "$T"/copy/planning/*.md; do
+find "$T/copy" -name '*.md' -type f | while IFS= read -r f; do
   sed 's/{{[A-Za-z_][A-Za-z0-9_]*}}/resolved-by-the-installer/g' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
 done
 out="$(run --tree --installed "$T/copy" --skills "$HERE/skills")"; code=$?
-check "8 --tree --installed over the chapter tree with planning/ resolved (--skills elsewhere) is green (INSTALL step 7.3)" 0 "$code"
+check "8 --tree --installed over the chapter tree with every placeholder resolved (--skills elsewhere) is green (INSTALL step 7.3)" 0 "$code"
 [ -n "$out" ] && printf '%s\n' "$out" | sed 's/^/     /'
 
 exit $fail
