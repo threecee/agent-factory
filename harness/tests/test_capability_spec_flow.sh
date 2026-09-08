@@ -1,6 +1,17 @@
 #!/usr/bin/env bash
-# Exercises strict validation and archival against a temporary two-capability project.
+# Exercises the kit's current specs, then strict validation and archival against a
+# temporary two-capability project.
+#
+# Cases:
+#   1  the kit's own capability specs pass strict non-interactive validation
+#   1b a temporary copy with one Purpose heading removed is refused by strict validation
+#   2  an incomplete MODIFIED requirement is refused for omitting a surviving scenario
+#   3  a bare ADDED capability validates
+#   4  archival merges the addition, records one dated archive, and leaves no live change
 set -u
+
+HERE="$(cd "$(dirname "$0")" && pwd -P)"
+ROOT="$(cd "$HERE/../.." && pwd -P)"
 
 if ! command -v openspec >/dev/null 2>&1; then
   echo 'SKIP capability-spec-flow: openspec 1.12.0 is not on PATH'
@@ -21,6 +32,22 @@ fi
 
 T="$(mktemp -d "${TMPDIR:-/tmp}/capability-spec-flow.XXXXXX")"
 trap 'rm -rf "$T"' EXIT
+
+if ! (cd "$ROOT" && openspec validate --all --strict --no-interactive) >"$T/kit-strict.out" 2>&1; then
+  cat "$T/kit-strict.out" >&2
+  echo 'not ok - the kit capability specs failed strict validation' >&2
+  exit 1
+fi
+
+mkdir -p "$T/purpose-plant/openspec"
+cp -R "$ROOT/openspec/specs" "$T/purpose-plant/openspec/specs"
+sed '/^## Purpose$/d' "$T/purpose-plant/openspec/specs/board-protocol/spec.md" >"$T/purpose-plant/spec.tmp"
+mv "$T/purpose-plant/spec.tmp" "$T/purpose-plant/openspec/specs/board-protocol/spec.md"
+if (cd "$T/purpose-plant" && openspec validate --all --strict --no-interactive) >"$T/purpose-red.out" 2>&1; then
+  echo 'not ok - strict validation accepted a capability spec without Purpose' >&2
+  exit 1
+fi
+
 cd "$T" || exit 1
 
 mkdir -p \
@@ -141,4 +168,4 @@ if [ -n "$live" ]; then
   exit 1
 fi
 
-echo 'capability-spec-flow: strict ADDED/archive green; incomplete MODIFIED refused; no live changes remain'
+echo 'capability-spec-flow: kit specs strict; missing Purpose refused; ADDED/archive green; incomplete MODIFIED refused; no live changes remain'

@@ -1,5 +1,10 @@
 # INSTALL — agent runbook
 
+The kit ships its own eight capabilities under `openspec/specs/` as the worked
+example of the four-document model. Read those current promises beside the
+numbered records in `decisions/`, `ARCHITECTURE.md`, `PATTERNS.md`, and the
+choices protocol before adapting their shapes to the target repository.
+
 You are an LLM agent installing the factory into the repo you are standing in.
 Follow the steps in order. Everything deterministic ships in this package;
 YOUR job is parameterization against the target repo's language, build chain
@@ -102,7 +107,12 @@ has no Python of its own, and pin it in the verify entry (`PY ?= python3`).
    `verification/gates/README.md`.
    With the pinned binary on `PATH`, run
    `bash harness/tests/test_capability_spec_flow.sh`; an absent binary is a
-   loud skip, never proof.
+   loud skip, never proof. That package test first runs strict validation over
+   the kit's own `openspec/specs/`, then proves delta archival in a throwaway
+   project. Also run `bash verification/tests/test_adr_anchors.sh` and
+   `bash verification/tests/test_architecture_anchors.sh`; they keep the
+   worked example's decision, architecture, pattern, and shell-case anchors
+   resolvable.
 
 ## Step 2 — Verification pillar
 1. Read `verification/gates/README.md` §"Which gates port" BEFORE copying
