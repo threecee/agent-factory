@@ -140,8 +140,8 @@ STATE="$T/state two"; LOG="$T/logs/2.jsonl"
 deny_case "2a gate | tail is refused naming the stage" "$PLANTED" 'GUARD verdict: a verdict cannot be read through «| tail»'
 check "2b the refusal carries the rewritten form and the switch" "$( has "$(cat "$ERR")" 'make check-backlog > <lane>-check-backlog.log 2>&1; echo EXIT=$?' && has "$(cat "$ERR")" 'Switch: FACTORY_GUARD_ALLOW=verdict (logged)'; echo $? )" "$(cat "$ERR")"
 deny_case "2c pytest | head" 'pytest tests -q | head -3' '«| head»'
-deny_case "2d make verify | grep without pipefail" "make verify 2>&1 | grep -E 'passed|failed'" '«| grep without set -o pipefail»'
-deny_case "2d2 pipefail enabled after the gate pipeline is too late" "make verify | grep passed; set -o pipefail" '«| grep without set -o pipefail»'
+deny_case "2d make verify | grep is refused" "make verify 2>&1 | grep -E 'passed|failed'" '«| grep»'
+deny_case "2d2 pipefail after the gate pipeline does not permit a pipe" "make verify | grep passed; set -o pipefail" '«| grep»'
 deny_case "2e python3 -m scripts.check_x | tail" 'python3 -m scripts.check_backlog | tail -2' '«| tail»'
 deny_case "2f gate; git push in one call" 'make check-backlog; git push origin HEAD:main' '«; git push»'
 check "2g the push refusal names the next call" "$( has "$(cat "$ERR")" 'then, in the NEXT call when EXIT=0: git push origin HEAD:main'; echo $? )" "$(cat "$ERR")"
@@ -149,8 +149,9 @@ deny_case "2h cat receipt; git push" 'cat t-42-1.exit; git push origin HEAD:main
 deny_case "2i two gates && push" 'make check-backlog && make check-numbers && git push origin HEAD:main' '«; git push»'
 allow_case "2j grep on a log | tail" 'grep -n FAILED verify-t-42.log | tail -5'
 allow_case "2k ls | tail" 'ls -t artifacts | tail -3'
-allow_case "2l tee with pipefail and PIPESTATUS" 'set -o pipefail; make check-backlog 2>&1 | tee t-42.log; echo EXIT=${PIPESTATUS[0]}'
-allow_case "2l2 grouped set -eo enables pipefail before the pipeline" 'set -eo pipefail; make check-backlog | grep passed'
+deny_case "2l pipefail does not permit gate output through tee" 'set -o pipefail; make check-backlog 2>&1 | tee t-42.log; echo EXIT=${PIPESTATUS[0]}' '«| tee»'
+deny_case "2l2 pipefail does not permit gate output through grep" 'set -eo pipefail; make check-backlog | grep passed' '«| grep»'
+deny_case "2l3 even gate help output may not be piped" 'make check-backlog --help | head -20' '«| head»'
 allow_case "2m redirect + echo EXIT=\$?" 'make check-backlog > lane-backlog.log 2>&1; echo EXIT=$?'
 allow_case "2n receipt alone" 'cat t-42-1.exit'
 allow_case "2n2 push of a lane branch alone" 'git push origin lane/x'

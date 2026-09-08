@@ -26,6 +26,8 @@
 #  12  read-only run: report extracted from stdout, validated, banked
 #  13  parent-harness termination: the run survives SIGTERM+SIGHUP to the
 #      dispatcher's process group and still writes its exit receipt
+#  14  stale quota and roster refusals happen before a provisioning command;
+#      neither refusal leaves a candidate worktree or branch
 set -u
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -103,11 +105,26 @@ date +%s > "$FAKE_STAMP"
 printf 'lane: %s\nrun_id: %s\nstatus: built\n' "$LANE" "$LANE_RUN_ID" > "$LANE_RESULT_PATH"
 exit 0
 EOF
+cat > "$T/body-provision.sh" <<'EOF'
+git -C "$PROVISION_PRIMARY" worktree add -q -b "$PROVISION_BRANCH" \
+  "$PROVISION_WORKTREE" "$PROVISION_PIN"
+exit $?
+EOF
+
+QUOTA="$T/quota receipt"
+printf 'checked_epoch=%s\nverdict=go\n' "$(date +%s)" > "$QUOTA"
+cat > "$T/roster-check.sh" <<'EOF'
+#!/bin/sh
+[ "${ROSTER_ALLOW:-yes}" = yes ]
+EOF
+chmod +x "$T/roster-check.sh"
+ROSTER_CHECK="$T/roster-check.sh"
 
 # start one lane; args: lane worktree run-id body [extra env assignments via env]
 start_lane() { # lane wt run_id body
   LANE="$1" LANE_WORKTREE="$2" LANE_RUN_ID="$3" LANE_RUN_DIR="$RUN" LANE_SENTINEL_DIR="$RUN" \
     LANE_RESULT_PATH="$RUN/$1.$3.result.md" LANE_BRIEF="$BRIEF" \
+    LANE_QUOTA_RECEIPT="${LANE_QUOTA_RECEIPT_OVERRIDE:-$QUOTA}" LANE_ROSTER_CHECK="$ROSTER_CHECK" \
     "$LAUNCHER" start -- "$FAKE" "$T/$4" exec --cd "{worktree}" --lane "{lane}"
 }
 wait_lane() {
@@ -254,7 +271,7 @@ check "12d read-only exit 0 without markers is no-deliverable (exit 21)" "$( [ "
 # ---------------------------------------------------------------- case 13
 # a "parent harness" in its own session dispatches the lane, then is killed
 # (TERM + HUP to its whole process group) while the lane is still running.
-parent_cmd="LANE=orphan LANE_WORKTREE='$T/wt c' LANE_RUN_ID=o1 LANE_RUN_DIR='$RUN' LANE_SENTINEL_DIR='$RUN' LANE_RESULT_PATH='$RUN/orphan.o1.result.md' LANE_BRIEF='$BRIEF' FAKE_SLEEP=3 '$LAUNCHER' start -- '$FAKE' '$T/body-ok.sh' exec > '$T/orphan start.out' 2>&1; sleep 60"
+parent_cmd="LANE=orphan LANE_WORKTREE='$T/wt c' LANE_RUN_ID=o1 LANE_RUN_DIR='$RUN' LANE_SENTINEL_DIR='$RUN' LANE_RESULT_PATH='$RUN/orphan.o1.result.md' LANE_BRIEF='$BRIEF' LANE_QUOTA_RECEIPT='$QUOTA' LANE_ROSTER_CHECK='$ROSTER_CHECK' FAKE_SLEEP=3 '$LAUNCHER' start -- '$FAKE' '$T/body-ok.sh' exec > '$T/orphan start.out' 2>&1; sleep 60"
 parent_pid=""
 if command -v setsid >/dev/null 2>&1; then
   setsid /bin/sh -c "$parent_cmd" & parent_pid=$!
@@ -283,6 +300,26 @@ else
   check "13c the run survived and wrote its exit receipt; verdict built (exit 0)" "$( [ "$rw" -eq 0 ] && [ "$rv" -eq 0 ]; echo $? )" "wait=$rw $v"
   printf 'detach method exercised: %s\n' "$(rget "$RUN/orphan.o1.start" detach)"
 fi
+
+# ---------------------------------------------------------------- case 14
+mkdir -p "$T/provision primary"
+( cd "$T/provision primary" && git init -q && git -c user.email=t@example.invalid -c user.name=t commit -q --allow-empty -m init ) 2>/dev/null
+provision_pin="$(git -C "$T/provision primary" rev-parse HEAD)"
+printf 'checked_epoch=1\nverdict=go\n' > "$T/stale quota"
+out="$(LANE_QUOTA_RECEIPT_OVERRIDE="$T/stale quota" PROVISION_PRIMARY="$T/provision primary" \
+  PROVISION_BRANCH=lane/quota-refusal PROVISION_WORKTREE="$T/quota refused wt" \
+  PROVISION_PIN="$provision_pin" start_lane c "$T/wt c" preflight1 body-provision.sh 2>&1)"; rc=$?
+[ "$rc" -eq 0 ] && wait_lane c preflight1
+check "14a stale quota preflight refusal leaves no worktree or branch" \
+  "$( [ "$rc" -eq 4 ] && [ ! -e "$T/quota refused wt" ] && ! git -C "$T/provision primary" show-ref --verify --quiet refs/heads/lane/quota-refusal; echo $? )" \
+  "rc=$rc out=$out"
+out="$(ROSTER_ALLOW=no PROVISION_PRIMARY="$T/provision primary" \
+  PROVISION_BRANCH=lane/roster-refusal PROVISION_WORKTREE="$T/roster refused wt" \
+  PROVISION_PIN="$provision_pin" start_lane c "$T/wt c" preflight2 body-provision.sh 2>&1)"; rc=$?
+[ "$rc" -eq 0 ] && wait_lane c preflight2
+check "14b roster preflight refusal leaves no worktree or branch" \
+  "$( [ "$rc" -eq 4 ] && [ ! -e "$T/roster refused wt" ] && ! git -C "$T/provision primary" show-ref --verify --quiet refs/heads/lane/roster-refusal; echo $? )" \
+  "rc=$rc out=$out"
 
 # ---------------------------------------------------------------- summary
 printf '\n# %d passed, %d failed, %d skipped (tmp: %s)\n' "$PASS" "$FAIL" "$SKIP" "$T"

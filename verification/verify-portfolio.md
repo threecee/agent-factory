@@ -37,6 +37,14 @@ frontend must run it explicitly at assembly.
   immediately before the suite (a snapshot, not a lock — train-plan §3.6).
   A red suite from a contended machine is adjudicated (below), never
   trusted.
+- **Watchers never run the chain.** A verification chain that may outlive one
+  tool call runs under one detached driver. The driver sequences the phases
+  and writes each phase's log and atomic `<run-id>-<phase>.exit` file. A
+  watcher only reads those receipts and reports state; its timeout ends the
+  watch, never signals or kills the driver or its children. The next phase is
+  started by the driver from the preceding phase receipt, never by the watcher
+  (`harness/train-plan.md` §4.2). Provenance: source factory Varde w137,
+  2026-09-08.
 - **Local verify gates landing — in both landing modes** (landing-modes.md).
   The host's branch policy requires the lander's `local-verify` status on
   the exact commit; CI re-verifies on the train pull request (pr) or on main

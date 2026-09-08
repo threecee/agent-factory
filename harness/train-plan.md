@@ -60,20 +60,38 @@ step. It is a snapshot; it is not a lock (§3.6).
 |---|---|---|
 | A served instance is listening in the project's port range | `lsof -nP -iTCP:<range> -sTCP:LISTEN` (or the platform equivalent) returns any row | `<range>`: the range the project's serve/standup/eval scripts bind |
 | A test runner is running UNDER a delegated agent lane | a process whose command matches the test runner (`pytest`, `vitest`, …) and whose ancestor chain contains a live agent lane (§3.3) | `<test runner names>` |
+| A live writing lane is present | the matched lane's start receipt says `mode=write`; a missing mode is treated as write (§3.3) | `<lane receipt directory>` |
 | The detection apparatus itself is unavailable | `ps`/`lsof` missing or erroring | fail CLOSED: refuse and say the apparatus failed, never "idle" |
-| Disk below the floor or the CLI temp dir above its ceiling before a big spender (dispatch, assembly, serve) | `df -k <volume>` free < FLOOR_GB; `du -sk <tmp>` under a time budget (a du that does not finish is a note, never a stop) | `<volume>`, `<floor GB>`, `<tmp dir>` |
+| Disk below the floor before a big spender (dispatch, assembly, serve) | `df -k <volume>` free < FLOOR_GB | `<volume>`, `<floor GB>` |
+| Coding-CLI staging above its ceiling | `du -sk <staging-root>` under a time budget, only before the configured spawn/dispatch command class that grows that tree; a `du` timeout is a note, never a stop | `<staging-root>`, `<ceiling GB>`, `<growth command>` |
 
 A hard stop is re-checked before EVERY load sample in the wait window
 (§3.4). `--force` cannot override or delay it. The disk row's refusal carries
 the reaper commands; nothing is deleted by the check (`guards.md` §6, M-20);
 the session-start line prints free space and listeners in the port range.
 
+The source-factory Codex CLI left about 0.4 GB per spawn under
+`~/.codex/.tmp/marketplaces/.staging/`. Recovery may reap only
+`.staging/*` entries older than 30 minutes; it never removes
+`bundled-marketplaces`. One selective form is `find
+~/.codex/.tmp/marketplaces/.staging -mindepth 1 -maxdepth 1 -mmin +30 -exec
+rm -rf -- {} +`. The check prints candidates and this exact recovery path;
+it deletes nothing. The staging ceiling never turns every Python command
+into a spender: only the configured command class that grows the measured
+tree is blocked. Provenance: source factory Varde w137, 2026-09-08.
+
 ### 3.2 Soft stops — overridable with a logged warning
 
 | Condition | Rule |
 |---|---|
-| A delegated agent lane is live (§3.3) but not running tests | refuse by default; `--force` overrides and prints `[FORCED IDLE WARNING] <reason>` into the run log |
+| A delegated read-only agent lane is live (§3.3) but not running tests | refuse by default; `--force` overrides and prints `[FORCED IDLE WARNING] <reason>` into the run log |
 | Sustained load above the threshold (§3.4) | wait up to the bounded window, then refuse; `--force` overrides after the same warning |
+
+`--force` has exactly those two effects: it may override a live read-only
+lane and sustained high load. It never overrides a listener, a writing lane
+or a lane with a descendant test runner. Every use writes an orchestrator
+`O-<n>` entry in the train's choices ledger with the observed condition and
+reason. Provenance: source factory Varde w137, 2026-09-08.
 
 ### 3.3 Process-match criteria — what counts as a live agent lane
 
@@ -93,6 +111,8 @@ the session-start line prints free space and listeners in the port range.
    is the soft condition in §3.2.
 5. **Process names carried by the harness.** The binary name and token are
    parameters (fill them in below); a project with two coding CLIs lists both.
+6. **Mode comes from the run receipt.** `mode=read-only` is the only soft
+   classification; `mode=write` or no mode is the hard condition in §3.1.
 
 Fill in: `<binary>` = ____ ; `<token>` = ____ ; `<test runner names>` = ____.
 
@@ -266,9 +286,11 @@ smoke test:
    `nc -l <port>`); the check must refuse and name the range. Stop it.
 2. Run `sh -c 'sleep 60 # <binary> <token>'` in another terminal; the check
    must NOT refuse (text mention, §3.3 rule 3).
-3. Run the real agent CLI in a scratch directory with the lane subcommand;
-   the check must refuse as a soft stop; `--force` must proceed with the
-   warning in the log.
+3. Run the real agent CLI read-only in a scratch directory with the lane
+   subcommand; the check must refuse as a soft stop; `--force` must proceed
+   with the warning in the log and an `O-<n>` ledger entry. Repeat as a
+   writing lane, with a descendant test runner, and with a listener; all
+   three must still refuse under `--force`.
 4. Run the resumed form on a tree with an uncommitted file; it must refuse
    with the "commit the conflict resolution" message.
 5. Re-run a finished run id; it must refuse to overwrite the receipt.

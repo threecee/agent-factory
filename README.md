@@ -103,8 +103,8 @@ Each step: artifact → owner → next reader, then its home. Tags: (gate)
 2. Uncertain cause: a read-only investigation brief on frozen evidence at a
    pinned SHA → a falsified causal model → a fix brief or a Decision-needed
    item, never code (`planning/investigation-brief-template.md §0`, `§8`).
-3. Every ADR or migration number claimed as a `claimed` row in NUMBERS on
-   main before the lane starts; the drift leg (gate) reads it at assembly
+3. Every ADR or migration number is claimed first on its claims-only lane,
+   which boards the train; the drift leg (gate) reads it at assembly
    (`planning/adr-and-numbers.md`).
 4. The lane brief from the standing template — task ID, round, pin,
    numbers, measurement baseline and proof owner, model/effort line, kind
@@ -189,8 +189,9 @@ Each step: artifact → owner → next reader, then its home. Tags: (gate)
   task ID, decision versus repetition, first-contact STOPs, PARK versus
   STOP and who pushes, the change kind
   (`planning/execution-contract.md §2`–`§6`, `§9`).
-- **4.5 ADRs and numbers** — claim first, orchestrator-only, flip at
-  landing; the drift leg (gate) finds a `claimed` row already on main
+- **4.5 ADRs and numbers** — claim first, orchestrator-only, board the claim
+  branch, then flip on the assembled train before its final run; the drift
+  leg (gate) finds a stale `claimed` row already on main
   (`planning/adr-and-numbers.md`; `planning/NUMBERS-template.md`;
   `verification/protections.md §7`).
 - **4.6 Backlog teeth** — cited-or-stamped specs and closing evidence are a
@@ -340,11 +341,13 @@ never judges whether it is right (`harness/guards.md §12`;
 |---|---|
 | What is the core loop, and what does each hop hand onward? | §0, “The core loop” |
 | Who may push main, and what happens when the owner is asleep? | `planning/execution-contract.md §6`; `verification/lander-duties.md §7`; `user-level/landing-policy.example.md §1` |
-| How is a number allocated, and flipped? | `planning/adr-and-numbers.md`; `verification/lander-duties.md §8` |
-| What must a receipt contain, and what is a verdict never read from? | `harness/train-plan.md §4.1`; `harness/run-lifecycle.md §2`; `harness/guards.md §7` |
+| What must pass before a launch may invoke a provisioning command? | `harness/run-lifecycle.md §11`; `harness/model-policy.md §4` |
+| How does a number claim board, and when is it flipped? | `planning/adr-and-numbers.md`; `verification/lander-duties.md §8` |
+| What must a receipt contain, and how must gate output be captured? | `harness/train-plan.md §4.1`; `harness/run-lifecycle.md §2`; `harness/guards.md §7` |
 | When may a train carry one lane? | `verification/lander-duties.md §2` |
 | What may a guard never do, and when does a soft form become hard? | `harness/guards.md §1`, `§5` |
-| Where is a switch use recorded? | `harness/guards.md §4`; `interpretation/choices-ledger-README.md §1` |
+| What is the fix-first switch rule, where is use recorded, and may auto-mode still decline it? | `harness/guards.md §4`; `interpretation/choices-ledger-README.md §1` |
+| When does the board guard treat a command as a dispatch? | `harness/guards.md §7` |
 | Which anti-patterns is this session repeating? | `harness/guards.md §15` |
 | When does a lane STOP, when does it PARK, and how many rounds does it get? | `planning/execution-contract.md §3`–`§6` |
 | What is the change kind, and who re-derives it? | `planning/execution-contract.md §9` |
@@ -359,7 +362,9 @@ never judges whether it is right (`harness/guards.md §12`;
 | What does the system do today, and where is a behaviour change written? | `planning/capability-specs.md §1`, `§3` |
 | When is an investigation dispatched before a fix? | `planning/investigation-brief-template.md §0` |
 | What is a choice, and what is its ID? | `interpretation/choices-ledger-README.md §1`, `§2` |
-| May the heavy step start now, and how is a live lane identified? | `harness/train-plan.md §3`; `harness/run-lifecycle.md §6` |
+| May the heavy step start now, what can `--force` override, and how is a live lane identified? | `harness/train-plan.md §3`; `harness/run-lifecycle.md §6` |
+| What may the disk guard block, and what may its reaper touch? | `harness/train-plan.md §3.1`; `harness/guards.md §6` |
+| How does a long verification chain run, and what may its watcher do? | `verification/verify-portfolio.md` "Laws"; `harness/train-plan.md §4.2` |
 | What may an evaluation claim, and when is a bank copy isolated? | `verification/evaluation-readiness.md §1`, `§4`; `harness/artifact-bank.md §3` |
 | Which model runs a lane? | `harness/model-policy.md §3`, `§4`; `user-level/README.md` |
 | Which skill does a step reach for, and are the installed skills the shipped ones? | `skills/ROUTING.md`; `skills/ATTRIBUTION.md` |

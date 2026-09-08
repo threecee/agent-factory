@@ -106,9 +106,11 @@ order, and nowhere else:
    as, so the report carries provenance.
 2. **The launcher argv**: the model and effort tokens as the CLI wants
    them, e.g. `-- <cli> exec --cd "{worktree}" -m <model> -c
-   effort=<level> "{brief}"`. The launcher validates nothing about the
-   model — it is not its business (`run-lifecycle.md` §3) — and records
-   the argv in the start receipt, which is the provenance the train reads.
+   effort=<level> "{brief}"`. The launcher does not interpret model names;
+   it invokes the target repository's `LANE_ROSTER_CHECK` over the brief and
+   proposed argv before dispatch (`run-lifecycle.md` §3, §11), then records
+   the argv in the start receipt. The policy remains the one home of what the
+   checker accepts. Provenance: source factory Varde w137, 2026-09-08.
 3. **The report**: `proof:` or `measurements:` may cite the model when a
    result depends on it (an evaluation always does — `verification/evaluation-readiness.md`
    §4 receipt roles); a ledger entry names the policy row when the lane
