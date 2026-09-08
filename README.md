@@ -139,8 +139,8 @@ Each step: artifact → owner → next reader, then its home. Tags: (gate)
 9. The lander: train worktree at origin/main, the resource contract (hard
    stops before the heavy run), `--no-ff` merges of pinned SHAs, every live
    capability delta archived in stable order before cross-checks, the kind
-   re-derived from the real diff (text — a lander duty today; a `context`
-   guard when M-21 ships, `harness/guards.md §6`), cross-checks, ledger
+   re-derived from the real diff and checked at landing by the M-21 context
+   guard (`harness/guards.md §7`), cross-checks, ledger
    committed with the train (`planning/capability-specs.md §4`;
    `verification/lander-duties.md §1`, `§2`; `harness/train-plan.md §2`,
    `§3`).
@@ -230,7 +230,7 @@ Each step: artifact → owner → next reader, then its home. Tags: (gate)
   | Lane, before commit | pregate block; matching legs-table rows selected mechanically (gate rows) | the brief's hard rules; first-contact STOPs |
   | Wrapper, at handback | result lint (wrapper check; a guard on the harness's subagent-stop event); red→green falsification | the choices audit |
   | Any commit | identity leg, trailer on source commits (hook); `--no-verify` refused in a hooked session (guard) | subject form (WARN) |
-  | Assembly | cross-checks; cheap gates incl. drift leg, never-weaken, ledger lint (gate); `verdict`, `identity` (guard) | kind re-derivation (a lander duty today; a `context` guard when M-21 ships); the batch rule (independent lanes share a train) |
+  | Assembly | cross-checks; cheap gates incl. drift leg, never-weaken, ledger lint (gate); `verdict`, `identity`, and the landing-time `kind` check (guard) | kind re-derivation; the batch rule (independent lanes share a train) |
   | Full verify | the receipt launcher; the resource contract's hard stops (before the heavy run) | adjudicating a red X |
   | Landing | `landing` rule (guard); pre-push (hook); ruleset; status poster | landing authority: a ruling or a signed policy |
   | Close-out | close-out check (gate); stop-event rule (guard) | board sweep; notifications |
@@ -250,8 +250,8 @@ Each step: artifact → owner → next reader, then its home. Tags: (gate)
   "Legs that bring lane-green closer to train-green"); the change kind,
   declared from the planned file set and re-derived from the real diff —
   a kind that rose is applied and announced, a kind that fell is a ledger
-  entry (text — a lander duty today; a `context` guard when M-21 ships,
-  the legs it selects being the hard ones — `planning/execution-contract.md
+  entry (the M-21 context guard checks both at landing, while the legs it
+  selects remain the hard ones — `planning/execution-contract.md
   §9`; `harness/guards.md §6`); the
   trivial-lane exemption (text — `skills/ROUTING.md` rule 2); never-weaken
   over the control plane (gate — `verification/protections.md §7`). Keyed
@@ -359,7 +359,7 @@ never judges whether it is right (`harness/guards.md §12`;
 | When does the board guard treat a command as a dispatch? | `harness/guards.md §7` |
 | Which anti-patterns is this session repeating? | `harness/guards.md §15` |
 | When does a lane STOP, when does it PARK, and how many rounds does it get? | `planning/execution-contract.md §3`–`§6` |
-| What is the change kind, and who re-derives it? | `planning/execution-contract.md §9` |
+| What is the change kind, who re-derives it, and what checks it at landing? | `planning/execution-contract.md §9`; `harness/guards.md §7` |
 | Which legs run on a lane before commit, how are rows selected, and where do domain checklists live? | `planning/lane-brief-template.md §4`; `verification/verify-portfolio.md` "Legs that bring lane-green closer to train-green"; `verification/select_diff_triggered_legs.sh`; `harness/guards.md §9` |
 | How do path-scoped open improvement items enter a lane brief? | `harness/lookup_open_improvements.sh`; `interpretation/continuous-improvement.md §1`; `planning/lane-brief-template.md §1` |
 | What may CI decide? | `verification/landing-modes.md §4.3`; `verification/ci/README.md §4` |

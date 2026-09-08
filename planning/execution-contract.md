@@ -229,9 +229,9 @@ deleted, no gate edited to go green. PARK instead.
   `development-harness`; the provenance line and the one list of what was
   deliberately not adopted from it are in `../skills/ATTRIBUTION.md`. No
   text was borrowed: the kind selects legs that already exist and carries
-  no policy column. §9 is a documented row (`../harness/guards.md` §6,
-  M-21) — no code ships for it; the consequence of each kind is proved by
-  the leg it selects.
+  no policy column. The shipped M-21 context guard checks §9 at landing
+  (`../harness/guards.md` §7); the consequence of each kind is still proved
+  by the leg it selects.
 
 ## 8. Parameters the standing brief fills
 
@@ -295,6 +295,10 @@ comma-separated. Each kind has exactly one consequence, owned elsewhere:
    the declared legs still run (they are cheap), and the drop is an `O-<n>`
    entry with the reason, so a lane that was briefed as `record` and
    delivered `source` is read by the owner, not inferred from a green train.
+   For this comparison only, `docs-only` is the empty risk envelope: a
+   `docs-only` declaration that delivers `source` rose and is refused, while
+   a `source` declaration that delivers only documentation fell and is
+   recorded without refusal. Other kinds remain set members, not ranks.
 4. **Unbound is written, not assumed.** A repo that has bound no classifier
    writes `none — classifier unbound` in the header and the lander skips
    the re-derivation; the `holds:` floor then relies on the lander's

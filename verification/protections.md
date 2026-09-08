@@ -383,10 +383,11 @@ merge whose second parent is HEAD no longer registers, so no state file);
 short-circuiting the `HEAD~1` measurement in `commit_msg.staged_diff` turned
 exactly hooks 4c red; making the poster skip the read-back turned exactly
 protections case 4 red. Nothing else moved. `guard_dispatch.py falsify` on
-the package replays 106 cases (53 planted violations, 53 green forms) over
-the eight rules — among them the pre-push hook's `landing` switch that must
-not cover the lint, the `ui-pass:` leg and the `DOCS_ONLY=1` leg — and
-106/106 again on a copy that keeps `verification/gates` beside the package
+the package replays 128 cases (66 planted violations, 10 context notes, 52
+allowed forms) over the nine rule modules — among them the M-21 kind
+classifier and the pre-push hook's `landing` switch that must not cover the
+lint, the `ui-pass:` leg and the `DOCS_ONLY=1` leg — and
+128/128 again on a copy that keeps `verification/gates` beside the package
 (`harness/tests/test_guards.sh` case 9 makes that copy).
 
 What the tests do **not** prove:

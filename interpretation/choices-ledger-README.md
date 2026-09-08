@@ -57,8 +57,8 @@ duplicates the rules below.
   the rose/fell consequences) — and every logged switch or
   enforcement change as an orchestrator entry
   (../verification/landing-modes.md §1). The ledger lint
-  (../verification/protections.md §5) checks presence only, and does not
-  yet read the `kind:` line (a documented row).
+  (../verification/protections.md §5) checks presence only; the M-21 guard
+  reads the `kind:` line at landing (`../harness/guards.md` §7).
 
 ## 2. One ID per choice, everywhere it is mentioned
 - A choice gets a stable ID when it is first written down and keeps it:

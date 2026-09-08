@@ -366,8 +366,8 @@ check "11a2 session-start prints the bindings line with 'unbound' while nothing 
 out="$(rem session-start FACTORY_GUARD_CLI=fakecli FACTORY_GUARD_CLI_TOKEN=exec FACTORY_GUARD_GATES=npm)"
 check "11a3 session-start prints the bound values" "$( has "$out" 'GUARD BINDINGS: cli=fakecli token=exec dir-flag=unbound gates=npm'; echo $? )" "$out"
 check "11a4 session-start prints the PROTECTIONS BINDINGS line with 'unbound' while nothing is bound, and no GIT HOOKS line without the driver" "$( has "$out" 'PROTECTIONS BINDINGS: default-branch=unbound git-email=unbound source-prefix=unbound' && ! has "$out" 'GIT HOOKS'; echo $? )" "$out"
-out="$(rem session-start FACTORY_GUARD_DEFAULT_BRANCH=trunk FACTORY_GUARD_GIT_EMAIL=lander@example.invalid)"
-check "11a5 the PROTECTIONS BINDINGS line prints the bound values" "$( has "$out" 'PROTECTIONS BINDINGS: default-branch=trunk git-email=lander@example.invalid source-prefix=unbound'; echo $? )" "$out"
+out="$(rem session-start FACTORY_GUARD_DEFAULT_BRANCH=trunk FACTORY_GUARD_GIT_EMAIL=lander@example.invalid FACTORY_GUARD_KIND_CMD=classify-kind)"
+check "11a5 the PROTECTIONS BINDINGS line prints the bound values" "$( has "$out" 'PROTECTIONS BINDINGS: default-branch=trunk git-email=lander@example.invalid source-prefix=unbound' && has "$out" 'kind-cmd=classify-kind'; echo $? )" "$out"
 out="$(rem session-start FACTORY_GUARD_DISABLED=1)"
 check "11b session-start warns when FACTORY_GUARD_DISABLED=1" "$( has "$out" 'WARNING: FACTORY_GUARD_DISABLED=1'; echo $? )" "$out"
 printf '{"train": "t-9"}\n' > "$STATE/landing-in-progress.json"
@@ -403,6 +403,7 @@ copy = pathlib.Path(sys.argv[1])
 data = json.loads((copy / "adapters" / "claude-code-settings.json.example").read_text(encoding="utf-8"))
 hooks = data["hooks"]
 assert isinstance(data.get("env"), dict) and "FACTORY_GUARD_GATES" in data["env"], "no env block binding the parameters"
+assert data["env"].get("FACTORY_GUARD_KIND_CMD") == "{{KIND_CLASSIFIER}}", "no change-kind classifier binding"
 assert "PreCompact" not in hooks, "PreCompact leg present"
 commands = [h["command"] for rows in hooks.values() for row in rows for h in row["hooks"]]
 assert commands, "no commands"
