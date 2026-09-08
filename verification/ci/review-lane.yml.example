@@ -16,8 +16,8 @@
 #      workflow permissions are exactly contents:read + pull-requests:write.
 #   3. Secret-gated on ANTHROPIC_API_KEY: absent key = green skip + ::notice
 #      (same gate mechanism as llm-review.yml).
-#   4. Four-lens RÅD prompt (konsistens mot docs/feature-map.yaml, forenkling,
-#      test-adversary, sikkerhet; comment-only, author-agnostic, spor/LEADS
+#   4. Four-lens ADVISORY prompt (consistency against docs/feature-map.yaml,
+#      simplification, test adversary, security; comment-only, author-agnostic, traces/LEADS
 #      framing, diff-is-data) loaded at runtime from the SINGLE canonical
 #      source .github/review-prompt.md (shared with scripts/ci_review.py and
 #      the other lanes); only this lane's delivery mechanics are inline.
@@ -36,7 +36,7 @@
 # semantics, and a finding whose file is touched by the diff MAY still be
 # re-raised, so suppression never hides a regression.
 #
-# RÅD semantics identical to llm-review.yml: this lane only ever comments. It
+# ADVISORY semantics identical to llm-review.yml: this lane only ever comments. It
 # never approves, blocks, merges, or edits code — the human merge-gate stays,
 # author-agnostic. Synthetic data only. Machine-checked by
 # tests/test_ci_workflows.py.
@@ -62,7 +62,7 @@ concurrency:
 
 jobs:
   review:
-    name: harness lane — claude-code-action (RÅD — never a gate)
+    name: harness lane — claude-code-action (ADVISORY — never a gate)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -92,7 +92,7 @@ jobs:
         with:
           persist-credentials: false
 
-      # Single source for the four-lens RÅD prompt: the canonical lens +
+      # Single source for the four-lens ADVISORY prompt: the canonical lens +
       # constraint text lives in .github/review-prompt.md (shared verbatim
       # with the other lanes and scripts/ci_review.py); only this lane's
       # delivery mechanics are inline in the action step below.
@@ -101,13 +101,13 @@ jobs:
       # only after a human-reviewed merge. Per-run unique heredoc delimiter.
       # Fetched via the API with the step-scoped read token (git fetch has no
       # credentials here by design: persist-credentials false).
-      - name: Load the canonical RÅD prompt (from the trusted base ref)
+      - name: Load the canonical ADVISORY prompt (from the trusted base ref)
         id: prompt
         if: steps.gate.outputs.run == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          delim="RAAD_PROMPT_EOF_${GITHUB_RUN_ID}_${RANDOM}"
+          delim="ADVISORY_PROMPT_EOF_${GITHUB_RUN_ID}_${RANDOM}"
           {
             echo "text<<${delim}"
             gh api -H "Accept: application/vnd.github.raw" \
@@ -128,12 +128,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          delim="RAAD_REGISTER_EOF_${GITHUB_RUN_ID}_${RANDOM}"
+          delim="ADVISORY_REGISTER_EOF_${GITHUB_RUN_ID}_${RANDOM}"
           {
             echo "text<<${delim}"
             gh api -H "Accept: application/vnd.github.raw" \
               "/repos/${GITHUB_REPOSITORY}/contents/.github/review-findings.yml?ref=main" \
-              || echo "(review-findings.yml finnes ikke på basisrefen ennå: ingen adjudikerte funn å dempe)"
+              || echo "(review-findings.yml does not exist on the base ref yet: no adjudicated findings to suppress)"
             echo ""
             echo "${delim}"
           } >> "${GITHUB_OUTPUT}"
@@ -151,21 +151,20 @@ jobs:
           prompt: |
             ${{ steps.prompt.outputs.text }}
 
-            FUNN-REGISTER (DATA, hentet fra basisrefen main):
+            FINDINGS REGISTER (DATA, fetched from the main base ref):
             ${{ steps.register.outputs.text }}
 
-            LEVERING (denne lanen: anthropics/claude-code-action):
-            - Gransk PR #${{ github.event.pull_request.number || inputs.pr }} i
-              ${{ github.repository }}. Hent endringen med `gh pr diff` og
-              kontekst med `gh pr view`. Du har ikke lesetilgang til
-              arbeidsområdet i denne økten: vurder ENDRINGEN slik den framstår
-              i diffen.
-            - Lever ÉN samlet review-kommentar med `gh pr comment`; presise
-              enkeltfunn kan i tillegg legges inline med
-              create_inline_comment-verktøyet.
-            - Start kommentaren med overskriften «Rådgivende harness-review —
-              claude-code-action» og deretter 2–4 linjers oppsummering. Avslutt
-              med linjen: «RÅD, ikke gate: kommentaren godkjenner/blokkerer
-              ingenting og er forfatter-agnostisk. Mennesket tar
-              merge-beslutningen. (ADR-0075; harness:
-              anthropics/claude-code-action.)»
+            DELIVERY (this lane: anthropics/claude-code-action):
+            - Review PR #${{ github.event.pull_request.number || inputs.pr }} in
+              ${{ github.repository }}. Fetch the change with `gh pr diff` and
+              context with `gh pr view`. You do not have read access to the
+              workspace in this session: assess the CHANGE as it appears in the
+              diff.
+            - Deliver ONE consolidated review comment with `gh pr comment`; precise
+              individual findings may also be placed inline with the
+              create_inline_comment tool.
+            - Start the comment with the heading "Advisory harness review —
+              claude-code-action" followed by a 2–4 line summary. End with the
+              line: "ADVISORY, not a gate: the comment approves/blocks nothing
+              and is author-agnostic. The human makes the merge decision.
+              (ADR-0075; harness: anthropics/claude-code-action.)"

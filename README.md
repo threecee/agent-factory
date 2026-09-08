@@ -356,6 +356,8 @@ never judges whether it is right (`harness/guards.md §12`;
 | What does a hook do on a coding CLI? | `harness/guards.md §2`, `§9`; `verification/protections.md §8` |
 | Where does a lesson go, and how is a machinery change adopted? | `interpretation/memory-conventions.md`; `interpretation/continuous-improvement.md` |
 | How does a foreign repo install? | `INSTALL.md`; `verification/examples/install-trial-node.md` |
+| Is the kit English-only? | `verification/tests/test_english_only.sh` |
+
 
 ## 11. Tried against a foreign repo
 

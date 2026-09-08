@@ -83,7 +83,8 @@ ADVISORY tier (reports -- never affect the exit code):
     work, so their rule is stricter than the keyword heuristic: every doc must be cited by a
     BACKLOG row OR carry a terminal `Status:` (Implemented/Done/Superseded/Withdrawn/Historical).
     The heuristic is dropped for them because approved specs state what the system WILL BE
-    ("Outcome", "Scope") and never trip Neste/Senere. docs/eval-proposals/ is excluded (transient
+    ("Outcome", "Scope") and never trip the configured forward-looking keywords.
+    docs/eval-proposals/ is excluded (transient
     by convention, ADR-0077).
 
     The leg was built FAIL-CLOSED-CAPABLE and wired ADVISORY until the one-time stamping of the
@@ -128,7 +129,7 @@ _ACTIVE_REGISTRY_STATUSES = {"claimed", "landed"}
 
 # Scan roots for the coverage advisory (BL-LINT-A). Each root carries a POLICY:
 #   HEURISTIC        -- a note is reported only when it has a forward-looking keyword section
-#                       (Neste/Senere/Next/...) AND no BACKLOG row cites it. Right for
+#                       matches _FORWARD_KEYWORDS AND no BACKLOG row cites it. Right for
 #                       design-notes, which use those words and mostly carry no Status field.
 #   CITED_OR_FLAGGED -- every doc must be cited by a BACKLOG row OR carry a terminal Status.
 #                       Right for specs/plans, which exist to describe work and whose approved
@@ -153,8 +154,9 @@ SCAN_ROOTS: tuple[ScanRoot, ...] = (
 )
 
 # A terminal Status exempts a cited-or-flagged doc: it describes settled work and needs no live
-# BACKLOG row. Fail-closed -- draft / approved / ready / "godkjent design" are NOT terminal, so
-# a missing or in-progress status is a finding. The value is matched as a whole word, so
+# BACKLOG row. Fail-closed -- draft / approved / ready / localized approved-design states are
+# NOT terminal, so a missing or in-progress status is a finding. The value is matched as a whole
+# word, so
 # "Superseded by ADR-0095" counts.
 _TERMINAL_STATUSES = frozenset({"implemented", "done", "superseded", "withdrawn", "historical"})
 # A `Status:` line: frontmatter `status:`, a bold `**Status:**`, or a blockquoted `> Status:`.
@@ -168,9 +170,8 @@ _ADR_REF_RE = re.compile(r"ADR-(\d{3,4})")
 
 # The forward-looking vocabulary named in the process decision: a heading (any level) or a
 # bold lead-in line naming one of these words marks a note's "forward-looking section". Word
-# boundaries matter: Norwegian words like "flater"/"relaterte" contain "later" as a bare
-# substring and must NOT match.
-_FORWARD_KEYWORDS = r"(?:neste|senere|next|later|follow-?up|oppfølging|deferred|pending)"
+# boundaries matter: longer words can contain "later" as a bare substring and must NOT match.
+_FORWARD_KEYWORDS = r"(?:neste|senere|next|later|follow-?up|oppf\u00f8lging|deferred|pending)"
 _FORWARD_HEADER_RE = re.compile(
     rf"^#{{1,6}}[ \t].*\b{_FORWARD_KEYWORDS}\b", re.IGNORECASE | re.MULTILINE
 )
@@ -663,8 +664,10 @@ def anchor_problems(repo_root: pathlib.Path | None = None) -> tuple[list[str], i
 
 
 def has_forward_section(text: str) -> bool:
-    """True if `text` carries a forward-looking heading or bold lead-in line (Neste/Senere/
-    Next/Later/follow-up/deferred/pending) -- the mechanical proxy for "has open follow-up"."""
+    """True if `text` carries a heading or bold lead-in matching _FORWARD_KEYWORDS.
+
+    This is the mechanical proxy for "has open follow-up".
+    """
     return bool(_FORWARD_HEADER_RE.search(text) or _FORWARD_BOLD_RE.search(text))
 
 
@@ -710,7 +713,7 @@ def terminal_status(text: str) -> str | None:
 
     Scans every `Status:` line for a terminal keyword as a whole word, so
     `Status: Superseded by ADR-0095` counts but `status: draft`, `Status: ready-for-execution`
-    and `Status: **Godkjent design**` do not. Callers pass fenced-stripped text so a plan's
+    and localized approved-design statuses do not. Callers pass fenced-stripped text so a plan's
     `status_code=422` / `status: Mapped[str]` code snippets cannot read as a document status.
     """
     for match in _STATUS_LINE_RE.finditer(text):

@@ -5,7 +5,7 @@ The author-agnostic gate-plus-human-signature control (ADR-0071) is correctly
 placed in principle, but it is not calibrated to the CONTRACT boundary: a
 reviewer still reads every diff broadly, and that habit degrades into a
 rubber-stamp queue as generation volume grows. This script labels each changed
-file CONTRACT-LEVEL or within-contract so review effort (and the advisory RÅD
+file CONTRACT-LEVEL or within-contract so review effort (and the advisory
 lanes) concentrate where a mechanical gate cannot: at the boundary a change in
 meaning crosses, not on every line of an accepted implementation.
 
@@ -63,7 +63,7 @@ link is check_traceability's gate to catch, not this one's to guess around. A
 brand-new ADR (no old side) is new criteria, not a mutation, so it does not
 fire; a deleted ADR co-moving with its governed code does. Weakening a criterion
 to make a run pass is sometimes legitimate and PO-reviewed — the leg's whole job
-is to make that co-movement VISIBLE as a RÅD event, never to gate it. Advisory
+is to make that co-movement VISIBLE as an ADVISORY event, never to gate it. Advisory
 only — `main()`'s exit logic is unchanged.
 
     python -m scripts.check_contract_touch                  # advisory report, exit 0

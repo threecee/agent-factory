@@ -16,19 +16,19 @@ _TEXT_EXTS = {".py", ".html", ".jinja", ".jinja2", ".css", ".js", ".ts", ".md"}
 _SKIP_DIRS = {"__pycache__", "node_modules", "dist", ".venv"}
 _ROW_RE = re.compile(r"^\|\s*`([^`]+)`\s*\|\s*(.+?)\s*\|", re.MULTILINE)
 _UI_RULES = [
-    (r"Batch-avvis(?: fullført|…)|Angre hele batchen|Kunne ikke[^\n]*batch", "samlet avvisning"),
-    (r"\bsemantisk recall\b", "Mer som dette"),
-    (r"(?:estimert |lav |høy |· )konfidens|lavkonfidens", "sikkerhet / lav sikkerhet"),
-    (r"\bKI-(?:forslag|vurdering|generert)\b", "forslag / vurdering / beskrivelse"),
-    (r"\bForeslå tittel med KI\b|\bIngen modell tilgjengelig\b", "plain draft wording"),
-    (r">\s*Term(?:er)?\b|aria-label=[\"']Term", "kodeord"),
+    (r"Batch-avvis(?: fullf\u00f8rt|…)|Angre hele batchen|Kunne ikke[^\n]*batch", "bulk rejection"),
+    (r"\bsemantisk recall\b", "More like this"),
+    (r"(?:estimert |lav |h\u00f8y |· )konfidens|lavkonfidens", "confidence / low confidence"),
+    (r"\bKI-(?:forslag|vurdering|generert)\b", "suggestion / assessment / description"),
+    (r"\bForesl\u00e5 tittel med KI\b|\bIngen modell tilgjengelig\b", "plain draft wording"),
+    (r">\s*Term(?:er)?\b|aria-label=[\"']Term", "codeword"),
     (r"\bAdmin \(innsyn\)|\bAdmin ser\b", "administrator"),
     (r"Agent \$\{turn\.agentId\}", "assistant wording"),
     (
-        r'(?:data-screen-label|aria-label|label):?\s*=\s*["\'](?:Gjennomgang(?:skø)?|Leksikon)["\']'
+        r'(?:data-screen-label|aria-label|label):?\s*=\s*["\'](?:Gjennomgang(?:sk\u00f8)?|Leksikon)["\']'
         r'|\blabel:\s*["\'](?:Gjennomgang|Leksikon)["\']'
-        r"|<h[1-6][^>]*>\s*(?:Gjennomgang(?:skø)?|Leksikon)\s*</h[1-6]>",
-        "Funn / Kodeord",
+        r"|<h[1-6][^>]*>\s*(?:Gjennomgang(?:sk\u00f8)?|Leksikon)\s*</h[1-6]>",
+        "Findings / Codewords",
     ),
 ]
 

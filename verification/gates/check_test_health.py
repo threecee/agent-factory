@@ -43,7 +43,7 @@ DIMENSIONS = [
     "discipline",
 ]
 BASE_NOTES = [
-    "Advisory / report-only: never fails the build (RÅD contract). Exit 2 only on internal error.",
+    "Advisory / report-only: never fails the build (ADVISORY contract). Exit 2 only on internal error.",
     "Existence-based coverage: a link/marker proves a citing test EXISTS, not that it "
     "semantically asserts the behavior.",
     "Static source counts; the executed test count is higher than "
@@ -519,7 +519,7 @@ def build_scoreboard(repo_root: pathlib.Path | None = None) -> dict[str, Any]:
 
 def render_summary(scoreboard: dict[str, Any]) -> str:
     """Render the human-readable scoreboard grouped in declared dimension order."""
-    lines = ["TEST HEALTH SCOREBOARD (RÅD / REPORT-ONLY)"]
+    lines = ["TEST HEALTH SCOREBOARD (ADVISORY / REPORT-ONLY)"]
     records = scoreboard["records"]
     for dimension in scoreboard["dimensions"]:
         lines.append(f"\n{dimension.upper()}")
