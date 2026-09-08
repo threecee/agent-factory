@@ -33,7 +33,7 @@ a file or a git operation. The rules below have exactly one home each
   pattern is a review finding.
 - The SPEC IS THE CONTRACT — deviation requires STOP + report, never silent
   reinterpretation.
-- Never run the full verify (the lander does). Never use `--no-verify`.
+- Never run the full verify (the lander does).
 - The lane agent never pushes and never opens a pull request. The wrapper
   pushes this lane's branch at every handback (built or parked); only the
   lander lands — by merging the train pull request or pushing main
@@ -45,13 +45,8 @@ a file or a git operation. The rules below have exactly one home each
 - Name every sentinel/log after this lane — the scratchpad is shared.
 - Environment symlinks (.venv/.env/node_modules) must be gitignored in the
   target repo; the wrapper's `git add -A` must never commit them.
-- Tear down served instances by PORT and by path, never by process-name grep
-  (../harness/artifact-bank.md §8).
-- Guards may refuse a hard form (a verdict through a pipe, `--no-verify`,
-  text-match process selection, a raw lane dispatch): the refusal names the
-  exact alternative and a switch; using a switch is logged and goes into the
-  train's choices ledger with a reason, never silently
-  (../harness/guards.md §4–§5).
+- Guard-enforced command forms: `../harness/guards.md` §7 (`verdict`,
+  `identity`, `no-verify`).
 - First-contact STOPs for this repo (execution-contract.md §5):
   {{FIRST_CONTACT_STOPS}}
 
@@ -97,10 +92,7 @@ test files with grep before running).
 ## 5. Report-first sentinel
 - Sentinel `<scratchpad>/<lane>.sentinel.json` — machine-readable heartbeat,
   rewritten at every leg boundary and before any long-running step.
-- Report `<scratchpad>/<lane>-result.md` per the report schema
-  (../harness/report-schema.md), filed no matter how you exit, WITH the
-  mandatory `choices:` self-report; when `choices:` is non-empty, the walked
-  scenarios go in the sidecar `<scratchpad>/<lane>-choices.md`.
+- Report per `../harness/report-schema.md`.
 
 ## 6. Circuit breakers (execution-contract.md §3–§6 is the home)
 - Two complete rounds — authoring pass plus prescribed proof attempt,

@@ -4,6 +4,7 @@
 #   1 green on an untouched copy
 #   2 red   when one byte is appended to one SKILL.md   (drift)
 #   3 red   when an unlocked skill directory is added   (extra)
+#   3b red  when one retired skill is restored without a lock row (extra)
 #   4 red   when a locked skill directory is removed    (missing)
 #   5 green again after restore
 #   6 --update on an adapted copy makes it green and changes exactly one entry
@@ -32,6 +33,9 @@ check "2c restore is green" 0 "$(run)"
 mkdir -p "$T/skills/zz-extra" && printf 'x\n' > "$T/skills/zz-extra/SKILL.md"
 check "3 unlocked extra skill is red" 1 "$(run)"
 rm -rf "$T/skills/zz-extra"
+git -C "$HERE/.." archive origin/main skills/executing-plans | tar -x -C "$T"
+check "3b restored retired skill without a lock row is red" 1 "$(run)"
+rm -rf "$T/skills/executing-plans"
 mv "$T/skills/$first" "$T/$first.away"
 check "4 missing locked skill is red" 1 "$(run)"
 mv "$T/$first.away" "$T/skills/$first"

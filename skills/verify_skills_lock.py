@@ -7,7 +7,8 @@ signature and not an upstream pin — upstream commit refs were not recorded
 when the skills were vendored, so `origin` is attribution (see
 ATTRIBUTION.md), never a fetchable reference.
 
-    python3 skills/verify_skills_lock.py --check    # exit 1 on drift, missing or extra skill
+    python3 skills/verify_skills_lock.py            # check; exit 1 on drift, missing or extra skill
+    python3 skills/verify_skills_lock.py --check    # explicit form of the same check
     python3 skills/verify_skills_lock.py --report   # print per-skill digests, exit 0
     python3 skills/verify_skills_lock.py --update   # rewrite the lock (the ONLY path to a new lock)
 
@@ -153,7 +154,7 @@ def update(root: pathlib.Path, lock_path: pathlib.Path) -> int:
 def main(argv: list[str] | None = None) -> int:
     here = pathlib.Path(__file__).resolve().parent
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    mode = ap.add_mutually_exclusive_group(required=True)
+    mode = ap.add_mutually_exclusive_group()
     mode.add_argument("--check", action="store_true")
     mode.add_argument("--report", action="store_true")
     mode.add_argument("--update", action="store_true")
@@ -164,11 +165,11 @@ def main(argv: list[str] | None = None) -> int:
     if not root.is_dir():
         sys.exit(f"[skills-lock] --root is not a directory: {root} (exit 2)")
     lock_path = (args.lock or root / LOCK_NAME).resolve()
-    if args.check:
-        return check(root, lock_path)
     if args.report:
         return report(root, lock_path)
-    return update(root, lock_path)
+    if args.update:
+        return update(root, lock_path)
+    return check(root, lock_path)
 
 
 if __name__ == "__main__":

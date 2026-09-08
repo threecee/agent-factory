@@ -56,6 +56,7 @@ is_allowlisted() {
 
 findings=0
 while IFS= read -r -d '' path; do
+  [ -f "$ROOT/$path" ] || continue
   is_allowlisted "$path" && continue
   matches="$(LC_ALL=C grep -nE "$NORDIC_PATTERN" "$ROOT/$path")"
   grep_status=$?
