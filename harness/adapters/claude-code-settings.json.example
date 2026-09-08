@@ -1,7 +1,8 @@
 {
   "_comment": "Copy-then-adapt: the env block and the hooks block. Registration is a separate operator step (harness/guards.md §9); every command here must exist (§10). The two adapter paths are the only thing to edit in the hooks block. Every event the dispatcher can serve is registered once; a leg with no shipped rule logs an empty verdict set and costs one interpreter start — a new rule needs a rule module, never a settings edit. The env block is how the §8 parameters reach the hook process (it inherits the session-start environment): put the values from your operations doc here, and read the GUARD BINDINGS line the session-start reminder prints. Before registering: add .factory-guard/ and __pycache__/ to the repository's .gitignore (harness/guards.md §3; INSTALL step 5). No bulk-read shunt entries: that adapter is harness/bulk-read-contract.md §8.",
   "env": {
-    "FACTORY_GUARD_GATES": "verify,verify-*,check-*,pytest,scripts.check_*,scripts.assemble_*"
+    "FACTORY_GUARD_GATES": "verify,verify-*,check-*,pytest,scripts.check_*,scripts.assemble_*",
+    "FACTORY_GUARD_KIND_CMD": "{{KIND_CLASSIFIER}}"
   },
   "hooks": {
     "SessionStart": [

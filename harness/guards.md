@@ -251,7 +251,7 @@ direct push carrying the `local-verify` status
 | M-18 watchdog | a recurring task, not a hook | every `<lane>.sentinel.json` at `--max-age-min`, the exit sentinel, log and result mtimes, the branch head on origin; one line only on change | context; nudges, never kills | `run-lifecycle.md` §11 rule 6 (consumer of `../verification/gates/lane_sentinel.py`) | documented |
 | M-19 hygiene | none — a rule about the hook table itself | every registered entry exists and its channel reaches the model | — | §10 | shipped as §10 + the settings example |
 | M-20 disk floor | pre-tool before a big spender (dispatch, assembly, serve); the staging ceiling only before the configured coding-CLI command class that grows it | `df -k <volume>` against the floor, `du -sk <staging-root>` under a time budget | hard; a `du` that does not finish is a note | `train-plan.md` §3.1 row + the reminders' session-start line | documented |
-| M-21 kind | the assembly cross-check (`../verification/lander-duties.md` §1 step 3) and the landing (M-1) | the repo's kind classifier (`FACTORY_GUARD_KIND_CMD`, §8) over `BASE..HEAD` against the ledger's `kind:` line — a classification of what the diff contains, never a policy | text today — the lander's reading at step 3, no code; `context`, never hard, when this row ships — the legs a kind selects are the hard ones (M-1's optional legs, M-17), and a kind that fell without an `O-<n>` entry is then a finding at landing (the rose/fell rule is `../planning/execution-contract.md` §9.2) | `../planning/execution-contract.md` §9 | documented |
+| M-21 kind | a landing command after the assembly cross-check (`../verification/lander-duties.md` §1 step 3) | the repo's kind classifier (`FACTORY_GUARD_KIND_CMD`, §8) over the receipt-bound `BASE..HEAD` paths against the ledger's `kind:` declaration — a classification of what the diff contains, never a policy | context on a fall or apparatus failure; a rise is refused until its existing hard legs are applied and recorded (the comparison rule is `../planning/execution-contract.md` §9.2) | `../planning/execution-contract.md` §9 | shipped |
 
 **M-16 rows.** Each row has one switch (`FACTORY_GUARD_ALLOW=<row>`) so a false
 positive never turns off the whole table.
@@ -275,8 +275,8 @@ honest form as the alternative.
 
 ## 7. Shipped rules
 
-Eight rules ship as code, each with its falsification table (§11). Every gate
-name, CLI name and token in their messages is a parameter (§8). The three
+Nine rules ship as code, each with its falsification table (§11). Every gate
+name, CLI name and token in their messages is a parameter (§8). The four
 shipped rules below are this chapter's; its documented board selector follows
 them. The five rules of the protections chapter — `landing`
 (M-1, both landing modes, plus the hard-form rows `gh pr merge
@@ -388,6 +388,29 @@ Provenance: source factory Varde w137, 2026-09-08.
   user.email=<x> commit -m 'x'` · `git merge -qn lane/x` · `git push -qn
   origin lane/x` · `grep -rn -- --no-verify docs` (green).
 
+### `kind` (M-21)
+
+- **Signal.** A landing command in a train tree, the newest receipt's
+  `BASE..HEAD`, and the ledger's `kind:` declaration. The rule passes the
+  committed path list to `FACTORY_GUARD_KIND_CMD`; the comparison and its
+  rose/fell consequences remain at `../planning/execution-contract.md` §9.2.
+- **Parameter.** `FACTORY_GUARD_KIND_CMD` (§8). Unbound is silent. A missing
+  input is left to the landing rule; a classifier failure or invalid output
+  fails open with context naming the repair.
+- **Refusal and context.** An unrecorded rise names the newly selected kinds,
+  their existing legs, the ledger update, and the `kind` switch. Once the
+  receipt is green and the ledger's derived side records the rise, it is not
+  refused again. An unrecorded fall exits zero with the exact
+  `kind: <declared>→<derived>` and `O-<n>` record the lander writes; an
+  unchanged or already recorded envelope is silent.
+- **Falsification** (1 denied, 6 context/allowed): an unrecorded
+  `docs-only→source` is denied; `source→docs-only` is context; a recorded
+  rise, `source→source`, and an unbound classifier are silent; invalid output
+  and classifier exit 7 fail open with context. `bash
+  harness/tests/test_kind_guard.sh` binds an executable
+  classifier in two real git repositories and proves the issue's two
+  directions independently of the landing rule.
+
 ### `board` (M-9; documented)
 
 - **Selector.** The board rule runs only after the configured launcher or
@@ -450,7 +473,7 @@ placeholders, the live-lane legs list nothing).
 | Registry check | `FACTORY_GUARD_REGISTRY_CMD` / `FACTORY_GUARD_REGISTRY_FILE` | unset — the leg is skipped / `docs/decisions/NUMBERS.md` | repo operations doc |
 | UI pass glob | `FACTORY_GUARD_UI_GLOB` | unset — the leg is skipped; comma-separated globs; bound, a train touching them needs `ui-pass:` in the ledger | repo operations doc |
 | Docs-only classifier | `FACTORY_GUARD_DOCS_ONLY_CMD` | unset — a receipt carrying `DOCS_ONLY=1` is refused; `<cmd> <BASE> <HEAD>` (§1.1) | repo operations doc |
-| Change-kind classifier | `FACTORY_GUARD_KIND_CMD` | unset — the M-21 leg is skipped and the brief's `Kind:` line reads `none — classifier unbound`; `<cmd> <path>...` prints the applicable kinds, one per line (`../planning/execution-contract.md` §9.3); built from the docs-only classifier, the source prefix, the decisions directory, the registry file, the never-weaken check's baseline and gate globs and the guarded-boundary list already bound here — that the kind and the landing legs never disagree about a path is the design constraint INSTALL step 7.7 falsifies, not a property this row checks; printed on `PROTECTIONS BINDINGS:` once the leg ships (documented row) | repo operations doc |
+| Change-kind classifier | `FACTORY_GUARD_KIND_CMD` | unset — the M-21 rule is silent and the brief's `Kind:` line reads `none — classifier unbound`; `<cmd> <path>...` prints the applicable kinds, one per line (`../planning/execution-contract.md` §9.3); built from the docs-only classifier, the source prefix, the decisions directory, the registry file, the never-weaken check's baseline and gate globs and the guarded-boundary list already bound here — that the kind and the landing legs never disagree about a path is the design constraint INSTALL step 7.7 falsifies, not a property this row checks; printed on `PROTECTIONS BINDINGS:` | repo operations doc |
 | Hook interpreter | `FACTORY_GUARD_PYTHON` | `<toplevel>/.venv/bin/python`, else `python3` (the shims; `../verification/protections.md` §1) | repo operations doc |
 | Protections location | `FACTORY_PROTECTIONS_DIR` | `<adapters>/../../verification/protections` — locates `git_hooks.py` and `ci_signal.sh` for the shims and the reminders script; a location like `FACTORY_GUARD_DIR`, never a rule parameter | the operator, when the chapter is kept elsewhere |
 
