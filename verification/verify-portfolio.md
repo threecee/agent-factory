@@ -176,17 +176,16 @@ the fix (`protections.md` §7 owns the three shipped ones).
   | `<gate/guard/hook source>` | `check_gate_weakening --hard` — hard from the first lane: the train's WARN-first rule (`protections.md` §7) is for the whole tree, and a lane touching gate source has no first-train excuse; the gate's default `--base`, the merge-base with `origin/<default>`, is the right base in a lane worktree; then the rule's `falsify` | criteria not weakened | `<the repo's guard doc>`, translated from `../harness/guards.md` §11 |
 
   On the lane a row runs when one of its globs matches the working tree
-  against the pin — the lane's command is
-  `{ git diff --name-only <pin>; git ls-files --others --exclude-standard; } | sort -u`
-  — because the wrapper commits after the pregate (HEAD is still `<pin>`
-  when the block runs, so `<pin>..HEAD` is empty) and the canonical
-  trigger, a new migration file, is untracked and invisible to every `git
-  diff` form. On the train the lander re-runs the matching rows among the
-  cheap gates against the committed range, `git diff --name-only
-  <BASE>..HEAD` (`lander-duties.md` §1 step 6). Each row runs in seconds
-  and names ONE proof, judged by exit code like any gate. The package ships
-  no pregate runner: selecting the rows is the lane's reading of the table
-  and the brief's §4 is the home of that duty. A row whose command is
+  against the pin. `select_diff_triggered_legs.sh` mechanically reads this
+  table, combines `git diff --name-only <pin>...HEAD` with untracked files,
+  and prints each selected row with its command; its shell proof is
+  `tests/test_diff_triggered_legs.sh`. The untracked half is required because
+  the wrapper commits after the pregate and the canonical trigger, a new
+  migration file, is invisible to every `git diff` form. On the train the
+  lander re-runs the matching rows among the cheap gates against the
+  committed range, `git diff --name-only <BASE>..HEAD`
+  (`lander-duties.md` §1 step 6). Each row runs in seconds and names ONE
+  proof, judged by exit code like any gate. A row whose command is
   skip-guarded (a test that skips on an absent build product) names the
   build step in `proves` as its precondition, and the lane reports such a
   row as not run when that product is absent — a skipped row is not a
