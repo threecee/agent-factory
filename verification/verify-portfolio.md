@@ -164,6 +164,7 @@ the fix (`protections.md` §7 owns the three shipped ones).
   | `migrations/**` | `<migration head test>` | one head; the count literal bumped | `<the repo's migration doc>` |
   | `<ui glob>` | `<copy-contract test>`, `<a11y name test>` | strings and roles unchanged or documented | `<the repo's pattern doc>` |
   | `docs/decisions/NUMBERS.md` | `<registry pin tests>` | registry consistent | `<the repo's number doc>`, translated from `../planning/adr-and-numbers.md` |
+  | `openspec/**` | `python3 -m scripts.check_openspec` (or the project's equivalent adapter) | runs strict OpenSpec validation with the four non-interactive environment controls; reports advisory until every sidecar is accepted, then gates | `<the repo's capability-spec doc>`, translated from `../planning/capability-specs.md` §5 |
   | `<gate/guard/hook source>` | `check_gate_weakening --hard` — hard from the first lane: the train's WARN-first rule (`protections.md` §7) is for the whole tree, and a lane touching gate source has no first-train excuse; the gate's default `--base`, the merge-base with `origin/<default>`, is the right base in a lane worktree; then the rule's `falsify` | criteria not weakened | `<the repo's guard doc>`, translated from `../harness/guards.md` §11 |
 
   On the lane a row runs when one of its globs matches the working tree

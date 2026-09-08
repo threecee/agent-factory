@@ -17,6 +17,9 @@ factory-specific additions:
   skills, and more).
 - Factory additions (this repo's license): independent-lane-review and
   adaptations recorded in the lock file.
+- **@fission-ai/openspec 1.12.0** — adopted subset: the capability-spec and
+  four-delta format, strict validation, and archive-at-landing rule described
+  in `../planning/capability-specs.md §2`, `§4`, `§8`.
 - **threecee/varde** (same author; contributed under this repo's license) —
   the bounded bulk-read pilot skills `bulk-reader`, `log-triage` and
   `handback-digest`, adapted from that factory's `.claude/skills/` set. The

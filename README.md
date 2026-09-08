@@ -36,6 +36,9 @@ flowchart LR
   I -->|ledger entry, memory, or board item| B
 ```
 
+Capability specs are the durable *what* the plan hop reads and the land hop
+updates; ADRs stay the durable *why* (`planning/capability-specs.md §1`, `§4`).
+
 Planning can define but cannot prove or learn without verification and interpretation; verification can test but cannot choose intent or explain outcomes without planning and interpretation; interpretation can explain but cannot authorize or prove a change without planning and verification (`planning/core-model.md`; `verification/verify-portfolio.md`; `interpretation/continuous-improvement.md`).
 
 ### Inspect it
@@ -47,6 +50,7 @@ Planning can define but cannot prove or learn without verification and interpret
 | Autonomous loops | text | The loop identity, owner, expected end, stop command, and liveness proof (`harness/run-lifecycle.md §12`). | One local status row for every lane, evaluation, watch, loop, or server (`harness/run-lifecycle.md §12`). | `harness/loop_registry.sh list` |
 | Lane authors → verify | gate | The lane worktree plus the brief's pregate and matching legs (`planning/lane-brief-template.md §4`; `verification/verify-portfolio.md` "Legs that bring lane-green closer to train-green"). | A run-bound lane result with proof and choices (`harness/report-schema.md` "Machine check at handback"). | `harness/launch_lane.sh verdict` — reports the current run's deliverable state from its receipts (`harness/run-lifecycle.md §5`). |
 | Verify → land | guard | The assembled tree, its `EXIT= HEAD= BASE=` receipt, and a live ruling or active policy (`harness/train-plan.md §4.1`; `verification/lander-duties.md §7`). | The receipt-bound `local-verify` status and landing decision (`verification/protections.md §3`; `verification/landing-modes.md §2`). | `sed -n '1,4p' <artifacts>/<run-id>.exit` — exposes the four-line receipt the lander judges (`harness/train-plan.md §4`). |
+| Land → capability specs | gate | The boarders' deltas (`planning/capability-specs.md §3`). | The archived change and merged spec, committed with the train (`planning/capability-specs.md §4`). | `ls openspec/changes \| grep -v '^archive$'` prints nothing on the default branch; `test -d openspec/changes/archive && test "$(find openspec/changes -mindepth 1 -maxdepth 1 \| wc -l \| tr -d ' ')" -eq 1` also refuses a missing tree. |
 | Land → interpret | guard | The registered landing, boarded SHAs and open close-out duties (`verification/lander-duties.md §8`). | Landing registration and close-out evidence for the ledger (`verification/protections.md §6`; `interpretation/choices-ledger-README.md §1`). | `python3 verification/gates/check_landing_closeout.py --state <state-file>` — prints the duties still open (`verification/lander-duties.md §8`). |
 | Interpret → board | text | Lane choices, verify findings and landed evidence (`interpretation/choices-ledger-README.md §1`, `§4`). | A ledger entry, one-fact memory, or new board item (`interpretation/memory-conventions.md`; `interpretation/continuous-improvement.md`). | `git log --grep '<choice-id>'` — follows a stable choice ID into history (`interpretation/choices-ledger-README.md §2`). |
 
@@ -110,10 +114,12 @@ Each step: artifact → owner → next reader, then its home. Tags: (gate)
 5. The wrapper: worktree at the pin, ritual, writer lock, launcher with
    run-bound receipts → three questions: started, alive, deliverable
    (`harness/worktree-ritual.md`; `harness/run-lifecycle.md §1`, `§4`, `§5`).
-6. The lane: authors; pregate block plus matching legs (gate) with the
-   import root pinned; sentinel; `<lane>-result.md` with `choices:` however
-   it exits; STOP on first contact, PARK at the ceiling or after round two
-   (`harness/report-schema.md`; `planning/execution-contract.md §3`–`§6`).
+6. The lane: authors; writes a capability delta for every behaviour change,
+   or carries the applicable no-delta trailer; pregate block plus matching
+   legs (gate) with the import root pinned; sentinel; `<lane>-result.md` with
+   `choices:` however it exits; STOP on first contact, PARK at the ceiling
+   or after round two (`planning/capability-specs.md §3`;
+   `harness/report-schema.md`; `planning/execution-contract.md §3`–`§6`).
 7. The wrapper: result lint, red→green falsified after committing, identity
    and trailer (hook), lane branch pushed — built or parked
    (`harness/report-schema.md` "Machine check at handback";
@@ -122,11 +128,13 @@ Each step: artifact → owner → next reader, then its home. Tags: (gate)
    invented decision with a stable ID in `docs/choices/<train>.md`; unsound
    resolved before assembly (`interpretation/choices-ledger-README.md §1`–`§4`).
 9. The lander: train worktree at origin/main, the resource contract (hard
-   stops before the heavy run), `--no-ff` merges of pinned SHAs, the kind
+   stops before the heavy run), `--no-ff` merges of pinned SHAs, every live
+   capability delta archived in stable order before cross-checks, the kind
    re-derived from the real diff (text — a lander duty today; a `context`
    guard when M-21 ships, `harness/guards.md §6`), cross-checks, ledger
-   committed with the train (`verification/lander-duties.md §1`, `§2`;
-   `harness/train-plan.md §2`, `§3`).
+   committed with the train (`planning/capability-specs.md §4`;
+   `verification/lander-duties.md §1`, `§2`; `harness/train-plan.md §2`,
+   `§3`).
 10. The lander: build and stamp; cheap gates by exit code (gate);
     import-root probe; resource check; ONE full verify read only from
     `EXIT= HEAD= BASE=` — the `verdict` rule (guard) refuses a pipe
@@ -348,6 +356,7 @@ never judges whether it is right (`harness/guards.md §12`;
 | How is a held train presented? | `planning/decision-brief-template.md`; `planning/board-protocol.md` "Decision needed" |
 | How many notifications per transition, and which board action per event? | `planning/board-protocol.md` "Notifications", "Transaction points" |
 | What must a spec contain? | `planning/core-model.md` |
+| What does the system do today, and where is a behaviour change written? | `planning/capability-specs.md §1`, `§3` |
 | When is an investigation dispatched before a fix? | `planning/investigation-brief-template.md §0` |
 | What is a choice, and what is its ID? | `interpretation/choices-ledger-README.md §1`, `§2` |
 | May the heavy step start now, and how is a live lane identified? | `harness/train-plan.md §3`; `harness/run-lifecycle.md §6` |

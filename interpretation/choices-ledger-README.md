@@ -38,6 +38,9 @@ duplicates the rules below.
   commit, so the next lane of that shape inherits the lesson as a given.
 - A mechanical lane (a version bump, one documentation row) with no choices
   of its own gets one line in the protocol, not an empty ritual.
+- A change to what the system does is a spec delta, never a ledger entry; an
+  `inferred` requirement is a `needs-user` entry because the owner has not
+  yet ruled on it (`../planning/capability-specs.md §3`, `§6`).
 - A guard denial the orchestrator overrode, and every switch use, is an
   orchestrator entry (`O-<n>`) with the rule id, the reason and the
   events-log line it corresponds to; a switch without a ledger entry is a
