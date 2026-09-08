@@ -177,6 +177,9 @@ id, or a context note under a switched id (a leg that delivered its finding
 as context instead of a refusal). A rule never writes the events log itself.
 The module's own id switches every leg of it.
 
+To aggregate this trace by session or time window, use the anti-pattern
+report in §15; it reads this events log and does not create a second log.
+
 **Conditions with no switch.** A few refusals name a fact no switch can
 change and are refused with the switch set, saying so: a server listening in
 the project's port range, a test runner descending from a live lane
@@ -656,3 +659,33 @@ Provisional:
   analysis time; the one empirical confirmation there was that `PostToolUse`
   plain stdout never reached the model. Re-read the table against the
   harness version you run.
+
+## 15. Anti-pattern report
+
+`python3 harness/guard_report.py [--session <id> | --since <ISO>] [--log
+<path>] [--json]` reads the six-column `factory-events.log` contract from §3.
+It reports denials per rule with count, first timestamp, last timestamp, and
+newest message; it also lists every `allow-switch` trace from §4. The default
+log is `<FACTORY_GUARD_STATE_DIR>/factory-events.log`, falling back to
+`.factory-guard/factory-events.log`. A supplied log path is read verbatim.
+
+The named anti-pattern table is one ordered regex table named
+`ANTI_PATTERNS` in `guard_report.py`; an operator extends that table rather
+than adding report branches. Its stable names are `verdict-pipe`,
+`gate-plus-push`, `self-matching-kill`, `stale-canary`,
+`raw-cli-outside-launcher`, `no-justification`, `idle-violation`,
+`stale-build`, `board-unverified`, and `unbounded-read`. The derived
+`looping-denial` row means the exact same denial message occurred at least
+three times within a ten-minute window. A climbing count usually means one
+broken guard is looping, not that the operator made many independent errors.
+
+Text output is a set of Markdown tables; `--json` emits the same denials,
+switches, and named matches as objects for another local tool. Malformed TSV
+rows are ignored with a warning, while an unreadable log is red. The report
+only interprets the existing trace: it changes no switch, guard, or state.
+
+Provenance and what is still provisional: the names capture recurring
+failure forms from the source factory and the 2026 Uber efficiency lesson
+recorded by issue 23. `test_guard_report.sh` exercises every name and removes
+one regex to prove the fixture reds; thresholds other than the observed
+three-in-ten-minute loop remain an operator choice.

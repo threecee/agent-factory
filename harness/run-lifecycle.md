@@ -34,6 +34,7 @@ produces is named `<lane>.<run-id>.*` inside `LANE_RUN_DIR`:
 |---|---|---|
 | `<lane>.<run-id>.start` | launcher, then runner | key=value lines, appended, last occurrence wins: `run_id`, `worktree`, `brief_sha256`, `cli_name`, `detach`, `state` (`dispatched → delayed → started`, or `refused` + `refused_reason`), `runner_pid`, `runner_pgid`, `cli_pid`, `cli_comm_observed`, `head_at_start`, `started_at`, `started_epoch` |
 | `<lane>.<run-id>.log` | the CLI | stdout + stderr, stdin closed |
+| `<lane>.<run-id>.cost` | runner, atomically after the CLI exits | `tokens_in`, `tokens_out`, `cached_tokens`, `requests`, `model`, `effort`, `wall_s`, `source`; every key is present and unknown values are `unknown`, not zero |
 | `<lane>.<run-id>.result.md` | the CLI (write mode) or the runner (read-only, §8) | the report, per `harness/report-schema.md`, carrying `run_id:` |
 | `<lane>.<run-id>.exit` | runner, atomically, **last** | `run_id`, `ended_at`, `deliverable`, `report_status`, `rate_limited`, `bank_path`, and as the final line `LANE_EXIT=<code>` |
 | `<lane>.<run-id>.runner.log` | runner | the launcher's own diagnostics |
@@ -84,6 +85,8 @@ Optional, with defaults:
 | `LANE_SENTINEL_DIR` | `LANE_RUN_DIR` | exported to the CLI for its sentinel |
 | `LANE_RESULT_PATH` | `<run-dir>/<lane>.<run-id>.result.md` | exported to the CLI; where the report must land |
 | `LANE_START_TIMEOUT_S` / `LANE_LOCK_TIMEOUT_S` | `30` / `600` | check-in and writer-lock budgets |
+| `LANE_USAGE_PARSER` | unset | executable receiving the run-log path as argv; it prints the eight cost `key=value` lines; unset or red means `source=unavailable` |
+| `LANE_LOOP_OWNER` / `LANE_EXPECTED_END` / `LANE_STOP_CMD` | lane / `none` / `kill <runner-pid>` | autonomous-loop registry fields (§12) |
 
 Placeholders substituted in every argv element: `{brief}` (contents),
 `{brief_path}`, `{worktree}`, `{lane}`, `{run_id}`, `{result_path}`. Paths
@@ -256,7 +259,7 @@ Anything a later train, a review, or the owner would want again — receipts,
 the log, the report, a measurement whose re-derivation is expensive — is
 banked **as it is produced**, not at the end: a run that banks at exit banks
 nothing when it is force-collected. With `LANE_ARTIFACT_BANK` set, the runner
-copies the start receipt, log, report and exit receipt to
+copies the start receipt, log, cost receipt, report and exit receipt to
 `<bank>/<lane>/<run-id>/` and records `bank_path` in the exit receipt. The
 bank root is operator policy (`user-level/README.md`), a durable out-of-repo
 directory; what goes there is decided by regeneration cost and auditability,
@@ -269,6 +272,10 @@ observed executable; the exit receipt names log, report and verdict.
 `harness/artifact-bank.md` owns the bank's own lifecycle
 — pristine copies, isolation, renewal, retention. This section owns only
 which run receipts go there and when.
+
+The cost receipt is durable evidence, not diagnostic chatter. It is banked
+with the other run receipts even when `source=unavailable`; absence and an
+explicitly unavailable measurement are not interchangeable.
 
 ## 10. What the test proves — and what it does not
 
@@ -368,3 +375,29 @@ mechanism rows; this section owns the rules).
 | B | log size at or below which the run counts as never started, bytes | 39 |
 | C | CPU time at or below which the run counts as never started, seconds | 0.5 |
 | banner | the CLI's own stdin-closed error text | the provider CLI's documented line |
+
+## 12. Every autonomous loop is registered
+
+Every autonomous lane, evaluation, watch, retry loop, and served process has
+one row in `harness/loop_registry.sh` before its work begins. The registry is
+`$LANE_SENTINEL_DIR/loops.tsv` by default; `LOOP_REGISTRY_FILE` overrides the
+path for tests or an operator-chosen state directory. Its eight tab-separated
+fields are `id`, `kind` (`lane|eval|watch|loop|serve`), `owner`, `started_at`,
+`expected_end` (epoch seconds or `none`), `stop_cmd`, `liveness`
+(`pid:<number>` or `exit_file:<path>`), and `status`
+(`active|finished|overdue|stale`). Tabs and newlines are refused in fields.
+
+The interface is `add <id> <kind> <owner> <expected_end> <stop_cmd>
+<liveness>`, `done <id>`, `list`, and `check`. `check` and `list` refresh
+status: an existing exit file is `finished`; a dead pid is `stale`; live or
+unfinished work past `expected_end` is `overdue`; otherwise it is `active`.
+`check` is red while any row is overdue or stale. `LOOP_REGISTRY_NOW` injects
+epoch seconds for deterministic tests. `launch_lane.sh start` registers its
+runner as kind `lane` with exit-file liveness, and every exit path marks that
+row done, so a launched lane is never absent from the registry.
+
+The registry is local process truth, not a project-management mirror. Board
+mirroring is outside this contract. Provenance: the registry closes the
+source factory's recurring ambiguity between an intended loop and an orphaned
+process; only lane registration has been exercised by the launcher so the
+other kinds remain provisional until a project binds its own launchers.

@@ -16,6 +16,7 @@ round: <1|2>
 status: built | parked | blocked | refused | failed
 branch: <branch>
 head_sha: <sha>                  # the worktree HEAD when the report was written — the pin, when the wrapper commits; the wrapper records the handback commit in the choices protocol
+cost: {tokens_in: <integer|unknown>, tokens_out: <integer|unknown>, cached_tokens: <integer|unknown>, requests: <integer|unknown>, model: <name|unknown>, effort: <name|unknown>, wall_s: <number|unknown>, source: <adapter|unavailable>}
 files_touched:
   - <path>
 gates:
@@ -46,8 +47,10 @@ report: |-                       # at most 8 lines; facts first; every hypothesi
 
 ## Rules
 
-1. **Omit empty or default fields;** absence means none. Exception: every
-   `choices` entry carries exactly one explicit verdict.
+1. **Omit empty or default fields;** absence means none. Exceptions: every
+   `choices` entry carries exactly one explicit verdict, and `cost` is never
+   absent. `unknown` and numeric zero are different observations. `source`
+   names the adapter that measured the values or is exactly `unavailable`.
 2. **`gates:` is one line per gate** — `<gate-id> ok|red <count/summary>`.
    Never the command (it is standard in the brief's gate block); logs by
    path; a test selection as `<runner> -k "<expr>": N passed/M skipped`.
@@ -93,6 +96,7 @@ the `SubagentStop` guard runs the same check for a harness subagent
 
 - front matter missing or unparseable;
 - `lane:` or `status:` missing; `status` outside the closed set above;
+- `cost:` missing, any of its eight keys missing, or `source` empty;
 - a `gates:` line not of the form `<gate-id> ok|red <summary>` (or the
   `-k` selection form of rule 2);
 - a hedge phrase standing in for evidence (`should work now`, `looks
@@ -157,6 +161,7 @@ round: 2
 status: built
 branch: lane/flow-fix
 head_sha: e69392f63aa035cef7b20b8708e2b36dc8de96ec
+cost: {tokens_in: unknown, tokens_out: unknown, cached_tokens: unknown, requests: unknown, model: unknown, effort: unknown, wall_s: unknown, source: unavailable}
 files_touched:
   - docs/generated/reference/surfaces.md
   - tests/flows/react_surfaces.py

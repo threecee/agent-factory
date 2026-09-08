@@ -24,7 +24,8 @@
 # Optional (defaults in resolve_contract): LANE_RUN_ID, LANE_DELAY_S, LANE_DETACH,
 # LANE_MODE, LANE_PIN_SHA, LANE_ARTIFACT_BANK, LANE_RATE_LIMIT_REGEX,
 # LANE_RESULT_BEGIN, LANE_RESULT_END, LANE_START_TIMEOUT_S, LANE_LOCK_TIMEOUT_S,
-# LANE_SENTINEL_DIR, LANE_RESULT_PATH.
+# LANE_SENTINEL_DIR, LANE_RESULT_PATH, LANE_USAGE_PARSER, LANE_LOOP_OWNER,
+# LANE_EXPECTED_END, LANE_STOP_CMD.
 #
 # Exit codes — start: 0 dispatched (state started or delayed), 2 contract violation
 # (the message names the variable/file), 3 runner never checked in, 4 refused at
@@ -129,10 +130,15 @@ resolve_contract() { # $1 = start|wait|verdict|lock|env
   : "${LANE_START_TIMEOUT_S:=30}"
   : "${LANE_LOCK_TIMEOUT_S:=600}"
   : "${LANE_SENTINEL_DIR:=$LANE_RUN_DIR}"
+  : "${LANE_USAGE_PARSER:=}"
+  : "${LANE_LOOP_OWNER:=$LANE}"
+  : "${LANE_EXPECTED_END:=none}"
+  : "${LANE_STOP_CMD:=}"
 
   RUN_BASE="$LANE_RUN_DIR/$LANE.$LANE_RUN_ID"
   START_RECEIPT="$RUN_BASE.start"
   EXIT_RECEIPT="$RUN_BASE.exit"
+  COST_RECEIPT="$RUN_BASE.cost"
   RUN_LOG="$RUN_BASE.log"
   RUNNER_LOG="$RUN_BASE.runner.log"
   : "${LANE_RESULT_PATH:=$RUN_BASE.result.md}"
@@ -141,6 +147,7 @@ resolve_contract() { # $1 = start|wait|verdict|lock|env
   export LANE_DELAY_S LANE_DETACH LANE_MODE LANE_PIN_SHA LANE_ARTIFACT_BANK
   export LANE_RATE_LIMIT_REGEX LANE_RESULT_BEGIN LANE_RESULT_END
   export LANE_START_TIMEOUT_S LANE_LOCK_TIMEOUT_S
+  export LANE_USAGE_PARSER LANE_LOOP_OWNER LANE_EXPECTED_END LANE_STOP_CMD
   [ "${LANE_WORKTREE:-}" ] && export LANE_WORKTREE
   [ "${LANE_BRIEF:-}" ] && export LANE_BRIEF
   return 0
@@ -151,11 +158,13 @@ print_env() {
   for k in LANE LANE_RUN_ID LANE_WORKTREE LANE_BRIEF LANE_RUN_DIR LANE_SENTINEL_DIR \
            LANE_RESULT_PATH LANE_DELAY_S LANE_DETACH LANE_MODE LANE_PIN_SHA \
            LANE_ARTIFACT_BANK LANE_RATE_LIMIT_REGEX LANE_RESULT_BEGIN LANE_RESULT_END \
-           LANE_START_TIMEOUT_S LANE_LOCK_TIMEOUT_S; do
+           LANE_START_TIMEOUT_S LANE_LOCK_TIMEOUT_S LANE_USAGE_PARSER \
+           LANE_LOOP_OWNER LANE_EXPECTED_END LANE_STOP_CMD; do
     eval "printf '%s=%s\n' \"$k\" \"\${$k:-}\""
   done
   say "start_receipt=$START_RECEIPT"
   say "exit_receipt=$EXIT_RECEIPT"
+  say "cost_receipt=$COST_RECEIPT"
   say "log=$RUN_LOG"
   say "detach_method=$(detach_method)"
 }
@@ -246,7 +255,7 @@ bank_receipts() { # -> prints bank path or nothing
   [ -n "$LANE_ARTIFACT_BANK" ] || return 0
   local dest="$LANE_ARTIFACT_BANK/$LANE/$LANE_RUN_ID" f
   mkdir -p "$dest" || return 0
-  for f in "$START_RECEIPT" "$RUN_LOG" "$LANE_RESULT_PATH" "$EXIT_RECEIPT.tmp"; do
+  for f in "$START_RECEIPT" "$RUN_LOG" "$LANE_RESULT_PATH" "$COST_RECEIPT" "$EXIT_RECEIPT.tmp"; do
     [ -f "$f" ] && cp "$f" "$dest/$(basename "$f" .tmp)"
   done
   printf '%s' "$dest"
@@ -258,12 +267,46 @@ bank_receipts() { # -> prints bank path or nothing
 # CLI start with stdin closed → identity check → wait → validation → banking →
 # exit receipt (written atomically, LAST).
 CLI_PID=""
+LOOP_REGISTRY="$(cd "$(dirname "$SELF")" && pwd)/loop_registry.sh"
+
+write_cost_receipt() {
+  local tmp="$COST_RECEIPT.tmp" parsed="$COST_RECEIPT.parser.tmp" started ended elapsed key value
+  rm -f "$tmp" "$parsed"
+  started="$(receipt_get "$START_RECEIPT" started_epoch)"; ended="$(now_epoch)"
+  case "$started" in ''|*[!0-9]*) elapsed=unknown;; *) elapsed=$((ended - started));; esac
+  receipt_set "$tmp" tokens_in unknown
+  receipt_set "$tmp" tokens_out unknown
+  receipt_set "$tmp" cached_tokens unknown
+  receipt_set "$tmp" requests unknown
+  receipt_set "$tmp" model unknown
+  receipt_set "$tmp" effort unknown
+  receipt_set "$tmp" wall_s "$elapsed"
+  receipt_set "$tmp" source unavailable
+  if [ -n "$LANE_USAGE_PARSER" ] && "$LANE_USAGE_PARSER" "$RUN_LOG" > "$parsed" 2>/dev/null; then
+    while IFS='=' read -r key value; do
+      case "$key" in
+        tokens_in|tokens_out|cached_tokens|requests|model|effort|wall_s|source)
+          [ -n "$value" ] && receipt_set "$tmp" "$key" "$value"
+          ;;
+      esac
+    done < "$parsed"
+  fi
+  rm -f "$parsed"
+  mv "$tmp" "$COST_RECEIPT"
+}
+
+loop_done() {
+  [ -x "$LOOP_REGISTRY" ] || return 0
+  LOOP_REGISTRY_FILE="$LANE_SENTINEL_DIR/loops.tsv" "$LOOP_REGISTRY" done "$LANE.$LANE_RUN_ID" >/dev/null 2>&1 || true
+}
+
 write_exit_receipt() { # code
   local tmp="$EXIT_RECEIPT.tmp" code="$1" verdict status rl="no" bank
   receipt_set "$tmp" run_id "$LANE_RUN_ID"
   receipt_set "$tmp" lane "$LANE"
   receipt_set "$tmp" ended_at "$(now_iso)"
   receipt_set "$tmp" ended_epoch "$(now_epoch)"
+  write_cost_receipt
   if [ "$LANE_MODE" = read-only ]; then
     if extract_stdout_report "$RUN_LOG" "$LANE_RESULT_PATH"; then receipt_set "$tmp" stdout_extract extracted
     else receipt_set "$tmp" stdout_extract none; fi
@@ -282,6 +325,7 @@ write_exit_receipt() { # code
   bank="$(bank_receipts)"; [ -n "$bank" ] && receipt_set "$tmp" bank_path "$bank"
   receipt_set "$tmp" LANE_EXIT "$code"
   mv "$tmp" "$EXIT_RECEIPT"
+  loop_done
   [ -n "$bank" ] && cp "$EXIT_RECEIPT" "$bank/" 2>/dev/null
   return 0
 }
@@ -294,6 +338,7 @@ runner_signal() { # name
 runner_refuse() { # reason
   receipt_set "$START_RECEIPT" state refused
   receipt_set "$START_RECEIPT" refused_reason "$1"
+  loop_done
   release_writer_lock
   exit 4
 }
@@ -305,6 +350,11 @@ cmd_run() {
   trap 'runner_signal INT' INT
   receipt_set "$START_RECEIPT" runner_pid "$$"
   receipt_set "$START_RECEIPT" runner_pgid "$(ps -o pgid= -p $$ | tr -d ' ')"
+  [ -x "$LOOP_REGISTRY" ] || runner_refuse "loop-registry-missing: $LOOP_REGISTRY"
+  local stop_cmd="${LANE_STOP_CMD:-kill $$}"
+  LOOP_REGISTRY_FILE="$LANE_SENTINEL_DIR/loops.tsv" "$LOOP_REGISTRY" add \
+    "$LANE.$LANE_RUN_ID" lane "$LANE_LOOP_OWNER" "$LANE_EXPECTED_END" "$stop_cmd" "exit_file:$EXIT_RECEIPT" \
+    || runner_refuse "loop-registry-refused"
 
   if [ "$LANE_DELAY_S" -gt 0 ]; then
     receipt_set "$START_RECEIPT" state delayed
@@ -416,6 +466,7 @@ cmd_start() {
   say "start_receipt=$START_RECEIPT"
   say "log=$RUN_LOG"
   say "exit_receipt=$EXIT_RECEIPT"
+  say "cost_receipt=$COST_RECEIPT"
   say "result_path=$LANE_RESULT_PATH"
   return 0
 }

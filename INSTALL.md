@@ -89,7 +89,7 @@ has no Python of its own, and pin it in the verify entry (`PY ?= python3`).
 
 ## Step 2 — Verification pillar
 1. Read `verification/gates/README.md` §"Which gates port" BEFORE copying
-   anything. Of the 27 scripts, ten are repo-agnostic decision gates
+   anything. Of the 28 scripts, eleven are repo-agnostic decision gates
    (ADR index, traceability, backlog, number registry, gitleaks, number
    provenance, sentinel, and the three protections gates: close-out, ledger
    lint, never-weaken — stdlib + git); the rest are Python-stack tooling, frontend/
