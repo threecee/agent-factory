@@ -357,6 +357,7 @@ never judges whether it is right (`harness/guards.md §12`;
 | What may a guard never do, and when does a soft form become hard? | `harness/guards.md §1`, `§5` |
 | What is the fix-first switch rule, where is use recorded, and may auto-mode still decline it? | `harness/guards.md §4`; `interpretation/choices-ledger-README.md §1` |
 | When does the board guard treat a command as a dispatch? | `harness/guards.md §7` |
+| How do I read back an issue's board status and last transition? | `harness/board_readback.sh`; `planning/board-protocol.md` “Authority, pagination and derived views” item 5 |
 | Which anti-patterns is this session repeating? | `harness/guards.md §15` |
 | When does a lane STOP, when does it PARK, and how many rounds does it get? | `planning/execution-contract.md §3`–`§6` |
 | What is the change kind, who re-derives it, and what checks it at landing? | `planning/execution-contract.md §9`; `harness/guards.md §7` |

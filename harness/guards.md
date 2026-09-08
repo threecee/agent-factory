@@ -239,7 +239,7 @@ direct push carrying the `local-verify` status
 | M-6 built-bundle | pre-tool before a serve/standup | the built bundle's entry set and stamp against the tree it will serve | hard | this row — only with a bundle to serve | documented |
 | M-7 ledger lint | landing (M-1) and a cheap gate on a train branch | the choices ledger's form: one section per boarder, verdict + confidence per entry, no `unsound` without a fix note, no hedge | hard on the second train, `WARN` on the first | `../verification/protections.md` §5 (`check_choices_protocol`) | shipped |
 | M-8 drift leg | a gate leg | a `claimed` registry row whose file is already on the remote default branch | gate, no switch | `../verification/protections.md` §7 | shipped |
-| M-9 board | post-tool after a configured launcher/dispatcher invocation with its dispatch verb, not any `#<issue>` token; and after a registered push | the targeted repository's board-item status via the board CLI (network — hence post-tool, never in verify) | context; **fail-open by design** | §7 for selection; `../planning/board-protocol.md` item 5 for transaction/readback | documented |
+| M-9 board | post-tool after a configured launcher/dispatcher invocation with its dispatch verb, not any `#<issue>` token; and after a registered push | the targeted repository's board-item status via the board CLI (network — hence post-tool, never in verify) | context; **fail-open by design** | §7 for selection; `../planning/board-protocol.md` item 5 for transaction/readback | read-back shipped as `board_readback.sh`, selector wiring documented; replaces the kit's `project-sync.js poll` idea — this is a script, not a design problem |
 | M-10 git hooks | `pre-commit`, `commit-msg`, `pre-push` | the identity git will write, the staged blobs, the trailer, the landing check when the override mode pushes the default branch directly | hard; git's `--no-verify` cannot be removed on the git side | `../verification/protections.md` §1 | shipped |
 | M-11 ruleset / status | a change to the default branch on the hosting side | the ruleset accepts both paths — a PR merge after the required checks, or a direct push whose SHA carries the `local-verify` status posted from the receipt — and refuses everything else | hosting refuses | `../verification/protections.md` §2 | shipped |
 | M-12 CI signal | `SessionStart` | the last CI conclusion for the default branch, when the CLI is authenticated; offline silent | context | `../verification/protections.md` §4 | shipped |
@@ -411,7 +411,7 @@ Provenance: source factory Varde w137, 2026-09-08.
   classifier in two real git repositories and proves the issue's two
   directions independently of the landing rule.
 
-### `board` (M-9; documented)
+### `board` (M-9; shipped read-back)
 
 - **Selector.** The board rule runs only after the configured launcher or
   dispatcher invocation with its dispatch verb. A bare `#<issue>` token is
@@ -425,6 +425,9 @@ Provenance: source factory Varde w137, 2026-09-08.
   the command selector excludes all three. Board status, readback and
   fail-open semantics remain in `../planning/board-protocol.md` item 5.
   Provenance: source factory Varde w137, 2026-09-08.
+- **Read-back.** `board_readback.sh` performs the repository-scoped status
+  check. `tests/test_board_readback.sh` injects a file-backed CLI runner and
+  exercises it without network access.
 
 ## 8. Parameters
 
@@ -455,7 +458,8 @@ placeholders, the live-lane legs list nothing).
 | Per-rule switch | `FACTORY_GUARD_ALLOW` | unset; `<id>[,<id>]`, preferably as a command prefix | operator; every use ledgered |
 | Offline mode | `FACTORY_GUARD_OFFLINE` | unset; `1` makes every network-reading rule (M-9) answer with context instead of calling out — the falsification runner and the tests set it | operator; the apparatus always |
 | Gate names for `verdict` | `FACTORY_GUARD_GATES` | `verify,verify-*,check-*,pytest,scripts.check_*,scripts.assemble_*` — make target patterns and runner names (no dot), module patterns (with a dot) | repo operations doc |
-| Board dispatch form | `FACTORY_GUARD_BOARD_DISPATCH` | unset — M-9 remains documented; `<launcher-or-dispatcher> <dispatch-verb>` identifies a dispatch before the rule reads any issue token | repo operations doc |
+| Board dispatch form | `FACTORY_GUARD_BOARD_DISPATCH` | unset — M-9 selector wiring remains documented; `<launcher-or-dispatcher> <dispatch-verb>` identifies a dispatch before the rule reads any issue token | repo operations doc |
+| Board read-back | `BOARD_OWNER` / `BOARD_PROJECT_NUMBER` / `BOARD_REPOSITORY` / `BOARD_EXPECTED_STATUS` / `BOARD_LIMIT` / `GH_RUNNER` | no repository defaults; expected status `In flight`, limit `200`, runner `gh` | repo operations doc; tests inject the runner |
 | Lane CLI identity | `FACTORY_GUARD_CLI` / `FACTORY_GUARD_CLI_TOKEN` / `FACTORY_GUARD_CLI_DIR_FLAG` | unset — the identity refusal prints placeholders and the live-lane legs list nothing; e.g. `codex` / `exec` / `--cd` | repo operations doc (`train-plan.md` §3.3 names the same two values) |
 | Port range | `FACTORY_GUARD_PORT_RANGE` | unset; e.g. `4300-4399` (`train-plan.md` §3.1) | repo operations doc |
 | Data volume | `FACTORY_GUARD_DATA_VOLUME` | unset; the volume the repo lives on | repo operations doc |

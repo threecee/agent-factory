@@ -70,9 +70,13 @@ API-created items get no automatic status — set it explicitly.
    and the lane has already started; once per landing, every boarded item
    must be Done or closed; after any item edit, the item is read back and
    the status that actually stands there is reported. Offline — no CLI, no
-   auth, a network error — is reported as `board not verified (offline)`,
+   auth, a network error — is reported as `board not verified (offline:
+   <reason>)`,
    never a refusal: the board is not an air-gap-critical invariant. This
-   verification never edits the board and never runs in verify.
+   verification never edits the board and never runs in verify. Run the
+   read-back with `../harness/board_readback.sh <issue-number>
+   [expected-status]`; its project binding and injectable CLI runner are
+   listed in the script's usage line.
 
 ## Task identity and the round counter
 
