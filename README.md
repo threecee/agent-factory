@@ -36,8 +36,17 @@ flowchart LR
   I -->|ledger entry, memory, or board item| B
 ```
 
+The kit practises the same four-document model it asks installed projects to
+use:
+
+| Model | Capability spec | ADR | Architecture + patterns | Choices ledger |
+|---|---|---|---|---|
+| Durable question | What does the kit promise now? `openspec/specs/` | Why was the structure chosen? `decisions/` | Where are the boundaries and recurring shapes? `ARCHITECTURE.md`; `PATTERNS.md` | What did agents decide while executing approved work? `interpretation/choices-ledger-README.md` |
+
 Capability specs are the durable *what* the plan hop reads and the land hop
 updates; ADRs stay the durable *why* (`planning/capability-specs.md §1`, `§4`).
+The root architecture and pattern maps orient readers without becoming another
+rule home (`ARCHITECTURE.md §4`).
 
 Planning can define but cannot prove or learn without verification and interpretation; verification can test but cannot choose intent or explain outcomes without planning and interpretation; interpretation can explain but cannot authorize or prove a change without planning and verification (`planning/core-model.md`; `verification/verify-portfolio.md`; `interpretation/continuous-improvement.md`).
 
@@ -360,6 +369,8 @@ never judges whether it is right (`harness/guards.md §12`;
 | How many notifications per transition, and which board action per event? | `planning/board-protocol.md` "Notifications", "Transaction points" |
 | What must a spec contain? | `planning/core-model.md` |
 | What does the system do today, and where is a behaviour change written? | `planning/capability-specs.md §1`, `§3` |
+| What does the kit itself promise? | `openspec/specs/`; `ARCHITECTURE.md §4` |
+| Where are the kit's own decisions? | `decisions/`; `decisions/NUMBERS.md` |
 | When is an investigation dispatched before a fix? | `planning/investigation-brief-template.md §0` |
 | What is a choice, and what is its ID? | `interpretation/choices-ledger-README.md §1`, `§2` |
 | May the heavy step start now, what can `--force` override, and how is a live lane identified? | `harness/train-plan.md §3`; `harness/run-lifecycle.md §6` |
