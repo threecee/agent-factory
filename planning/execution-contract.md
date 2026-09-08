@@ -323,3 +323,7 @@ Falsification of the row, when it ships as code (`../harness/guards.md`
 re-derivation must print `record` and the ledger must carry
 `kind: source→source, record`; remove it and the line must read
 `kind: source→source`.
+
+## 10. Approved dispatched briefs
+
+A dispatched lane with an approved brief does not run `brainstorming`'s design gate.

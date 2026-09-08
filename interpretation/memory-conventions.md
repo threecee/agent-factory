@@ -35,3 +35,11 @@ refusals or two red assembly rounds on one train, or when the operations doc
 changed in the working tree (its portability claim must be re-tested): the
 question is whether the lesson was written here. What counts as a lesson
 stays the writer's judgement (`../harness/guards.md` §6, M-14).
+
+## 1. Memory tiers
+
+Keep the auto-loaded index at no more than 100 one-line entries. Move older or
+lower-value entries to an archive file that remains grep-able but is never
+auto-loaded. Promote stable gotchas that every contributor needs into the
+repository primer, then remove their duplicate memory entries. The source
+factory measured this tiering at 204 → 76 indexed entries on 2026-09-08.

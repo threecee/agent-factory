@@ -27,8 +27,8 @@ owns the rule and the skill executes it.
 | Second opinion | `codex` / `claude` | Harness-symmetric second opinions; model and effort per the operator's policy, not the skill's built-in default (`../harness/model-policy.md` §4). |
 | Spec closeout | `close-spec` | Archive a shipped spec and rewrite it for the later reader. |
 | Bounded bulk reading (pilot) | `bulk-reader` · `log-triage` · `handback-digest` | Inert until `../harness/bulk-read-contract.md` §4 is bound and §5/§7 have run; never registered by installing. |
-| Skill authoring | `write-skills` + `eval-skills` (`writing-skills` for the process-discipline set) | A change to a vendored skill goes through these; the lock is regenerated with `verify_skills_lock.py --update` and the reason recorded in ATTRIBUTION.md. |
-| Parallel dispatch | `dispatching-parallel-agents` · `subagent-driven-development` · `using-git-worktrees` | Only through the launcher and the worktree ritual (`../harness/run-lifecycle.md`); these skills do not override one-lane-one-writer. |
+| Skill authoring | `write-skills` + `eval-skills` | A change to a vendored skill goes through these; the lock is regenerated with `verify_skills_lock.py --update` and the reason recorded in ATTRIBUTION.md. |
+| Parallel dispatch | `../harness/run-lifecycle.md` (launcher) · `../harness/worktree-ritual.md` (one lane, one writer) | Parallelism is the launcher's, never a skill's. |
 
 ## Rules
 

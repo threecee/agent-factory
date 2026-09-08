@@ -689,3 +689,21 @@ failure forms from the source factory and the 2026 Uber efficiency lesson
 recorded by issue 23. `test_guard_report.sh` exercises every name and removes
 one regex to prove the fixture reds; thresholds other than the observed
 three-in-ten-minute loop remain an operator choice.
+
+## 16. A mounted guard retires the prose rule it replaces
+
+**Rule.** Once a guard in §7 is mounted, operational documents remove the
+prose prohibition it enforces and keep only a one-line pointer to that guard's
+home. The executable rule, refusal, alternative, switch and falsification then
+have one owner.
+
+**Reason.** Parallel prose drifts from the executable condition, consumes the
+brief and repository-primer context that every lane pays for, and makes a
+reader reconcile two authorities. Retirement is recorded in the choices
+ledger with the rule ID, mounted guard, retired prose path, verdict and proof
+that the guard's falsification remains green.
+
+Do not prune skills expecting material Codex input savings. The source
+factory's A/B changed the listing from 50 skills to 35 and changed a trivial
+Codex call by about 150 input tokens out of about 24,400; the skills listing
+was not the cost driver. The brief and the repository primer were.

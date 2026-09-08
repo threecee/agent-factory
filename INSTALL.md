@@ -223,7 +223,7 @@ has no Python of its own, and pin it in the verify entry (`PY ?= python3`).
    `.claude/skills` to it.
 2. Verify the copy is what shipped:
    `python3 .agents/skills/verify_skills_lock.py --check --root .agents/skills`
-   must print `verified: 38 skill(s)`. The lock is a content digest per
+   must print `verified: 32 skill(s)`. The lock is a content digest per
    skill directory (sha256 over sorted `<path>\t<sha256>` lines;
    recomputable with coreutils — the script's docstring has the recipe, for
    a machine without Python). It is NOT an upstream pin: upstream commit
@@ -236,6 +236,9 @@ has no Python of its own, and pin it in the verify entry (`PY ?= python3`).
    forms; do not copy skill procedures into the lane brief. Panel and
    second-opinion models come from the operator's model policy (Step 6),
    never from the table or a skill's built-in default.
+4. If the upstream `superpowers` plugin is installed at user level, disable it
+   where this kit's vendored copies are used: the plugin injects its own
+   session-start mandate and creates a second routing authority.
 
 Three of the skills (`bulk-reader`, `log-triage`, `handback-digest`) are the
 bounded bulk-read pilot. They are inert until you bind the commands and

@@ -72,6 +72,16 @@ factory-specific additions:
   this entry must first carry the upstream notice, reconstructed from the
   upstream source.
 
+Retired upstream skills (2026-09-08; the source factory measured zero
+invocations):
+
+- `dispatching-parallel-agents` — upstream location: `obra/superpowers/skills/dispatching-parallel-agents` (MIT).
+- `executing-plans` — upstream location: `obra/superpowers/skills/executing-plans` (MIT).
+- `receiving-code-review` — upstream location: `obra/superpowers/skills/receiving-code-review` (MIT).
+- `subagent-driven-development` — upstream location: `obra/superpowers/skills/subagent-driven-development` (MIT).
+- `using-git-worktrees` — upstream location: `obra/superpowers/skills/using-git-worktrees` (MIT).
+- `writing-skills` — upstream location: `obra/superpowers/skills/writing-skills` (MIT).
+
 Factory adaptations to upstream skill text (recorded here so a re-vendoring
 from upstream does not silently drop them):
 
