@@ -27,6 +27,7 @@ a file or a git operation. The rules below have exactly one home each
   set (execution-contract.md §9 — the lander's re-derivation and the
   rose/fell consequences are there). `none — classifier unbound` when the
   repo has bound none
+- Open improvement lookup: `../interpretation/continuous-improvement.md §1`
 
 ## 2. Standing hard rules
 - Read the architecture/pattern docs first; a new seam duplicating an existing
