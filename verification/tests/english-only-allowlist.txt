@@ -1,0 +1,2 @@
+# One exception per line: <repo-relative path><TAB><reason>.
+# Keep this file empty unless an English-only exception is explicitly approved.

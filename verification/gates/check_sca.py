@@ -1,6 +1,6 @@
 """Software-composition-analysis gate (G3 SECURITY batch, ADR-0072).
 
-Advisory (RÅD) by design — its own `make check-sca` target, not a `make verify`
+Advisory by design — its own `make check-sca` target, not a `make verify`
 prerequisite (can run nightly). Scans `uv.lock` with osv-scanner against a
 committed baseline (`.sca-baseline.json`) of the known-existing advisories, and
 reports NEW ones. A NEW CRITICAL advisory affecting a RUNTIME dependency (the
@@ -101,11 +101,11 @@ def main(argv: list[str] | None = None) -> int:
     repo_root = pathlib.Path.cwd()
 
     if not (repo_root / LOCKFILE).exists():
-        print(f"[RÅD] no {LOCKFILE} present — SCA needs the lockfile; skipping (advisory).")
+        print(f"[ADVISORY] no {LOCKFILE} present — SCA needs the lockfile; skipping (advisory).")
         return 0
     if _osv_bin() is None:
         print(
-            "[RÅD] osv-scanner not installed — SCA skipped (advisory).\n"
+            "[ADVISORY] osv-scanner not installed — SCA skipped (advisory).\n"
             "      Install: brew install osv-scanner. Air-gap: mirror the DB, use --offline."
         )
         return 0

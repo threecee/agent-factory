@@ -1,21 +1,21 @@
-# Fly-deploy av den offentlige playgrounden (app "varde") fra CI — PO-bestilt
-# 2026-08-22 («deploy fra CI»), erstatter orkestrator-lokal flyctl.
+# Fly deployment of the public playground (app "varde") from CI — commissioned
+# by the PO on 2026-08-22 ("deploy from CI"), replacing orchestrator-local flyctl.
 #
-# Sikkerhetsposisjon (samme regime som harness-review-lanene):
-#   1. Full commit-SHA-pin: superfly/flyctl-actions/setup-flyctl pinnes til
-#      ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 (= tag 1.6) — tags er mutable.
-#   2. Secret-gated: uten FLY_API_TOKEN hopper jobben grønt med ::notice —
-#      forken/CI uten deploy-rett feiler aldri rødt på dette.
-#      Tokenet skal være et APP-SCOPET deploy-token (flyctl tokens create
-#      deploy -a varde), aldri et org-token.
-#   3. Permissions: contents:read — ingenting annet.
-#   4. Concurrency: én deploy om gangen, siste vinner (playgrounden er én
-#      maskin med ephemeral DB; parallelle deploys gir bare støy).
-#   5. Triggers: push til main (main mottar KUN lokalt verifiserte tog,
-#      OPERATIONS §5 — CI her er utrulling, ikke port) + workflow_dispatch
-#      for manuell omdeploy fra GitHub-UI.
-#   6. --remote-only: bygget skjer på Flys byggere; ingen Docker i runneren,
-#      ingen registry-secrets i CI.
+# Security posture (the same regime as the harness-review lanes):
+#   1. Full commit-SHA pin: superfly/flyctl-actions/setup-flyctl is pinned to
+#      ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 (= tag 1.6) — tags are mutable.
+#   2. Secret-gated: without FLY_API_TOKEN the job skips green with ::notice —
+#      forks/CI without deployment permission never fail red because of this.
+#      The token must be an APP-SCOPED deployment token (flyctl tokens create
+#      deploy -a varde), never an organization token.
+#   3. Permissions: contents:read — nothing else.
+#   4. Concurrency: one deployment at a time, latest wins (the playground is one
+#      machine with an ephemeral DB; parallel deployments only add noise).
+#   5. Triggers: push to main (main receives ONLY locally verified trains,
+#      OPERATIONS §5 — CI here is deployment, not a gate) + workflow_dispatch
+#      for a manual redeployment from the GitHub UI.
+#   6. --remote-only: the build runs on Fly's builders; no Docker in the runner
+#      and no registry secrets in CI.
 
 name: fly-deploy
 
@@ -35,13 +35,13 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Sjekk deploy-token
+      - name: Check deployment token
         id: gate
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
           if [ -z "$FLY_API_TOKEN" ]; then
-            echo "::notice::FLY_API_TOKEN er ikke satt — deploy hoppes over (grønt)."
+            echo "::notice::FLY_API_TOKEN is not set — deployment skipped (green)."
             echo "enabled=false" >> "$GITHUB_OUTPUT"
           else
             echo "enabled=true" >> "$GITHUB_OUTPUT"
@@ -49,7 +49,7 @@ jobs:
       - name: Checkout
         if: steps.gate.outputs.enabled == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Sett opp flyctl
+      - name: Set up flyctl
         if: steps.gate.outputs.enabled == 'true'
         uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # 1.6
       - name: Deploy

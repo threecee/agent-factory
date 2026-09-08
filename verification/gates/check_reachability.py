@@ -1,6 +1,6 @@
 """Undriven-public-producer advisory (software-factory advisory leg).
 
-This is a REPORT, not a gate: it emits `[REACHABILITY] RÅD` findings for public
+This is a REPORT, not a gate: it emits `[REACHABILITY] ADVISORY` findings for public
 top-level producers under src/kripos which no other src caller reaches, but is
 exit-inert this wave (always exit 0 on findings; the only nonzero exit is 2 on an
 internal analysis error). It closes the "landed-but-undriven-producer" class caught by
@@ -239,7 +239,7 @@ def write_baseline(repo_root: pathlib.Path, producers: list[Producer]) -> None:
 def render_report(
     producers: list[Producer], baseline: set[str], n_public: int | None = None
 ) -> str:
-    """Render the exit-inert RÅD report and its baseline delta.
+    """Render the exit-inert ADVISORY report and its baseline delta.
 
     ``n_public`` is the total public-producer count for the summary line; when omitted
     (e.g. a hand-built producer list in a test) it falls back to the number of findings."""
@@ -247,7 +247,7 @@ def render_report(
     lines = []
     for producer in producers:
         line = (
-            f"[REACHABILITY] RÅD {producer.key} ({producer.kind}, line {producer.lineno}): "
+            f"[REACHABILITY] ADVISORY {producer.key} ({producer.kind}, line {producer.lineno}): "
             "public producer no src caller reaches"
         )
         if producer.key not in baseline:
@@ -256,7 +256,7 @@ def render_report(
     n_public = n_public if n_public is not None else len(producers)
     lines.append(
         f"\nreachability: {n_public} public producer(s) under {SRC_ROOT}, "
-        f"{len(producers)} undriven (baseline {len(baseline)}). Advisory (RÅD): "
+        f"{len(producers)} undriven (baseline {len(baseline)}). Advisory: "
         "flags undriven producers, never changes exit code."
     )
     n_new = sum(producer.key not in baseline for producer in producers)
