@@ -77,10 +77,9 @@ states the fix.
 {{PREGATE_COMMAND_BLOCK}}
 Diff-triggered legs (../verification/verify-portfolio.md, "Legs that bring
 lane-green closer to train-green", leg (c) — the table is the repo's, copied
-here byte-equal from the operations doc): run every row whose glob matches
-the working tree against the pin — the wrapper commits after this block, so
-HEAD is still `<pin>` here and a new file is untracked:
-`{ git diff --name-only <pin>; git ls-files --others --exclude-standard; } | sort -u`.
+here byte-equal from the operations doc): print the selected rows and their
+commands with `bash verification/select_diff_triggered_legs.sh <pin>`, then
+run every printed row.
 A row whose command would skip for an absent build product is not green —
 build first, or report the row as not run in the result file (a skipped row
 is never a green row; this is the lane's duty, not a runner's). The lander

@@ -132,6 +132,9 @@ has no Python of its own, and pin it in the verify entry (`PY ?= python3`).
    script's docstring is its contract. Some carry localized (Norwegian)
    output strings — translating those strings is part of your adaptation;
    never change a gate's LOGIC while translating.
+   Copy `verification/select_diff_triggered_legs.sh` to the same path in the
+   target repository; it is the repo-neutral selector invoked by the lane
+   brief and reads the repository's parameterised table.
 2. Language fit: the ruff/mypy/bandit/semgrep/sca gates are Python-specific.
    For other stacks, WRITE equivalent ratchet gates with the same contract:
    a committed per-rule baseline, zero-regression enforcement, `--update`

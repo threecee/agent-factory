@@ -227,7 +227,7 @@ Each step: artifact → owner → next reader, then its home. Tags: (gate)
 
   | Moment | Deterministic (gate / guard / hook / ruleset) | Text |
   |---|---|---|
-  | Lane, before commit | pregate block; matching legs-table rows (gate rows — selection by the lane's reading of the table, text until a runner ships) | the brief's hard rules; first-contact STOPs |
+  | Lane, before commit | pregate block; matching legs-table rows selected mechanically (gate rows) | the brief's hard rules; first-contact STOPs |
   | Wrapper, at handback | result lint (wrapper check; a guard on the harness's subagent-stop event); red→green falsification | the choices audit |
   | Any commit | identity leg, trailer on source commits (hook); `--no-verify` refused in a hooked session (guard) | subject form (WARN) |
   | Assembly | cross-checks; cheap gates incl. drift leg, never-weaken, ledger lint (gate); `verdict`, `identity` (guard) | kind re-derivation (a lander duty today; a `context` guard when M-21 ships); the batch rule (independent lanes share a train) |
@@ -360,7 +360,7 @@ never judges whether it is right (`harness/guards.md §12`;
 | Which anti-patterns is this session repeating? | `harness/guards.md §15` |
 | When does a lane STOP, when does it PARK, and how many rounds does it get? | `planning/execution-contract.md §3`–`§6` |
 | What is the change kind, and who re-derives it? | `planning/execution-contract.md §9` |
-| Which legs run on a lane before commit, and where do domain checklists live? | `planning/lane-brief-template.md §4`; `verification/verify-portfolio.md` "Legs that bring lane-green closer to train-green"; `harness/guards.md §9` |
+| Which legs run on a lane before commit, how are rows selected, and where do domain checklists live? | `planning/lane-brief-template.md §4`; `verification/verify-portfolio.md` "Legs that bring lane-green closer to train-green"; `verification/select_diff_triggered_legs.sh`; `harness/guards.md §9` |
 | What may CI decide? | `verification/landing-modes.md §4.3`; `verification/ci/README.md §4` |
 | How does a docs-only train land, and what does `ui-pass:` mean? | `harness/train-plan.md §4`; `verification/protections.md §1.1`; `interpretation/choices-ledger-README.md §1` |
 | What does the branch policy contain, and deliberately not? | `verification/landing-modes.md §3`; `verification/protections.md §2` |
@@ -403,10 +403,10 @@ Read those before trusting a routine: the pull-request landing mode and the
 autonomous-landing column of the policy are the owner's stated defaults,
 not measured routines; the guards' false-positive rate is unknown until one
 train has run with the hooks on; the change kind
-(`planning/execution-contract.md §9`) and the diff-triggered legs
-placeholder (`planning/lane-brief-template.md §4`) are documented rows with
-no code of their own. `skills/ATTRIBUTION.md` records every adaptation from
-the source factory and the two upstream skill sets.
+(`planning/execution-contract.md §9`) remains a documented row with no code
+of its own. Diff-triggered leg selection is mechanical
+(`planning/lane-brief-template.md §4`). `skills/ATTRIBUTION.md` records every
+adaptation from the source factory and the two upstream skill sets.
 
 The change-kind line and the legs placeholder were prompted by reading
 Harness Kit's `development-harness`; the provenance line, the licence facts
