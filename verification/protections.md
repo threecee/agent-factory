@@ -88,6 +88,22 @@ receipt carries the optional line `DOCS_ONLY=1` (`../harness/train-plan.md`
 §4) — a docs-only receipt with no classifier bound is refused, and so is
 one the classifier rejects.
 
+**Children never inherit the hook's repository pins.** git exports `GIT_DIR`,
+`GIT_WORK_TREE`, `GIT_INDEX_FILE` (and `GIT_COMMON_DIR`, `GIT_OBJECT_DIRECTORY`,
+`GIT_PREFIX`, `GIT_NAMESPACE`) to a running hook. A registry check, a docs
+classifier or a gate that spawns `git` in a temporary directory would resolve
+the **shared** repository from them and act on it — a Varde landing on
+2026-09-08 had pin-test fixtures move the local default branch to a fixture
+commit that deleted the tree, from inside pre-push. Every child a rule spawns
+therefore gets `child_environ()` (`../harness/guards/_common.py`): the caller's
+environment minus those keys. The landing falsification list carries the
+proof (`registry-child-does-not-inherit-git-dir`: a planted `GIT_DIR` and a
+registry command that fails if it sees one; `registry-red-still-refuses-under-hook-env`).
+A hook verdict that quotes git errors in temporary paths is an environment
+symptom, not a red test — fix the child environment, never reach for the
+switch; recover a moved branch from `git reflog show <branch>` and
+`git reset --hard origin/<default>` in the primary.
+
 ### 1.2 commit-msg — the decision-record trailer
 
 A commit whose staged diff touches `FACTORY_GUARD_SOURCE_PREFIX` (default

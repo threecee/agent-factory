@@ -59,6 +59,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 from guards._common import (
+    child_environ,
     ALLOW,
     FalsificationCase,
     GuardContext,
@@ -305,7 +306,13 @@ def _short(sha: str | None) -> str:
 def _run(context: GuardContext, command: list[str], cwd: pathlib.Path, timeout: float) -> tuple[int, str]:
     try:
         result = context.run(
-            command, cwd=str(cwd), capture_output=True, text=True, check=False, timeout=timeout
+            command,
+            cwd=str(cwd),
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=timeout,
+            env=child_environ(context.environ),
         )
     except (OSError, subprocess.SubprocessError) as error:
         return 127, str(error)

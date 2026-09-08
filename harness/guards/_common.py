@@ -297,6 +297,30 @@ def effective_cwd(command: str, payload_cwd: str | None) -> pathlib.Path:
     return cwd
 
 
+# Git exports these to hooks; a child the hook spawns (a registry check, a gate, pytest with
+# git fixtures) would otherwise resolve the SHARED repository from them and act on it. Seen in
+# a Varde landing (2026-09-08): pin-test fixtures ran `git init/commit/checkout` against the
+# real repo and moved local main to a fixture commit. Every child a rule spawns gets this set.
+HOOK_REPO_ENV_KEYS = frozenset(
+    {
+        "GIT_DIR",
+        "GIT_WORK_TREE",
+        "GIT_INDEX_FILE",
+        "GIT_COMMON_DIR",
+        "GIT_OBJECT_DIRECTORY",
+        "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+        "GIT_PREFIX",
+        "GIT_NAMESPACE",
+    }
+)
+
+
+def child_environ(environ: Mapping[str, str]) -> dict[str, str]:
+    """The environment for a child a rule spawns: the caller's, minus git's hook repo pins."""
+
+    return {key: value for key, value in environ.items() if key not in HOOK_REPO_ENV_KEYS}
+
+
 def git(
     context: GuardContext, cwd: pathlib.Path, *args: str, timeout: float = 30.0
 ) -> tuple[int, str]:
@@ -308,6 +332,7 @@ def git(
             text=True,
             check=False,
             timeout=timeout,
+            env=child_environ(context.environ),
         )
     except (OSError, subprocess.SubprocessError) as error:
         return 127, str(error)
