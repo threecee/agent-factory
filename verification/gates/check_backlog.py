@@ -417,7 +417,7 @@ def closing_rows(text: str) -> list[Row]:
 
 
 def duplicate_row_id_problems(text: str) -> list[str]:
-    """The duplicate-id leg (agent-factory deviation three, 2026-09; verify-portfolio.md
+    """The duplicate-id leg (software-factory-kit deviation three, 2026-09; verify-portfolio.md
     "Legs that bring lane-green closer to train-green"; mechanism M-17a): one canonical row
     per backlog id.
 
